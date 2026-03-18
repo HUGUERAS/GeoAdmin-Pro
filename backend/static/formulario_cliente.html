@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoAdmin Pro — Formulário do Proprietário</title>
+<style>
+  :root {
+    --laranja: #EF9F27;
+    --laranja-dark: #BA7517;
+    --bg: #f5f4f0;
+    --card: #ffffff;
+    --text: #1a1a18;
+    --muted: #5f5e5a;
+    --border: #d3d1c7;
+    --radius: 10px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#1a1a18;--card:#2c2c2a;--text:#e8e6de;--muted:#9c9a92;--border:#444441}
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0 0 40px}
+  .header{background:var(--laranja);color:#412402;padding:20px 24px;text-align:center}
+  .header h1{font-size:18px;font-weight:600}
+  .header p{font-size:13px;margin-top:4px;opacity:.85}
+  .container{max-width:520px;margin:20px auto;padding:0 16px}
+  .card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px}
+  .section-title{font-size:13px;font-weight:600;color:var(--laranja-dark);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  .field{margin-bottom:14px}
+  label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px}
+  input,select,textarea{width:100%;padding:10px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);background:var(--card);outline:none;transition:border-color .2s}
+  input:focus,select:focus,textarea:focus{border-color:var(--laranja)}
+  .required::after{content:" *";color:#E24B4A}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .btn{width:100%;padding:14px;background:var(--laranja);color:#412402;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .2s}
+  .btn:hover{background:var(--laranja-dark);color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .aviso{background:#FAEEDA;border:0.5px solid var(--laranja);border-radius:8px;padding:12px 14px;font-size:12px;color:#412402;margin-bottom:14px}
+  .sucesso{background:#E1F5EE;border:0.5px solid #1D9E75;border-radius:8px;padding:20px;text-align:center;display:none}
+  .sucesso h2{color:#085041;font-size:16px;margin-bottom:6px}
+  .sucesso p{color:#0F6E56;font-size:13px}
+  .add-btn{background:none;border:0.5px dashed var(--border);border-radius:8px;padding:8px;width:100%;color:var(--muted);font-size:13px;cursor:pointer;margin-top:6px}
+  .add-btn:hover{border-color:var(--laranja);color:var(--laranja)}
+  .conf-item{border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;position:relative}
+  .conf-remove{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px}
+  .progress{display:flex;gap:6px;margin-bottom:20px}
+  .step{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s}
+  .step.ativo{background:var(--laranja)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Formulário do Proprietário</h1>
+  <p>Preencha seus dados para o processo de regularização fundiária</p>
+</div>
+
+<div class="container">
+
+  <div class="aviso">
+    Seus dados serão usados para gerar automaticamente os documentos do processo.
+    Preencha com atenção — os dados devem ser iguais aos dos seus documentos pessoais.
+  </div>
+
+  <div class="progress" id="progress">
+    <div class="step ativo" id="s1"></div>
+    <div class="step" id="s2"></div>
+    <div class="step" id="s3"></div>
+    <div class="step" id="s4"></div>
+  </div>
+
+  <form id="form" onsubmit="enviar(event)">
+
+    <!-- SEÇÃO 1: Dados Pessoais -->
+    <div class="card" id="sec1">
+      <div class="section-title">1. Seus dados pessoais</div>
+
+      <div class="field">
+        <label class="required">Nome completo</label>
+        <input type="text" name="nome" placeholder="Nome completo como no RG" required>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="required">CPF</label>
+          <input type="text" name="cpf" placeholder="000.000.000-00" required oninput="mascaraCPF(this)">
+        </div>
+        <div class="field">
+          <label class="required">RG</label>
+          <input type="text" name="rg" placeholder="Número do RG" required>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="required">Estado civil</label>
+          <select name="estado_civil" required>
+            <option value="">Selecione</option>
+            <option value="solteiro">Solteiro(a)</option>
+            <option value="casado">Casado(a)</option>
+            <option value="divorciado">Divorciado(a)</option>
+            <option value="viuvo">Viúvo(a)</option>
+            <option value="uniao_estavel">União estável</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Profissão</label>
+          <input type="text" name="profissao" placeholder="Ex: Agricultor">
+        </div>
+      </div>
+      <div id="conjuge-fields" style="display:none">
+        <div class="row2">
+          <div class="field">
+            <label>Nome do cônjuge</label>
+            <input type="text" name="conjuge_nome">
+          </div>
+          <div class="field">
+            <label>CPF do cônjuge</label>
+            <input type="text" name="conjuge_cpf" oninput="mascaraCPF(this)">
+          </div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="required">Telefone</label>
+          <input type="tel" name="telefone" placeholder="(00) 00000-0000" required>
+        </div>
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" name="email" placeholder="seu@email.com">
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 2: Endereço -->
+    <div class="card" id="sec2">
+      <div class="section-title">2. Seu endereço</div>
+      <div class="field">
+        <label class="required">Endereço (rua, fazenda, comunidade)</label>
+        <input type="text" name="endereco" required>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label>Número</label>
+          <input type="text" name="endereco_numero" placeholder="s/n">
+        </div>
+        <div class="field">
+          <label>CEP</label>
+          <input type="text" name="cep" placeholder="00000-000">
+        </div>
+        <div class="field">
+          <label class="required">Município</label>
+          <input type="text" name="municipio" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 3: Dados do Imóvel -->
+    <div class="card" id="sec3">
+      <div class="section-title">3. Dados do imóvel</div>
+      <div class="field">
+        <label class="required">Nome da propriedade</label>
+        <input type="text" name="nome_imovel" placeholder="Ex: Sítio São João" required>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="required">Município do imóvel</label>
+          <input type="text" name="municipio_imovel" required>
+        </div>
+        <div class="field">
+          <label>Comarca</label>
+          <input type="text" name="comarca">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Matrícula / transcrição</label>
+          <input type="text" name="matricula" placeholder="Número da matrícula">
+        </div>
+        <div class="field">
+          <label>Tempo de posse (anos)</label>
+          <input type="number" name="tempo_posse_anos" min="0" max="99" placeholder="Ex: 10">
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 4: Confrontantes -->
+    <div class="card" id="sec4">
+      <div class="section-title">4. Confrontantes (vizinhos de cada lado)</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Informe os dados de quem faz divisa com o seu imóvel em cada lado.
+        Se não souber o CPF, deixe em branco.
+      </p>
+
+      <div id="confrontantes-lista"></div>
+      <button type="button" class="add-btn" onclick="addConf()">+ Adicionar confrontante</button>
+    </div>
+
+    <div class="sucesso" id="sucesso">
+      <h2>Dados enviados com sucesso!</h2>
+      <p>O técnico responsável receberá uma notificação e gerará os documentos em breve.</p>
+    </div>
+
+    <button type="submit" class="btn" id="btn-enviar">Enviar dados</button>
+
+  </form>
+</div>
+
+<script>
+const LADOS = ['Norte','Sul','Leste','Oeste','Outros'];
+let confCount = 0;
+
+// Adicionar confrontante
+function addConf(lado) {
+  confCount++;
+  const div = document.createElement('div');
+  div.className = 'conf-item';
+  div.id = `conf-${confCount}`;
+  div.innerHTML = `
+    <button type="button" class="conf-remove" onclick="rmConf(${confCount})">✕</button>
+    <div class="row2">
+      <div class="field">
+        <label>Lado</label>
+        <select name="conf_lado_${confCount}">
+          ${LADOS.map(l=>`<option value="${l}">${l}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label class="required">Nome</label>
+        <input type="text" name="conf_nome_${confCount}" required>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>CPF</label>
+        <input type="text" name="conf_cpf_${confCount}" placeholder="000.000.000-00" oninput="mascaraCPF(this)">
+      </div>
+      <div class="field">
+        <label>Nome do imóvel</label>
+        <input type="text" name="conf_imovel_${confCount}">
+      </div>
+    </div>
+    <div class="field">
+      <label>Matrícula do imóvel confrontante</label>
+      <input type="text" name="conf_matricula_${confCount}">
+    </div>
+  `;
+  document.getElementById('confrontantes-lista').appendChild(div);
+  if (lado) div.querySelector('select').value = lado;
+}
+
+function rmConf(id) {
+  document.getElementById(`conf-${id}`)?.remove();
+}
+
+// Adicionar os 4 lados automaticamente
+['Norte','Sul','Leste','Oeste'].forEach(addConf);
+
+// Mostrar campos cônjuge
+document.querySelector('[name=estado_civil]').addEventListener('change', function() {
+  const show = ['casado','uniao_estavel'].includes(this.value);
+  document.getElementById('conjuge-fields').style.display = show ? 'block' : 'none';
+});
+
+// Máscara CPF
+function mascaraCPF(el) {
+  let v = el.value.replace(/\D/g,'');
+  if(v.length>11) v=v.slice(0,11);
+  v = v.replace(/(\d{3})(\d)/,'$1.$2');
+  v = v.replace(/(\d{3})\.(\d{3})(\d)/,'$1.$2.$3');
+  v = v.replace(/\.(\d{3})(\d)/,'.$1-$2');
+  el.value = v;
+}
+
+// Progresso visual
+function atualizarProgress() {
+  const secs = ['sec1','sec2','sec3','sec4'];
+  secs.forEach((id, i) => {
+    const card = document.getElementById(id);
+    const inputs = card.querySelectorAll('input[required],select[required]');
+    const ok = [...inputs].every(el => el.value.trim());
+    document.getElementById(`s${i+1}`).classList.toggle('ativo', ok);
+  });
+}
+document.getElementById('form').addEventListener('input', atualizarProgress);
+
+// Coletar confrontantes do form
+function coletarConfs() {
+  const confs = [];
+  document.querySelectorAll('.conf-item').forEach(el => {
+    const id = el.id.replace('conf-','');
+    const nome = el.querySelector(`[name=conf_nome_${id}]`)?.value;
+    if(!nome) return;
+    confs.push({
+      lado:      el.querySelector(`[name=conf_lado_${id}]`)?.value,
+      nome:      nome,
+      cpf:       el.querySelector(`[name=conf_cpf_${id}]`)?.value,
+      nome_imovel: el.querySelector(`[name=conf_imovel_${id}]`)?.value,
+      matricula: el.querySelector(`[name=conf_matricula_${id}]`)?.value,
+    });
+  });
+  return confs;
+}
+
+// Enviar
+async function enviar(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-enviar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  payload.confrontantes = coletarConfs();
+
+  // Pegar token da URL
+  const token = new URLSearchParams(window.location.search).get('token');
+
+  try {
+    const res = await fetch(`/formulario/cliente?token=${token}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+
+    if(res.ok) {
+      document.getElementById('sucesso').style.display = 'block';
+      document.getElementById('btn-enviar').style.display = 'none';
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    } else {
+      const err = await res.json();
+      alert('Erro ao enviar: ' + (err.erro || res.status));
+      btn.disabled = false;
+      btn.textContent = 'Enviar dados';
+    }
+  } catch(ex) {
+    alert('Falha de conexão. Verifique sua internet e tente novamente.');
+    btn.disabled = false;
+    btn.textContent = 'Enviar dados';
+  }
+}
+</script>
+</body>
+</html>

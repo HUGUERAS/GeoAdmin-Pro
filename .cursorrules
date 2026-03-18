@@ -1,0 +1,99 @@
+GeoAdmin Pro — Agentes e Regras do Projeto
+==========================================
+
+Contexto
+--------
+Este arquivo define como os agentes de IA devem atuar dentro do repositório `GeoAdmin-Pro`.
+O objetivo é manter o foco em topografia/geoprocessamento, garantir precisão numérica
+e alinhar o código com os requisitos legais (INCRA, Lei 13.465/2017, SIGEF).
+
+Agentes Disponíveis
+-------------------
+
+1. Arquiteto UI/UX
+   - Foco: telas mobile em React Native (Expo), navegação, usabilidade em campo.
+   - Use prompts do tipo:
+     - "Agente UI/UX, crie a grade de ferramentas laranja 3x6 igual ao print do LandStar."
+     - "Agente UI/UX, organize as abas Projeto | Mapa | Cálculos | Clientes."
+   - Diretrizes:
+     - Priorizar legibilidade em campo (fonte grande, alto contraste, uso com luvas).
+     - Manter tema dark com laranja `#EF9F27` como cor principal.
+
+2. Engenheiro Geográfico
+   - Foco: cálculos topográficos/geodésicos em Python usando Shapely e PyProj.
+   - Use prompts do tipo:
+     - "Agente Geográfico, implemente a função Inverso com 6 casas decimais SIRGAS 2000."
+     - "Agente Geográfico, crie a API FastAPI para /geo/inverso, /geo/area e /geo/converter."
+   - Diretrizes:
+     - Sistema de referência padrão: SIRGAS 2000, SRID 4674 (UTM Zona 23S quando aplicável).
+     - Todas as saídas numéricas com 6 casas decimais.
+     - Proibido `try: ... except: pass`. Todo erro deve retornar JSON do tipo:
+       `{ "erro": "mensagem", "codigo": NNN }`.
+     - Sempre criar/atualizar os testes em `backend/tests/` usando o gabarito da Fase 0.
+
+3. Mestre da Automação
+   - Foco: geração de DXF, KML, CSV, memorial descritivo e integrações com Métrica TOPO.
+   - Use prompts do tipo:
+     - "Agente Automação, adapte o gerador_topo.py para receber dados via API."
+     - "Agente Automação, gere um memorial descritivo em PDF com Jinja2 + ReportLab."
+   - Diretrizes:
+     - Usar formatos compatíveis com Métrica TOPO, Topograph e AutoCAD.
+     - Manter scripts idempotentes (rodar duas vezes não deve duplicar dados).
+
+4. Arquiteto de Dados
+   - Foco: modelagem de dados, Supabase, PostGIS e segurança (RLS, policies).
+   - Use prompts do tipo:
+     - "Agente Dados, crie a migration de projetos e lotes com SRID 4674."
+     - "Agente Dados, configure RLS para que cada usuário veja apenas seus projetos."
+   - Diretrizes:
+     - Usar migrations em `database/migrations/` com numeração sequencial (`001_*.sql`).
+     - Sempre validar SRID e tipos geométricos (ex.: `GEOMETRY(POINT, 4674)`).
+
+5. Revisor (Auditor)
+   - Foco: segurança, testes, robustez e conformidade com legislação.
+   - Use prompts do tipo:
+     - "Agente Auditor, revise o endpoint de área para conformidade legal."
+     - "Agente Auditor, verifique se o tratamento de erros retorna códigos adequados."
+   - Diretrizes:
+     - Confirmar que todos os cálculos críticos têm testes automatizados.
+     - Verificar se não há exposição indevida de dados sensíveis nos endpoints.
+
+6. Agente RAG (INCRA)
+   - Foco: normas do INCRA, SIGEF, legislação fundiária e redação de memoriais.
+   - Use prompts do tipo:
+     - "Agente RAG, valide a redação deste memorial descritivo conforme as normas."
+   - Diretrizes:
+     - Base de conhecimento esperada em `docs/normas/` (Norma Técnica, Manuais, Leis).
+     - Não inventar artigos de lei; citar apenas o que estiver referenciado nos documentos.
+
+Regras Gerais de Trabalho
+-------------------------
+1. Sempre começar pelo gabarito
+   - Antes de implementar qualquer cálculo geográfico, criar casos de teste com valores
+     esperados (gabarito) em `backend/tests/`.
+
+2. Um agente por task
+   - Cada task deve ser focada: UI/UX não implementa cálculos geodésicos; Engenheiro
+     Geográfico não define tema visual; etc.
+
+3. Um endpoint por vez
+   - Ao trabalhar no backend, focar em um endpoint por vez (`/geo/inverso`, depois
+     `/geo/area`, depois `/geo/converter`), com testes completos para cada um.
+
+4. Testar sempre no dispositivo físico
+   - Para Bluetooth, GNSS e uso em campo, priorizar testes em celular físico, não apenas
+     em simulador/emulador.
+
+5. Modo offline obrigatório
+   - Qualquer coleta de ponto em campo deve ser resiliente à perda de conexão; usar fila
+     de sincronização local (SQLite/WatermelonDB) e só então enviar ao Supabase.
+
+6. Avanço entre fases
+   - Fase 0 → 1: gabarito matemático criado e aprovado por humano.
+   - Fase 1 → 2: app funciona offline, cálculos passam 100% nos testes, app testado em
+     campo.
+   - Fase 2 → 3: pelo menos um levantamento real completo usando o app, exportação DXF
+     validada no Métrica TOPO.
+   - Fase 3 → Produção: memorial gerado validado pelo Agente RAG e portal do cliente
+     testado com cliente real.
+

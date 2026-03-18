@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/User/Documents/GeoAdmin-Pro/backend && python -c \"from routes.projetos import router; from routes.metrica_simples import router as mr; print\\('imports OK'\\)\")",
+      "Bash(python -c \"\nimport main\nroutes = [r.path for r in main.app.routes]\nfor r in routes:\n    print\\(r\\)\n\")",
+      "Bash(cd \"C:\\\\Users\\\\User\\\\Documents\\\\GeoAdmin-Pro\\\\backend\" && python -m pytest tests/ -v 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\User\\\\Documents\\\\GeoAdmin-Pro\\\\backend\" && python -m pytest tests/gabarito_geodesico.py -v 2>&1)",
+      "Bash(ls -la \"C:\\\\Users\\\\User\\\\Documents\\\\GeoAdmin-Pro\\\\backend\\\\routes\\\\\" 2>/dev/null || echo \"Pasta não encontrada\")",
+      "Bash(find /c/Users/User/Documents/GeoAdmin-Pro -type f -name \"*.py\" 2>/dev/null | head -30)",
+      "Bash(grep -r \"documentos\" /c/Users/User/Documents/GeoAdmin-Pro --include=\"*.py\" --include=\"*.sql\" --include=\"*.md\" 2>/dev/null | head -20)",
+      "Bash(cp \"C:\\\\Users\\\\User\\\\Downloads\\\\files\\\\gerador_documentos.py\" \"C:\\\\Users\\\\User\\\\Documents\\\\GeoAdmin-Pro\\\\backend\\\\integracoes\\\\gerador_documentos.py\" && cp \"C:\\\\Users\\\\User\\\\Downloads\\\\files\\\\formulario_cliente.html\" \"C:\\\\Users\\\\User\\\\Documents\\\\GeoAdmin-Pro\\\\backend\\\\static\\\\formulario_cliente.html\")",
+      "Bash(find 'D:/coletora pro landdd' -type f -name *.java -o -name *.kt -o -name *.gradle -o -name pom.xml -o -name build.xml)",
+      "Bash(cd \"C:\\\\Users\\\\User\\\\Documents\\\\GeoAdmin-Pro\\\\backend\" && pip install python-docx -q 2>&1 | tail -3)",
+      "Bash(find \"/c/Users/User\" -name \"PP05L2*\" -o -name \"*completo1*\" 2>/dev/null | head -20)"
+    ]
+  }
+}

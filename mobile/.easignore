@@ -1,0 +1,9 @@
+# Keep build uploads lean.
+node_modules/
+.expo/
+dist/
+.DS_Store
+
+# Upload local credentials even though they are ignored by Git.
+!credentials.json
+!credentials/android-keystore.jks

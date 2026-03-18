@@ -1,0 +1,3 @@
+# Nunca versionar credenciais locais
+.env
+.env.*

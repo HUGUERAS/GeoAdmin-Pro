@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "GeoAdmin Pro",
+    "slug": "geoadmin-pro",
+    "owner": "hugeras",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "geoadminpro",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.hugeras.geoadminpro"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d17fae3a-1c71-4365-b2f4-78aa26e5a30e"
+      }
+    }
+  }
+}
