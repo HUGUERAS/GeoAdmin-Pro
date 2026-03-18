@@ -1,22 +1,47 @@
-import { Tabs } from 'expo-router';
+import { Tabs } from 'expo-router'
+import { Feather } from '@expo/vector-icons'
+import { Colors } from '../../constants/Colors'
 
-export default function TabsLayout() {
+export default function TabLayout() {
+  const C = Colors.dark
   return (
-    <Tabs
-      screenOptions={{
+    <Tabs screenOptions={{
+      tabBarStyle: {
+        backgroundColor: C.card,
+        borderTopColor:  C.cardBorder,
+        borderTopWidth:  0.5,
+        height:          60,
+        paddingBottom:   8,
+      },
+      tabBarActiveTintColor:   C.primary,
+      tabBarInactiveTintColor: C.muted,
+      tabBarLabelStyle:  { fontSize: 11, fontWeight: '500' },
+      headerStyle:       { backgroundColor: C.card },
+      headerTintColor:   C.text,
+      headerTitleStyle:  { fontWeight: '700', fontSize: 18 },
+    }}>
+      <Tabs.Screen name="projeto/index" options={{
+        title: 'Projetos',
+        tabBarIcon: ({ color }) => <Feather name="folder" size={22} color={color} />,
         headerShown: false,
-        sceneStyle: { backgroundColor: '#0b0b0b' },
-        tabBarStyle: {
-          backgroundColor: '#111111',
-          borderTopColor: '#1f1f1f',
-        },
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#8A8A8A',
-      }}>
-      <Tabs.Screen name="projeto" options={{ title: 'Projeto' }} />
-      <Tabs.Screen name="mapa" options={{ title: 'Mapa' }} />
-      <Tabs.Screen name="calculos" options={{ title: 'Cálculos' }} />
-      <Tabs.Screen name="clientes" options={{ title: 'Clientes' }} />
+      }} />
+      <Tabs.Screen name="projeto/[id]" options={{ href: null }} />
+      <Tabs.Screen name="calculos/index" options={{
+        title: 'Cálculos',
+        tabBarIcon: ({ color }) => <Feather name="cpu" size={22} color={color} />,
+        headerShown: false,
+      }} />
+      <Tabs.Screen name="calculos/inverso" options={{ href: null }} />
+      <Tabs.Screen name="mapa/index" options={{
+        title: 'Mapa',
+        tabBarIcon: ({ color }) => <Feather name="map" size={22} color={color} />,
+        headerShown: false,
+      }} />
+      <Tabs.Screen name="clientes/index" options={{
+        title: 'Clientes',
+        tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
+        headerShown: false,
+      }} />
     </Tabs>
-  );
+  )
 }
