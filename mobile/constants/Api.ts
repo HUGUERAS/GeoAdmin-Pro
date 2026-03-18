@@ -2,4 +2,4 @@
 // Prod: Railway
 export const API_URL = __DEV__
   ? 'http://192.168.1.251:8000'
-  : 'https://geoadmin-pro-production.up.railway.app'
+  : 'https://geo-admin-pro.vercel.app'
