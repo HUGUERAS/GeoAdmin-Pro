@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GeoAdmin Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root {
   --bg:       #111110;
@@ -539,6 +541,21 @@ tr { cursor: pointer; transition: background .1s; }
 
 .config-input:focus { border-color: var(--orange); }
 
+/* ── MAPA ── */
+#view-mapa.ativa { display: flex; flex-direction: column; }
+#mapa-wrap { flex: 1; position: relative; min-height: 0; }
+#mapa-leaflet { width: 100%; height: 100%; }
+#mapa-cad { position: absolute; top: 0; left: 0; display: none; }
+.mapa-toolbar { display: flex; align-items: center; gap: 8px; }
+.layer-toggle { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.layer-toggle input { accent-color: var(--orange); cursor: pointer; }
+.leaflet-container { background: var(--bg) !important; }
+.leaflet-popup-content-wrapper { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
+.leaflet-popup-tip { background: var(--card); }
+.leaflet-popup-content { font-family: 'Syne', sans-serif; font-size: 12px; }
+.leaflet-control-zoom a { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.leaflet-control-zoom a:hover { background: var(--card2) !important; }
+
 /* scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -560,6 +577,9 @@ tr { cursor: pointer; transition: background .1s; }
     <div class="nav-section">Principal</div>
     <button class="nav-btn ativo" onclick="ir('projetos')">
       <span class="nav-icon">📁</span> Projetos
+    </button>
+    <button class="nav-btn" onclick="ir('mapa')">
+      <span class="nav-icon">🗺️</span> Mapa
     </button>
     <button class="nav-btn" onclick="ir('calculos')">
       <span class="nav-icon">📐</span> Cálculos
@@ -659,6 +679,9 @@ tr { cursor: pointer; transition: background .1s; }
           <div class="detail-card">
             <div class="detail-card-header"><span class="detail-card-title">Ações</span></div>
             <div class="action-list">
+              <button class="action-btn" onclick="abrirMapa()">
+                <span class="action-icon">🗺️</span> Ver no Mapa
+              </button>
               <button class="action-btn primary" onclick="gerarMagicLink()">
                 <span class="action-icon">📱</span> Gerar Link para Cliente
               </button>
@@ -872,6 +895,33 @@ tr { cursor: pointer; transition: background .1s; }
     </div>
   </div>
 
+  <!-- ── MAPA ── -->
+  <div id="view-mapa" class="view">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn btn-ghost" id="btn-voltar-mapa" onclick="voltarMapa()" style="display:none;padding:7px 10px">← Voltar</button>
+        <span class="topbar-title" id="mapa-titulo">Mapa</span>
+      </div>
+      <div class="topbar-actions mapa-toolbar">
+        <button class="btn btn-ghost" id="btn-sat" onclick="setTipoMapa('sat')">🛰 Satélite</button>
+        <button class="btn btn-ghost" id="btn-cad" onclick="setTipoMapa('cad')">📐 CAD</button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+        <label class="layer-toggle"><input type="checkbox" id="lyr-pontos"   checked onchange="toggleCamada()"> Pontos</label>
+        <label class="layer-toggle"><input type="checkbox" id="lyr-poligono" checked onchange="toggleCamada()"> Polígono</label>
+        <label class="layer-toggle"><input type="checkbox" id="lyr-rotulos"  checked onchange="toggleCamada()"> Rótulos</label>
+      </div>
+    </div>
+    <div id="mapa-wrap">
+      <div id="mapa-leaflet"></div>
+      <canvas id="mapa-cad"></canvas>
+      <div id="mapa-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted)">
+        <div style="font-size:40px">🗺️</div>
+        <div style="font-size:14px;font-weight:600">Selecione um projeto para ver no mapa</div>
+        <div style="font-size:12px">Vá em Projetos → selecione um → clique em "Ver no Mapa"</div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- TOAST -->
@@ -879,7 +929,7 @@ tr { cursor: pointer; transition: background .1s; }
 
 <script>
 // ── CONFIG ──
-let API_URL = localStorage.getItem('api_url') || 'http://127.0.0.1:8000'
+let API_URL = localStorage.getItem('api_url') || 'https://geo-admin-pro.vercel.app'
 document.getElementById('cfg-api-url').value = API_URL
 
 let projetoAtual = null
@@ -1212,6 +1262,184 @@ async function gerarTxt() {
   } catch(e) {
     toast('Erro: ' + e.message, 'error')
   }
+}
+
+// ── MAPA ──
+let mapaLeaflet = null
+let mapaLayers  = { pontos: null, poligono: null, rotulos: null }
+let tipoMapa    = 'sat'
+let pontosMapaAtual = []
+
+const ESRI_SAT = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Esri World Imagery', maxZoom: 19 }
+)
+const ESRI_LABELS = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  { maxZoom: 19, opacity: 0.7 }
+)
+
+function iniciarMapa() {
+  if (mapaLeaflet) return
+  mapaLeaflet = L.map('mapa-leaflet', { zoomControl: true })
+  ESRI_SAT.addTo(mapaLeaflet)
+  ESRI_LABELS.addTo(mapaLeaflet)
+  mapaLeaflet.setView([-15.78, -47.93], 10)
+}
+
+function abrirMapa() {
+  if (!projetoAtual) return
+  const pontos = (projetoAtual.pontos || []).filter(p => p.lon != null && p.lat != null)
+  pontosMapaAtual = pontos
+  document.getElementById('mapa-titulo').textContent = projetoAtual.projeto_nome
+  document.getElementById('btn-voltar-mapa').style.display = 'flex'
+  ir('mapa')
+  setTimeout(() => renderMapa(pontos), 100)
+}
+
+function voltarMapa() {
+  ir('detalhe')
+}
+
+function renderMapa(pontos) {
+  iniciarMapa()
+  mapaLeaflet.invalidateSize()
+
+  // Limpa camadas anteriores
+  Object.values(mapaLayers).forEach(l => { if (l) mapaLeaflet.removeLayer(l) })
+
+  if (!pontos.length) {
+    document.getElementById('mapa-empty').style.display = 'flex'
+    return
+  }
+  document.getElementById('mapa-empty').style.display = 'none'
+
+  const showPontos   = document.getElementById('lyr-pontos').checked
+  const showPoligono = document.getElementById('lyr-poligono').checked
+  const showRotulos  = document.getElementById('lyr-rotulos').checked
+
+  const coords = pontos.map(p => [p.lat, p.lon])
+
+  // Polígono
+  if (showPoligono && coords.length > 1) {
+    const poly = [...coords, coords[0]]
+    mapaLayers.poligono = L.polyline(poly, { color: '#EF9F27', weight: 2.5, opacity: 0.9 }).addTo(mapaLeaflet)
+  }
+
+  // Marcadores
+  if (showPontos) {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:10px;height:10px;border-radius:50%;background:#EF9F27;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.5)"></div>`,
+      iconSize: [10, 10], iconAnchor: [5, 5],
+    })
+    const grupo = L.layerGroup()
+    pontos.forEach(p => {
+      const m = L.marker([p.lat, p.lon], { icon })
+        .bindPopup(`<b>${p.nome}</b>${p.altitude_m != null ? `<br>Alt: ${p.altitude_m} m` : ''}`)
+      if (showRotulos) {
+        m.bindTooltip(p.nome, { permanent: true, direction: 'right', offset: [8, 0],
+          className: 'leaflet-tooltip-dark' })
+      }
+      grupo.addLayer(m)
+    })
+    mapaLayers.pontos = grupo.addTo(mapaLeaflet)
+  }
+
+  // Fit bounds
+  if (coords.length === 1) mapaLeaflet.setView(coords[0], 16)
+  else mapaLeaflet.fitBounds(coords, { padding: [40, 40] })
+
+  // CAD
+  if (tipoMapa === 'cad') desenharCad(pontos)
+}
+
+function toggleCamada() { renderMapa(pontosMapaAtual) }
+
+function setTipoMapa(tipo) {
+  tipoMapa = tipo
+  const leafletEl = document.getElementById('mapa-leaflet')
+  const cadEl     = document.getElementById('mapa-cad')
+  document.getElementById('btn-sat').className = 'btn ' + (tipo === 'sat' ? 'btn-primary' : 'btn-ghost')
+  document.getElementById('btn-cad').className = 'btn ' + (tipo === 'cad' ? 'btn-primary' : 'btn-ghost')
+
+  if (tipo === 'sat') {
+    leafletEl.style.display = 'block'
+    cadEl.style.display = 'none'
+  } else {
+    leafletEl.style.display = 'none'
+    cadEl.style.display = 'block'
+    desenharCad(pontosMapaAtual)
+  }
+}
+
+function desenharCad(pontos) {
+  const wrap = document.getElementById('mapa-wrap')
+  const canvas = document.getElementById('mapa-cad')
+  const W = wrap.clientWidth, H = wrap.clientHeight
+  canvas.width = W; canvas.height = H
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#111110'
+  ctx.fillRect(0, 0, W, H)
+
+  if (!pontos.length) return
+
+  const PAD = 56
+  const lons = pontos.map(p => p.lon), lats = pontos.map(p => p.lat)
+  const minLon = Math.min(...lons), maxLon = Math.max(...lons)
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats)
+  const rX = maxLon - minLon || 0.0001, rY = maxLat - minLat || 0.0001
+  const sc = Math.min((W - 2*PAD) / rX, (H - 2*PAD) / rY)
+  const dW = rX*sc, dH = rY*sc
+  const oX = (W - dW) / 2, oY = (H - dH) / 2
+  const tx = lon => oX + (lon - minLon) * sc
+  const ty = lat => H - oY - (lat - minLat) * sc
+
+  // Grade
+  const intv = niceIntervalWeb(Math.max(rX, rY))
+  ctx.strokeStyle = '#2a2a28'; ctx.lineWidth = 0.5
+  for (let v = Math.ceil(minLon/intv)*intv; v <= maxLon; v += intv) {
+    ctx.beginPath(); ctx.moveTo(tx(v), 0); ctx.lineTo(tx(v), H); ctx.stroke()
+    ctx.fillStyle = '#444'; ctx.font = '9px IBM Plex Mono'; ctx.fillText(v.toFixed(5), tx(v)+2, H-4)
+  }
+  for (let v = Math.ceil(minLat/intv)*intv; v <= maxLat; v += intv) {
+    ctx.beginPath(); ctx.moveTo(0, ty(v)); ctx.lineTo(W, ty(v)); ctx.stroke()
+    ctx.fillStyle = '#444'; ctx.font = '9px IBM Plex Mono'; ctx.fillText(v.toFixed(5), 2, ty(v)-3)
+  }
+
+  const showPoligono = document.getElementById('lyr-poligono').checked
+  const showPontos   = document.getElementById('lyr-pontos').checked
+  const showRotulos  = document.getElementById('lyr-rotulos').checked
+
+  // Polígono
+  if (showPoligono && pontos.length > 1) {
+    ctx.strokeStyle = '#EF9F27'; ctx.lineWidth = 1.5
+    ctx.fillStyle = 'rgba(239,159,39,0.07)'
+    ctx.beginPath()
+    pontos.forEach((p, i) => { i === 0 ? ctx.moveTo(tx(p.lon), ty(p.lat)) : ctx.lineTo(tx(p.lon), ty(p.lat)) })
+    ctx.closePath(); ctx.fill(); ctx.stroke()
+  }
+
+  // Pontos e rótulos
+  if (showPontos) {
+    pontos.forEach(p => {
+      const x = tx(p.lon), y = ty(p.lat)
+      ctx.strokeStyle = '#EF9F27'; ctx.lineWidth = 2
+      ctx.beginPath(); ctx.moveTo(x-6, y); ctx.lineTo(x+6, y); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(x, y-6); ctx.lineTo(x, y+6); ctx.stroke()
+      if (showRotulos) {
+        ctx.fillStyle = '#e8e6de'; ctx.font = '10px Syne, sans-serif'
+        ctx.fillText(p.nome, x+8, y-4)
+      }
+    })
+  }
+}
+
+function niceIntervalWeb(range, ticks = 5) {
+  const raw = range / ticks
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)))
+  const f = raw / mag
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag
 }
 
 // ── TOAST ──
