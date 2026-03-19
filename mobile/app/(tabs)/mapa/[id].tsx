@@ -147,40 +147,60 @@ function SatelliteView({
 // ── CAD view ─────────────────────────────────────────────────────────────────
 
 function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVertices,
-  onVertexDrag, onVertexDelete, onMidpointAdd }: any) {
+  onVertexDrag, onVertexDelete, onMidpointAdd, onDragStart }: any) {
   const { width: W, height: H } = Dimensions.get('window')
   const svgH = H - 56 - 50 - 50
-  const TOUCH_R = 18   // hit radius px
+  const TOUCH_R = 20   // hit radius px
 
-  const allPts = editMode ? [...(editVertices || []), ...(origVertices || [])] : pontos
+  // Memoize allPts to avoid thrashing xform recalculation
+  const allPts = useMemo(
+    () => editMode ? [...(editVertices || []), ...(origVertices || [])] : pontos,
+    [editMode, editVertices, origVertices, pontos]
+  )
   const xform = useMemo(
     () => computeTransform(allPts.length ? allPts : pontos, W, svgH),
     [allPts, W, svgH]
   )
   const { toX, toY, fromX, fromY, minLon, maxLon, minLat, maxLat } = xform
 
-  const panRef = useRef<{ idx: number; mid: number } | null>(null)
+  // Refs keep latest values without recreating panResponder
+  const stateRef = useRef({ editMode, editTool, editVertices, toX, toY, fromX, fromY, onVertexDrag, onDragStart })
+  useEffect(() => {
+    stateRef.current = { editMode, editTool, editVertices, toX, toY, fromX, fromY, onVertexDrag, onDragStart }
+  })
 
-  const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => editMode && editTool === 'mover',
-    onMoveShouldSetPanResponder:  () => editMode && editTool === 'mover',
+  const panRef = useRef<{ idx: number } | null>(null)
+
+  // PanResponder created ONCE — uses stateRef for always-current values
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () =>
+      stateRef.current.editMode && stateRef.current.editTool === 'mover',
+    onMoveShouldSetPanResponder: () =>
+      stateRef.current.editMode && stateRef.current.editTool === 'mover',
     onPanResponderGrant: (e: GestureResponderEvent) => {
-      if (!editMode || editTool !== 'mover' || !editVertices) return
+      const { editMode: em, editTool: et, editVertices: ev, toX: tx, toY: ty } = stateRef.current
+      if (!em || et !== 'mover' || !ev?.length) return
       const { locationX: px, locationY: py } = e.nativeEvent
       let closest = -1, minD = TOUCH_R
-      editVertices.forEach((v: Vertice, i: number) => {
-        const d = Math.hypot(toX(v.lon) - px, toY(v.lat) - py)
+      ev.forEach((v: Vertice, i: number) => {
+        const d = Math.hypot(tx(v.lon) - px, ty(v.lat) - py)
         if (d < minD) { minD = d; closest = i }
       })
-      panRef.current = closest >= 0 ? { idx: closest, mid: -1 } : null
+      if (closest >= 0) {
+        stateRef.current.onDragStart?.()   // push undo history before drag
+        panRef.current = { idx: closest }
+      } else {
+        panRef.current = null
+      }
     },
     onPanResponderMove: (e: GestureResponderEvent) => {
-      if (!panRef.current || panRef.current.idx < 0) return
+      if (!panRef.current) return
       const { locationX: px, locationY: py } = e.nativeEvent
-      onVertexDrag(panRef.current.idx, fromX(px), fromY(py))
+      const { fromX: fx, fromY: fy, onVertexDrag: drag } = stateRef.current
+      drag(panRef.current.idx, fx(px), fy(py))
     },
     onPanResponderRelease: () => { panRef.current = null },
-  }), [editMode, editTool, editVertices, toX, toY, fromX, fromY])
+  })).current
 
   const lonInterval = niceInterval(maxLon - minLon)
   const latInterval = niceInterval(maxLat - minLat)
@@ -373,6 +393,14 @@ export default function MapaProjetoScreen() {
     setEditHist(prev => [...prev.slice(-49), verts.map(v => ({ ...v }))])
   }, [])
 
+  // Called by CadView's PanResponder at drag start — before any position change
+  const handleDragStart = useCallback(() => {
+    setEditVerts(prev => {
+      setEditHist(h => [...h.slice(-49), prev.map(v => ({ ...v }))])
+      return prev
+    })
+  }, [])
+
   const handleVertexDrag = useCallback((i: number, lon: number, lat: number) => {
     setEditVerts(prev => {
       const next = [...prev]
@@ -534,6 +562,7 @@ export default function MapaProjetoScreen() {
             onVertexDrag={handleVertexDrag}
             onVertexDelete={handleVertexDelete}
             onMidpointAdd={handleMidpointAdd}
+            onDragStart={handleDragStart}
           />
         )}
       </View>

@@ -1,1 +1,1 @@
-export const API_URL = 'https://geo-admin-pro.vercel.app'
+export const API_URL = 'https://geoadmin-pro-production.up.railway.app'
