@@ -54,7 +54,7 @@ def _projeto_ou_404(sb, projeto_id: str) -> dict:
 @router.get("", summary="Listar todos os projetos")
 def listar_projetos():
     sb = _get_supabase()
-    res = sb.table("projetos").select("*").order("created_at", desc=True).execute()
+    res = sb.table("projetos").select("*").order("criado_em", desc=True).execute()
     return {"total": len(res.data), "projetos": res.data}
 
 
