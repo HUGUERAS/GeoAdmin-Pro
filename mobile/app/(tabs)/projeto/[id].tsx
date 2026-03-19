@@ -1,16 +1,36 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Clipboard } from 'react-native'
-import { useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Colors } from '../../../constants/Colors'
 import { API_URL } from '../../../constants/Api'
 import { StatusBadge } from '../../../components/StatusBadge'
+import { SyncBadge } from '../../../components/SyncBadge'
+import { contarPendentes } from '../../../lib/db'
+import { sincronizar } from '../../../lib/sync'
 
 export default function DetalheProjetoScreen() {
   const C = Colors.dark
   const { id } = useLocalSearchParams<{ id: string }>()
-  const [projeto, setProjeto]   = useState<any>(null)
-  const [loading, setLoading]   = useState(true)
-  const [gerando, setGerando]   = useState(false)
+  const router  = useRouter()
+  const [projeto, setProjeto]       = useState<any>(null)
+  const [loading, setLoading]       = useState(true)
+  const [gerando, setGerando]       = useState(false)
+  const [pendentes, setPendentes]   = useState(0)
+  const [sincronizando, setSinc]    = useState(false)
+
+  const atualizarPendentes = useCallback(async () => {
+    const n = await contarPendentes(id)
+    setPendentes(n)
+  }, [id])
+
+  const handleSync = async () => {
+    setSinc(true)
+    const r = await sincronizar(id)
+    await atualizarPendentes()
+    setSinc(false)
+    if (r.sincronizados > 0)
+      Alert.alert('Sincronizado', `${r.sincronizados} ponto(s) enviado(s).`)
+  }
 
   useEffect(() => {
     fetch(`${API_URL}/projetos/${id}`)
@@ -18,6 +38,7 @@ export default function DetalheProjetoScreen() {
       .then(setProjeto)
       .catch(() => Alert.alert('Erro', 'Projeto não encontrado'))
       .finally(() => setLoading(false))
+    atualizarPendentes()
   }, [id])
 
   const gerarMagicLink = async () => {
@@ -63,7 +84,10 @@ export default function DetalheProjetoScreen() {
   return (
     <ScrollView style={[s.container, { backgroundColor: C.background }]}>
       <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
-        <Text style={[s.titulo, { color: C.text }]} numberOfLines={2}>{projeto.projeto_nome}</Text>
+        <View style={s.headerRow}>
+          <Text style={[s.titulo, { color: C.text, flex: 1 }]} numberOfLines={2}>{projeto.projeto_nome}</Text>
+          <SyncBadge pendentes={pendentes} onPress={handleSync} sincronizando={sincronizando} />
+        </View>
         <View style={{ marginTop: 8 }}><StatusBadge status={projeto.status} /></View>
       </View>
 
@@ -82,6 +106,13 @@ export default function DetalheProjetoScreen() {
             <Text style={[s.campoValor, { color: C.text }]}>{valor}</Text>
           </View>
         ))}
+
+        <TouchableOpacity
+          style={[s.btn, { backgroundColor: C.card, borderColor: C.info }]}
+          onPress={() => router.push(`/(tabs)/mapa/${id}` as any)}
+        >
+          <Text style={[s.btnTxt, { color: C.info }]}>🗺 Ver no Mapa</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={[s.btn, { backgroundColor: C.card, borderColor: C.primary }]} onPress={gerarMagicLink}>
           <Text style={[s.btnTxt, { color: C.primary }]}>📱 Copiar Link do Cliente</Text>
@@ -106,6 +137,7 @@ const s = StyleSheet.create({
   container:  { flex: 1 },
   centro:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header:     { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
+  headerRow:  { flexDirection: 'row', alignItems: 'flex-start' },
   titulo:     { fontSize: 22, fontWeight: '700' },
   body:       { padding: 16 },
   campo:      { paddingVertical: 12, borderBottomWidth: 0.5 },

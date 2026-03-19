@@ -5,18 +5,18 @@ import { Colors } from '../../../constants/Colors'
 import { FerramentaBtn } from '../../../components/FerramentaBtn'
 
 const FERRAMENTAS = [
-  { id: 'inverso',    label: 'Inverso',    icone: 'arrow-right',      rota: '/calculos/inverso' },
-  { id: 'area',       label: 'Área',       icone: 'square',           rota: null },
-  { id: 'subdivisao', label: 'Subdivisão', icone: 'scissors',         rota: null },
-  { id: 'conversao',  label: 'Conversão',  icone: 'refresh-cw',       rota: null },
-  { id: 'deflexao',   label: 'Deflexão',   icone: 'corner-down-right',rota: null },
-  { id: 'intersecao', label: 'Interseção', icone: 'git-merge',        rota: null },
-  { id: 'distancia',  label: 'Dist. P-L',  icone: 'move',             rota: null },
-  { id: 'rotacao',    label: 'Rotação',    icone: 'rotate-cw',        rota: null },
-  { id: 'media',      label: 'Média Pts',  icone: 'target',           rota: null },
-  { id: 'irradiacao', label: 'Irradiação', icone: 'navigation',       rota: null },
-  { id: 'angular',    label: 'Angular',    icone: 'activity',         rota: null },
-  { id: 'mais',       label: '+ Mais',     icone: 'grid',             rota: null },
+  { id: 'inverso',    label: 'Inverso',       icone: 'arrow-right',       rota: '/calculos/inverso' },
+  { id: 'rag',        label: 'Normas INCRA',  icone: 'book-open',         rota: '/calculos/rag' },
+  { id: 'bluetooth',  label: 'GNSS BT',       icone: 'radio',             rota: '/bluetooth' },
+  { id: 'area',       label: 'Área',          icone: 'square',            rota: null },
+  { id: 'subdivisao', label: 'Subdivisão',    icone: 'scissors',          rota: null },
+  { id: 'conversao',  label: 'Conversão',     icone: 'refresh-cw',        rota: null },
+  { id: 'deflexao',   label: 'Deflexão',      icone: 'corner-down-right', rota: null },
+  { id: 'intersecao', label: 'Interseção',    icone: 'git-merge',         rota: null },
+  { id: 'distancia',  label: 'Dist. P-L',     icone: 'move',              rota: null },
+  { id: 'rotacao',    label: 'Rotação',       icone: 'rotate-cw',         rota: null },
+  { id: 'media',      label: 'Média Pts',     icone: 'target',            rota: null },
+  { id: 'irradiacao', label: 'Irradiação',    icone: 'navigation',        rota: null },
 ]
 
 export default function CalculosScreen() {

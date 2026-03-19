@@ -1,4 +1,3 @@
-// mobile/app/(tabs)/mapa/index.tsx
 import { View, Text, StyleSheet } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
@@ -12,8 +11,8 @@ export default function MapaScreen() {
       </View>
       <View style={s.centro}>
         <Feather name="map" size={48} color={C.muted} />
-        <Text style={[s.msg, { color: C.muted }]}>Vista CAD</Text>
-        <Text style={[s.sub, { color: C.muted }]}>Disponível na Fase 2</Text>
+        <Text style={[s.msg, { color: C.muted }]}>Nenhum projeto selecionado</Text>
+        <Text style={[s.sub, { color: C.muted }]}>Abra um projeto e toque em{'\n'}"Ver no Mapa"</Text>
       </View>
     </View>
   )
@@ -24,6 +23,6 @@ const s = StyleSheet.create({
   header:    { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
   titulo:    { fontSize: 24, fontWeight: '700' },
   centro:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  msg:       { fontSize: 18, fontWeight: '600' },
-  sub:       { fontSize: 14 },
+  msg:       { fontSize: 16, fontWeight: '600' },
+  sub:       { fontSize: 13, textAlign: 'center', lineHeight: 20 },
 })

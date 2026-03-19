@@ -83,10 +83,10 @@ def buscar_projeto(projeto_id: str):
             projeto["cliente_nome"] = cli.data.get("nome", "")
             projeto.setdefault("municipio", cli.data.get("municipio", ""))
 
-    # Pontos do projeto
+    # Pontos do projeto (com coordenadas geográficas via view)
     pontos_res = (
-        sb.table("pontos")
-        .select("id, nome, altitude_m, descricao, codigo")
+        sb.table("vw_pontos_geo")
+        .select("id, nome, altitude_m, descricao, codigo, lon, lat")
         .eq("projeto_id", projeto_id)
         .execute()
     )
