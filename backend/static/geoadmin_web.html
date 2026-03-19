@@ -614,7 +614,7 @@ tr { cursor: pointer; transition: background .1s; }
       <div class="topbar-actions">
         <div class="search-box">
           <span>🔍</span>
-          <input type="text" placeholder="Buscar projeto..." oninput="filtrarProjetos(this.value)">
+          <input type="text" id="busca-projetos" name="busca" placeholder="Buscar projeto..." oninput="filtrarProjetos(this.value)" autocomplete="off">
         </div>
         <button class="btn btn-ghost" onclick="carregarProjetos()">↺ Atualizar</button>
       </div>
