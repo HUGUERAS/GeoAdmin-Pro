@@ -16,6 +16,7 @@ from routes.projetos import router as projetos_router
 from routes.documentos import router as docs_router
 from routes.pontos import router as pontos_router
 from routes.rag import router as rag_router
+from routes.perimetros import router as perimetros_router
 
 app = FastAPI(title="GeoAdmin Pro - Backend MVP")
 
@@ -36,6 +37,7 @@ app.include_router(metrica_router)
 app.include_router(docs_router)
 app.include_router(pontos_router)
 app.include_router(rag_router)
+app.include_router(perimetros_router)
 
 
 class InversoRequest(BaseModel):

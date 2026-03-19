@@ -549,6 +549,10 @@ tr { cursor: pointer; transition: background .1s; }
 #mapa-empty { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: var(--muted); background: var(--bg); z-index: 10; }
 #mapa-empty.visivel { display: flex; }
 .mapa-toolbar { display: flex; align-items: center; gap: 8px; }
+#edit-toolbar { display: none; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+#edit-toolbar.ativo { display: flex; }
+.edit-tag { font-size: 10px; font-weight: 700; letter-spacing: .1em; color: var(--orange); background: var(--ot); border: 1px solid var(--orange2); border-radius: 5px; padding: 3px 8px; }
+.edit-sep { width: 1px; height: 18px; background: var(--border); }
 .layer-toggle { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
 .layer-toggle input { accent-color: var(--orange); cursor: pointer; }
 .leaflet-container { background: var(--bg) !important; }
@@ -683,6 +687,9 @@ tr { cursor: pointer; transition: background .1s; }
             <div class="action-list">
               <button class="action-btn" onclick="abrirMapa()">
                 <span class="action-icon">🗺️</span> Ver no Mapa
+              </button>
+              <button class="action-btn" onclick="entrarModoEdit()">
+                <span class="action-icon">✏️</span> Editar Perímetro
               </button>
               <button class="action-btn primary" onclick="gerarMagicLink()">
                 <span class="action-icon">📱</span> Gerar Link para Cliente
@@ -904,7 +911,7 @@ tr { cursor: pointer; transition: background .1s; }
         <button class="btn btn-ghost" id="btn-voltar-mapa" onclick="voltarMapa()" style="display:none;padding:7px 10px">← Voltar</button>
         <span class="topbar-title" id="mapa-titulo">Mapa</span>
       </div>
-      <div class="topbar-actions mapa-toolbar">
+      <div class="topbar-actions mapa-toolbar" id="mapa-toolbar">
         <button class="btn btn-ghost" id="btn-sat" onclick="setTipoMapa('sat')">🛰 Satélite</button>
         <button class="btn btn-ghost" id="btn-cad" onclick="setTipoMapa('cad')">📐 CAD</button>
         <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
@@ -912,6 +919,18 @@ tr { cursor: pointer; transition: background .1s; }
         <label class="layer-toggle"><input type="checkbox" id="lyr-poligono" checked onchange="toggleCamada()"> Polígono</label>
         <label class="layer-toggle"><input type="checkbox" id="lyr-rotulos"  checked onchange="toggleCamada()"> Rótulos</label>
       </div>
+    </div>
+    <div id="edit-toolbar">
+      <span class="edit-tag">✏️ EDITANDO</span>
+      <div class="edit-sep"></div>
+      <button id="etool-mover"     class="btn btn-primary" onclick="setEditTool('mover')"     style="font-size:12px;padding:5px 10px">↔ Mover</button>
+      <button id="etool-adicionar" class="btn btn-ghost"   onclick="setEditTool('adicionar')" style="font-size:12px;padding:5px 10px">+ Ponto</button>
+      <button id="etool-deletar"   class="btn btn-ghost"   onclick="setEditTool('deletar')"   style="font-size:12px;padding:5px 10px">✕ Deletar</button>
+      <div class="edit-sep"></div>
+      <button class="btn btn-ghost" onclick="desfazerEdit()" style="font-size:12px;padding:5px 10px" title="Desfazer">↩ Desfazer</button>
+      <div class="edit-sep"></div>
+      <button class="btn btn-ghost" style="color:var(--muted);font-size:12px;padding:5px 10px" onclick="cancelarEdit()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdit()" style="font-size:12px;padding:5px 12px;background:var(--green);border-color:var(--green)">💾 Salvar</button>
     </div>
     <div id="mapa-wrap">
       <div id="mapa-leaflet"></div>
@@ -1446,6 +1465,228 @@ function niceIntervalWeb(range, ticks = 5) {
   const mag = Math.pow(10, Math.floor(Math.log10(raw)))
   const f = raw / mag
   return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag
+}
+
+// ── EDIÇÃO DE PERÍMETRO ──
+let editMode     = false
+let editTool     = 'mover'
+let editVertices = []  // [{lon, lat, nome}]
+let editHistory  = []  // stack undo
+let editLayers   = { original: null, poligono: null, marcadores: [], midpoints: [], medidas: [] }
+
+async function entrarModoEdit() {
+  if (!projetoAtual) return
+  const pontos = (projetoAtual.pontos || []).filter(p => p.lon != null && p.lat != null)
+  if (!pontos.length) { toast('Projeto sem pontos com coordenadas', 'error'); return }
+
+  editVertices = pontos.map(p => ({ lon: p.lon, lat: p.lat, nome: p.nome }))
+  editHistory  = []
+  editTool     = 'mover'
+  editMode     = true
+
+  // Salvar original (ignora se já existe)
+  try {
+    await fetch(`${API_URL}/perimetros/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projeto_id: projetoAtual.id,
+        nome: projetoAtual.projeto_nome + ' — original',
+        tipo: 'original',
+        vertices: editVertices,
+      })
+    })
+  } catch(e) { console.warn('Salvar original:', e) }
+
+  // Abrir mapa e mostrar edit toolbar
+  abrirMapa()
+  setTimeout(() => {
+    document.getElementById('mapa-toolbar').style.display = 'none'
+    document.getElementById('btn-voltar-mapa').style.display = 'none'
+    document.getElementById('edit-toolbar').classList.add('ativo')
+    setEditTool('mover')
+    renderEditLayers()
+  }, 250)
+}
+
+function setEditTool(tool) {
+  editTool = tool
+  ;['mover', 'adicionar', 'deletar'].forEach(t => {
+    document.getElementById('etool-' + t).className =
+      'btn ' + (t === tool ? 'btn-primary' : 'btn-ghost')
+    document.getElementById('etool-' + t).style.fontSize = '12px'
+    document.getElementById('etool-' + t).style.padding  = '5px 10px'
+  })
+  renderEditLayers()
+}
+
+function pushHistEdit() {
+  editHistory.push(editVertices.map(v => ({ ...v })))
+  if (editHistory.length > 50) editHistory.shift()
+}
+
+function desfazerEdit() {
+  if (!editHistory.length) { toast('Nada para desfazer', ''); return }
+  editVertices = editHistory.pop()
+  renderEditLayers()
+}
+
+function limparEditLayers() {
+  if (editLayers.original) { mapaLeaflet.removeLayer(editLayers.original); editLayers.original = null }
+  if (editLayers.poligono) { mapaLeaflet.removeLayer(editLayers.poligono); editLayers.poligono = null }
+  editLayers.marcadores.forEach(m => mapaLeaflet.removeLayer(m)); editLayers.marcadores = []
+  editLayers.midpoints.forEach(m => mapaLeaflet.removeLayer(m)); editLayers.midpoints = []
+  editLayers.medidas.forEach(m => mapaLeaflet.removeLayer(m));   editLayers.medidas   = []
+}
+
+function renderEditLayers() {
+  iniciarMapa()
+  limparEditLayers()
+  if (!editVertices.length) return
+
+  const n = editVertices.length
+
+  // Camada original — cinza tracejado (pontos originais do projeto)
+  const origPontos = (projetoAtual.pontos || []).filter(p => p.lon != null && p.lat != null)
+  if (origPontos.length > 1) {
+    const coords = [...origPontos.map(p => [p.lat, p.lon]), [origPontos[0].lat, origPontos[0].lon]]
+    editLayers.original = L.polyline(coords, {
+      color: '#666460', weight: 1.5, dashArray: '6,4', opacity: 0.5
+    }).addTo(mapaLeaflet)
+  }
+
+  // Polígono editado (laranja)
+  if (n > 1) {
+    const coords = [...editVertices.map(v => [v.lat, v.lon]), [editVertices[0].lat, editVertices[0].lon]]
+    editLayers.poligono = L.polyline(coords, {
+      color: '#EF9F27', weight: 2.5, opacity: 0.9
+    }).addTo(mapaLeaflet)
+  }
+
+  // Midpoints (ferramenta + ponto)
+  if (editTool === 'adicionar' && n >= 2) {
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n
+      const v = editVertices[i], vj = editVertices[j]
+      const midLat = (v.lat + vj.lat) / 2, midLon = (v.lon + vj.lon) / 2
+      const mpIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:10px;height:10px;border-radius:50%;background:#2a2a28;border:2px solid #EF9F27;cursor:pointer;opacity:.85"></div>',
+        iconSize: [10, 10], iconAnchor: [5, 5],
+      })
+      const mp = L.marker([midLat, midLon], { icon: mpIcon, title: 'Adicionar vértice' })
+      ;(idx => {
+        mp.on('click', () => {
+          pushHistEdit()
+          editVertices.splice(idx + 1, 0, { lon: midLon, lat: midLat, nome: '' })
+          renderEditLayers()
+        })
+      })(i)
+      mp.addTo(mapaLeaflet)
+      editLayers.midpoints.push(mp)
+    }
+  }
+
+  // Marcadores de vértice
+  editVertices.forEach((v, i) => {
+    const isDel = editTool === 'deletar'
+    const icon  = L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:#EF9F27;border:2px solid #fff;cursor:${isDel ? 'no-drop' : 'grab'};box-shadow:0 0 6px rgba(0,0,0,.7)"></div>`,
+      iconSize: [14, 14], iconAnchor: [7, 7],
+    })
+    const m = L.marker([v.lat, v.lon], {
+      icon,
+      draggable: editTool === 'mover',
+      title: v.nome || `Vértice ${i + 1}`,
+    })
+    m.on('dragstart', () => pushHistEdit())
+    m.on('dragend', e => {
+      const ll = e.target.getLatLng()
+      editVertices[i] = { ...editVertices[i], lon: ll.lng, lat: ll.lat }
+      renderEditLayers()
+    })
+    m.on('click', () => {
+      if (editTool !== 'deletar') return
+      if (n <= 3) { toast('Mínimo de 3 vértices', 'error'); return }
+      pushHistEdit()
+      editVertices.splice(i, 1)
+      renderEditLayers()
+    })
+    m.addTo(mapaLeaflet)
+    editLayers.marcadores.push(m)
+  })
+
+  // Medidas por aresta
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    const v = editVertices[i], vj = editVertices[j]
+    const dist = haversineDist(v.lat, v.lon, vj.lat, vj.lon)
+    const az   = calcAzimute(v.lat, v.lon, vj.lat, vj.lon)
+    const midLat = (v.lat + vj.lat) / 2, midLon = (v.lon + vj.lon) / 2
+    const medIcon = L.divIcon({
+      className: '',
+      html: `<div style="background:rgba(17,17,16,.88);border:1px solid #333330;border-radius:4px;padding:2px 7px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#e8e6de;white-space:nowrap;pointer-events:none;line-height:1.5">${dist.toFixed(2)}m<br><span style="color:#7a7870">${az}</span></div>`,
+      iconSize: [90, 30], iconAnchor: [45, 15],
+    })
+    const med = L.marker([midLat, midLon], { icon: medIcon, interactive: false })
+    med.addTo(mapaLeaflet)
+    editLayers.medidas.push(med)
+  }
+}
+
+async function salvarEdit() {
+  try {
+    const res = await fetch(`${API_URL}/perimetros/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projeto_id: projetoAtual.id,
+        nome: projetoAtual.projeto_nome + ' — editado',
+        tipo: 'editado',
+        vertices: editVertices,
+      })
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    toast(`Perímetro salvo — ${editVertices.length} vértices`, 'success')
+    sairModoEdit()
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'error')
+  }
+}
+
+function cancelarEdit() {
+  sairModoEdit()
+  toast('Edição cancelada', '')
+}
+
+function sairModoEdit() {
+  editMode = false
+  limparEditLayers()
+  document.getElementById('edit-toolbar').classList.remove('ativo')
+  document.getElementById('mapa-toolbar').style.display = ''
+  document.getElementById('btn-voltar-mapa').style.display = 'flex'
+  renderMapa(pontosMapaAtual)
+}
+
+function haversineDist(lat1, lon1, lat2, lon2) {
+  const R = 6378137, rad = Math.PI / 180
+  const dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dLon/2)**2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
+function calcAzimute(lat1, lon1, lat2, lon2) {
+  const rad = Math.PI / 180
+  const dLon = (lon2 - lon1) * rad
+  const φ1 = lat1 * rad, φ2 = lat2 * rad
+  const y = Math.sin(dLon) * Math.cos(φ2)
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLon)
+  let az = Math.atan2(y, x) * 180 / Math.PI
+  if (az < 0) az += 360
+  const g = Math.floor(az), mf = (az - g) * 60, m = Math.floor(mf)
+  const s = Math.round((mf - m) * 60)
+  return `${g}°${String(m).padStart(2,'0')}'${String(s).padStart(2,'0')}"`
 }
 
 // ── TOAST ──
