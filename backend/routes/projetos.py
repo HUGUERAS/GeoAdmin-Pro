@@ -54,7 +54,7 @@ def _projeto_ou_404(sb, projeto_id: str) -> dict:
 @router.get("", summary="Listar todos os projetos")
 def listar_projetos():
     sb = _get_supabase()
-    res = sb.table("projetos").select("*").order("criado_em", desc=True).execute()
+    res = sb.table("vw_projetos_completo").select("*").order("criado_em", desc=True).execute()
     return {"total": len(res.data), "projetos": res.data}
 
 
@@ -73,11 +73,21 @@ def buscar_projeto(projeto_id: str):
     sb = _get_supabase()
     projeto = _projeto_ou_404(sb, projeto_id)
 
+    # Aliases para o app mobile
+    projeto["projeto_nome"] = projeto.get("nome", "")
+
+    # Busca nome do cliente
+    if projeto.get("cliente_id"):
+        cli = sb.table("clientes").select("nome, municipio").eq("id", projeto["cliente_id"]).maybe_single().execute()
+        if cli.data:
+            projeto["cliente_nome"] = cli.data.get("nome", "")
+            projeto.setdefault("municipio", cli.data.get("municipio", ""))
+
+    # Pontos do projeto
     pontos_res = (
         sb.table("pontos")
-        .select("id, nome, altitude, descricao, camada, created_at")
+        .select("id, nome, altitude_m, descricao, codigo")
         .eq("projeto_id", projeto_id)
-        .order("created_at")
         .execute()
     )
     projeto["pontos"] = pontos_res.data
