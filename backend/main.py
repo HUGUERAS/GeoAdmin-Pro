@@ -2,6 +2,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Dict, Any
 
@@ -16,6 +17,11 @@ from routes.pontos import router as pontos_router
 from routes.rag import router as rag_router
 
 app = FastAPI(title="GeoAdmin Pro - Backend MVP")
+
+_static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+if os.path.isdir(_static_dir):
+  app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+
 app.include_router(projetos_router)
 app.include_router(exportacao_router)
 app.include_router(metrica_router)
