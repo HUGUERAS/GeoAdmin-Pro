@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoAdmin Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #111110;
+  --bg2:      #1a1a18;
+  --card:     #222220;
+  --card2:    #2a2a28;
+  --border:   #333330;
+  --orange:   #EF9F27;
+  --orange2:  #BA7517;
+  --ot:       #2a1a00;
+  --text:     #e8e6de;
+  --muted:    #7a7870;
+  --muted2:   #555350;
+  --green:    #1D9E75;
+  --blue:     #378ADD;
+  --purple:   #7F77DD;
+  --red:      #E24B4A;
+  --gray:     #666460;
+  --r:        10px;
+  --mono:     'IBM Plex Mono', monospace;
+  --sans:     'Syne', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo-mark {
+  width: 36px; height: 36px;
+  background: var(--orange);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ot);
+}
+
+.logo h1 { font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
+.logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.nav { padding: 12px 8px; flex: 1; overflow-y: auto; }
+
+.nav-section {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  padding: 12px 12px 6px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 7px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: left;
+  margin-bottom: 2px;
+}
+
+.nav-btn:hover { background: var(--card); color: var(--text); }
+.nav-btn.ativo { background: var(--ot); color: var(--orange); }
+.nav-btn.ativo .nav-icon { color: var(--orange); }
+.nav-icon { font-size: 15px; width: 18px; text-align: center; }
+
+.sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--card);
+  border-radius: 7px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+  transition: background .3s;
+}
+.status-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ── MAIN ── */
+.main {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topbar-title { font-size: 16px; font-weight: 700; }
+
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+.btn {
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: none;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.btn-primary { background: var(--orange); color: var(--ot); }
+.btn-primary:hover { background: var(--orange2); }
+.btn-ghost   { background: var(--card); color: var(--text); }
+.btn-ghost:hover { background: var(--card2); }
+.btn-danger  { background: rgba(226,75,74,.15); color: var(--red); border: 1px solid rgba(226,75,74,.3); }
+
+.content { padding: 28px; flex: 1; }
+
+/* ── VIEWS ── */
+.view { display: none; }
+.view.ativa { display: block; }
+
+/* ── CARDS ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px;
+}
+
+.stat-label { font-size: 11px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
+.stat-value { font-size: 28px; font-weight: 800; font-family: var(--mono); color: var(--text); }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.stat-orange { border-color: rgba(239,159,39,.3); }
+.stat-orange .stat-value { color: var(--orange); }
+
+/* ── TABLE ── */
+.table-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-title { font-size: 14px; font-weight: 700; }
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 12px;
+}
+
+.search-box input {
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  width: 180px;
+}
+
+.search-box input::placeholder { color: var(--muted); }
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+td {
+  padding: 12px 20px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(51,51,48,.5);
+  vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--card2); }
+tr { cursor: pointer; transition: background .1s; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.nome-proj { font-weight: 600; }
+.pts { font-family: var(--mono); font-size: 12px; color: var(--orange); }
+.mun { font-size: 12px; color: var(--muted); }
+
+/* ── DETALHE ── */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+}
+
+.detail-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.detail-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-card-title { font-size: 13px; font-weight: 700; }
+
+.fields { padding: 4px 0; }
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(51,51,48,.4);
+  gap: 20px;
+}
+.field-row:last-child { border-bottom: none; }
+.field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; flex-shrink: 0; }
+.field-value { font-size: 13px; font-weight: 500; text-align: right; }
+.field-mono  { font-family: var(--mono); font-size: 12px; }
+
+.action-list { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  width: 100%;
+  text-align: left;
+}
+
+.action-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--ot); }
+.action-btn.primary { background: var(--orange); border-color: var(--orange); color: var(--ot); }
+.action-btn.primary:hover { background: var(--orange2); }
+.action-icon { font-size: 16px; }
+
+/* ── CALCULOS ── */
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.tool-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tool-card:hover { border-color: var(--orange); background: var(--ot); }
+.tool-card.ativo { border-color: var(--orange); }
+.tool-card.desativado { opacity: .4; cursor: not-allowed; }
+.tool-card.desativado:hover { border-color: var(--border); background: var(--card); }
+
+.tool-icon { font-size: 24px; }
+.tool-name { font-size: 14px; font-weight: 700; }
+.tool-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+/* ── INVERSO FORM ── */
+.calc-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.form-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.form-section {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--orange);
+  padding: 14px 20px 8px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(239,159,39,.04);
+}
+
+.form-field { padding: 12px 20px; border-bottom: 1px solid rgba(51,51,48,.4); }
+.form-field:last-child { border-bottom: none; }
+.form-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+
+.form-input {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+
+.form-input:focus { border-color: var(--orange); }
+.form-input::placeholder { color: var(--muted2); }
+
+.resultado-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.res-section {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.res-body { padding: 20px; }
+
+.res-valor-big {
+  font-family: var(--mono);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--orange);
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.res-label-big { font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+.res-divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+.calc-actions { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all .25s;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { border-color: var(--green); }
+.toast.error   { border-color: var(--red); }
+
+/* ── LOADING ── */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty {
+  text-align: center;
+  padding: 60px;
+  color: var(--muted);
+}
+
+.empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .5; }
+.empty-msg  { font-size: 14px; font-weight: 600; }
+.empty-sub  { font-size: 12px; margin-top: 4px; }
+
+/* ── CONFIG ── */
+.config-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(51,51,48,.4);
+  gap: 20px;
+}
+
+.config-info .config-label { font-size: 13px; font-weight: 600; }
+.config-info .config-desc  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.config-input {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+  width: 300px;
+  transition: border-color .15s;
+}
+
+.config-input:focus { border-color: var(--orange); }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">G</div>
+    <h1>GeoAdmin Pro</h1>
+    <p>Regularização Fundiária</p>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section">Principal</div>
+    <button class="nav-btn ativo" onclick="ir('projetos')">
+      <span class="nav-icon">📁</span> Projetos
+    </button>
+    <button class="nav-btn" onclick="ir('calculos')">
+      <span class="nav-icon">📐</span> Cálculos
+    </button>
+    <button class="nav-btn" onclick="ir('documentos')">
+      <span class="nav-icon">📄</span> Documentos
+    </button>
+    <button class="nav-btn" onclick="ir('metrica')">
+      <span class="nav-icon">📤</span> Exportar
+    </button>
+    <div class="nav-section">Sistema</div>
+    <button class="nav-btn" onclick="ir('config')">
+      <span class="nav-icon">⚙️</span> Configurações
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="api-status">
+      <div class="status-dot" id="api-dot"></div>
+      <span id="api-label">Verificando API...</span>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ── PROJETOS ── -->
+  <div id="view-projetos" class="view ativa">
+    <div class="topbar">
+      <span class="topbar-title">Projetos</span>
+      <div class="topbar-actions">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" placeholder="Buscar projeto..." oninput="filtrarProjetos(this.value)">
+        </div>
+        <button class="btn btn-ghost" onclick="carregarProjetos()">↺ Atualizar</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stats-grid" id="stats-projetos">
+        <div class="stat-card">
+          <div class="stat-label">Total</div>
+          <div class="stat-value" id="stat-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Em Medição</div>
+          <div class="stat-value" id="stat-medicao">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Aprovados</div>
+          <div class="stat-value" id="stat-aprovado" style="color:var(--green)">—</div>
+        </div>
+        <div class="stat-card stat-orange">
+          <div class="stat-label">Total de Pontos</div>
+          <div class="stat-value" id="stat-pontos">—</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Todos os projetos</span>
+        </div>
+        <div id="tabela-projetos">
+          <div class="loading"><div class="spinner"></div>Carregando projetos...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DETALHE PROJETO ── -->
+  <div id="view-detalhe" class="view">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn btn-ghost" onclick="ir('projetos')" style="padding:7px 10px">← Voltar</button>
+        <span class="topbar-title" id="detalhe-titulo">Projeto</span>
+      </div>
+      <div class="topbar-actions">
+        <span id="detalhe-badge"></span>
+      </div>
+    </div>
+    <div class="content">
+      <div class="detail-grid">
+        <div>
+          <div class="detail-card" style="margin-bottom:16px">
+            <div class="detail-card-header"><span class="detail-card-title">Dados do Imóvel</span></div>
+            <div class="fields" id="detalhe-fields"></div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-card-header"><span class="detail-card-title">Pontos coletados</span><span id="detalhe-total-pts" style="font-size:12px;color:var(--orange);font-family:var(--mono)"></span></div>
+            <div id="detalhe-pontos">
+              <div class="empty"><div class="empty-icon">📍</div><div class="empty-msg">Sem pontos</div><div class="empty-sub">Colete pontos com o CHC i73+ no campo</div></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="detail-card">
+            <div class="detail-card-header"><span class="detail-card-title">Ações</span></div>
+            <div class="action-list">
+              <button class="action-btn primary" onclick="gerarMagicLink()">
+                <span class="action-icon">📱</span> Gerar Link para Cliente
+              </button>
+              <button class="action-btn" onclick="gerarDocumentos()">
+                <span class="action-icon">📄</span> Gerar Documentos GPRF
+              </button>
+              <button class="action-btn" onclick="exportarTxt()">
+                <span class="action-icon">📤</span> Exportar TXT Métrica
+              </button>
+              <button class="action-btn" onclick="exportarKml()">
+                <span class="action-icon">🗺️</span> Exportar KML
+              </button>
+              <button class="action-btn" onclick="exportarDxf()">
+                <span class="action-icon">📐</span> Exportar DXF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CÁLCULOS ── -->
+  <div id="view-calculos" class="view">
+    <div class="topbar">
+      <span class="topbar-title" id="calc-titulo">Ferramentas de Cálculo</span>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost" id="btn-voltar-calc" onclick="voltarCalc()" style="display:none">← Voltar</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Grade de ferramentas -->
+      <div id="calc-grade">
+        <div class="tools-grid">
+          <div class="tool-card ativo" onclick="abrirCalc('inverso')">
+            <div class="tool-icon">↗</div>
+            <div class="tool-name">Inverso</div>
+            <div class="tool-desc">Distância e azimute entre dois pontos UTM</div>
+          </div>
+          <div class="tool-card desativado">
+            <div class="tool-icon">⬛</div>
+            <div class="tool-name">Área</div>
+            <div class="tool-desc">Cálculo de área e perímetro de polígono</div>
+          </div>
+          <div class="tool-card desativado">
+            <div class="tool-icon">✂️</div>
+            <div class="tool-name">Subdivisão</div>
+            <div class="tool-desc">Dividir área em partes iguais ou por percentual</div>
+          </div>
+          <div class="tool-card desativado">
+            <div class="tool-icon">🔄</div>
+            <div class="tool-name">Conversão</div>
+            <div class="tool-desc">GMS ↔ decimal, UTM ↔ geográfico</div>
+          </div>
+          <div class="tool-card desativado">
+            <div class="tool-icon">↪</div>
+            <div class="tool-name">Deflexão</div>
+            <div class="tool-desc">Ângulo de deflexão entre segmentos</div>
+          </div>
+          <div class="tool-card desativado">
+            <div class="tool-icon">✖</div>
+            <div class="tool-name">Interseção</div>
+            <div class="tool-desc">Ponto de interseção entre duas retas</div>
+          </div>
+          <div class="tool-card desativado">
+            <div class="tool-icon">📏</div>
+            <div class="tool-name">Dist. P-L</div>
+            <div class="tool-desc">Distância de ponto a linha</div>
+          </div>
+          <div class="tool-card desativado">
+            <div class="tool-icon">🔁</div>
+            <div class="tool-name">Rotação</div>
+            <div class="tool-desc">Rotacionar conjunto de pontos</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);padding:4px 0">
+          Laranja = disponível · Demais ferramentas em desenvolvimento
+        </div>
+      </div>
+
+      <!-- Tela de Inverso -->
+      <div id="calc-inverso" style="display:none">
+        <div class="calc-layout">
+          <div class="form-card">
+            <div class="form-section">Ponto 1</div>
+            <div class="form-field">
+              <div class="form-label">Nome</div>
+              <input class="form-input" id="p1-nome" placeholder="P01">
+            </div>
+            <div class="form-field">
+              <div class="form-label">Norte (m)</div>
+              <input class="form-input" id="p1-norte" placeholder="7395000.000000" type="number" step="0.000001">
+            </div>
+            <div class="form-field">
+              <div class="form-label">Este (m)</div>
+              <input class="form-input" id="p1-este" placeholder="313500.000000" type="number" step="0.000001">
+            </div>
+            <div class="calc-actions">
+              <button class="btn btn-ghost" onclick="carregarGabarito()">Gabarito</button>
+              <button class="btn btn-ghost" onclick="limparInverso()">Limpar</button>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-section">Ponto 2</div>
+            <div class="form-field">
+              <div class="form-label">Nome</div>
+              <input class="form-input" id="p2-nome" placeholder="P02">
+            </div>
+            <div class="form-field">
+              <div class="form-label">Norte (m)</div>
+              <input class="form-input" id="p2-norte" placeholder="7395400.000000" type="number" step="0.000001">
+            </div>
+            <div class="form-field">
+              <div class="form-label">Este (m)</div>
+              <input class="form-input" id="p2-este" placeholder="313800.000000" type="number" step="0.000001">
+            </div>
+            <div class="calc-actions">
+              <button class="btn btn-primary" onclick="calcularInverso()">Calcular →</button>
+            </div>
+          </div>
+
+          <div class="resultado-card">
+            <div class="res-section">Resultado</div>
+            <div class="res-body" id="res-inverso">
+              <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">
+                Preencha os pontos e clique em Calcular
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DOCUMENTOS ── -->
+  <div id="view-documentos" class="view">
+    <div class="topbar">
+      <span class="topbar-title">Documentos GPRF</span>
+    </div>
+    <div class="content">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Selecione um projeto para gerar documentos</span>
+        </div>
+        <div id="tabela-docs">
+          <div class="empty"><div class="empty-icon">📄</div><div class="empty-msg">Acesse um projeto</div><div class="empty-sub">Vá em Projetos → selecione um → clique em Gerar Documentos</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EXPORTAR ── -->
+  <div id="view-metrica" class="view">
+    <div class="topbar">
+      <span class="topbar-title">Exportar para Métrica TOPO</span>
+    </div>
+    <div class="content">
+      <div class="detail-card" style="max-width:600px">
+        <div class="detail-card-header"><span class="detail-card-title">Gerar TXT manual</span></div>
+        <div style="padding:20px">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+            Cole os pontos abaixo no formato <code style="font-family:var(--mono);background:var(--bg2);padding:2px 6px;border-radius:4px">nome,norte,este,cota</code> — um por linha.
+          </p>
+          <textarea
+            id="pontos-txt"
+            style="width:100%;height:140px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:var(--mono);font-size:12px;color:var(--text);outline:none;resize:vertical"
+            placeholder="P01,7395000.0,313500.0,1172.0&#10;P02,7395000.0,313800.0,1171.5&#10;P03,7395400.0,313800.0,1173.2"></textarea>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input class="form-input" id="nome-projeto-txt" placeholder="Nome do projeto" style="flex:1">
+            <input class="form-input" id="job-txt" placeholder="Número do job" style="width:180px">
+          </div>
+          <button class="btn btn-primary" style="margin-top:12px;width:100%;justify-content:center" onclick="gerarTxt()">
+            📥 Baixar TXT para Métrica
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONFIG ── -->
+  <div id="view-config" class="view">
+    <div class="topbar">
+      <span class="topbar-title">Configurações</span>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="salvarConfig()">Salvar</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="detail-card" style="max-width:640px">
+        <div class="detail-card-header"><span class="detail-card-title">Conexão com o Backend</span></div>
+        <div>
+          <div class="config-row">
+            <div class="config-info">
+              <div class="config-label">URL do Backend</div>
+              <div class="config-desc">Endereço do servidor FastAPI</div>
+            </div>
+            <input class="config-input" id="cfg-api-url" value="http://127.0.0.1:8000">
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-card" style="max-width:640px;margin-top:16px">
+        <div class="detail-card-header"><span class="detail-card-title">Status da API</span></div>
+        <div style="padding:20px">
+          <button class="btn btn-ghost" onclick="testarConexao()" style="margin-bottom:16px">Testar conexão</button>
+          <pre id="api-info" style="font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--bg2);padding:14px;border-radius:8px;line-height:1.6;white-space:pre-wrap">Clique em "Testar conexão"</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──
+let API_URL = localStorage.getItem('api_url') || 'http://127.0.0.1:8000'
+document.getElementById('cfg-api-url').value = API_URL
+
+let projetoAtual = null
+let todosProjetos = []
+
+// ── NAVEGAÇÃO ──
+function ir(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('ativa'))
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('ativo'))
+  document.getElementById('view-' + view).classList.add('ativa')
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.toLowerCase().includes(view.split('-')[0].toLowerCase()))
+      b.classList.add('ativo')
+  })
+  if (view === 'projetos') carregarProjetos()
+}
+
+// ── STATUS API ──
+async function checarApi() {
+  try {
+    const r = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(3000) })
+    const ok = r.ok
+    document.getElementById('api-dot').className = 'status-dot' + (ok ? ' ok' : '')
+    document.getElementById('api-label').textContent = ok ? 'API conectada' : 'API com erro'
+  } catch {
+    document.getElementById('api-dot').className = 'status-dot'
+    document.getElementById('api-label').textContent = 'API offline'
+  }
+}
+
+async function testarConexao() {
+  const url = document.getElementById('cfg-api-url').value
+  const el = document.getElementById('api-info')
+  el.textContent = 'Testando...'
+  try {
+    const r = await fetch(`${url}/health`)
+    const d = await r.json()
+    el.textContent = JSON.stringify(d, null, 2)
+    document.getElementById('api-dot').className = 'status-dot ok'
+    document.getElementById('api-label').textContent = 'API conectada'
+    toast('API conectada com sucesso', 'success')
+  } catch(e) {
+    el.textContent = `Erro: ${e.message}\n\nVerifique:\n• Backend rodando? (uvicorn main:app --reload)\n• URL correta? (${url})\n• Firewall bloqueando?`
+    toast('Não foi possível conectar', 'error')
+  }
+}
+
+function salvarConfig() {
+  API_URL = document.getElementById('cfg-api-url').value
+  localStorage.setItem('api_url', API_URL)
+  toast('Configurações salvas', 'success')
+  checarApi()
+}
+
+// ── PROJETOS ──
+const STATUS_COR = {
+  medicao:     '#378ADD',
+  montagem:    '#EF9F27',
+  protocolado: '#7F77DD',
+  aprovado:    '#1D9E75',
+  finalizado:  '#666460',
+}
+const STATUS_LABEL = {
+  medicao:'Medição', montagem:'Montagem', protocolado:'Protocolado',
+  aprovado:'Aprovado', finalizado:'Finalizado',
+}
+
+function badgeHtml(status) {
+  const cor = STATUS_COR[status] || '#666'
+  const label = STATUS_LABEL[status] || status
+  return `<span class="badge" style="color:${cor};border-color:${cor}30;background:${cor}15">${label}</span>`
+}
+
+async function carregarProjetos() {
+  document.getElementById('tabela-projetos').innerHTML =
+    '<div class="loading"><div class="spinner"></div>Carregando...</div>'
+  try {
+    const r = await fetch(`${API_URL}/projetos`)
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    const d = await r.json()
+    todosProjetos = d.projetos || []
+    renderTabelaProjetos(todosProjetos)
+    atualizarStats(todosProjetos)
+  } catch(e) {
+    document.getElementById('tabela-projetos').innerHTML =
+      `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-msg">Erro ao carregar</div><div class="empty-sub">${e.message}</div></div>`
+  }
+}
+
+function atualizarStats(projetos) {
+  document.getElementById('stat-total').textContent = projetos.length
+  document.getElementById('stat-medicao').textContent = projetos.filter(p => p.status === 'medicao').length
+  document.getElementById('stat-aprovado').textContent = projetos.filter(p => p.status === 'aprovado').length
+  const totalPts = projetos.reduce((a, p) => a + (p.total_pontos || 0), 0)
+  document.getElementById('stat-pontos').textContent = totalPts
+}
+
+function renderTabelaProjetos(projetos) {
+  if (!projetos.length) {
+    document.getElementById('tabela-projetos').innerHTML =
+      '<div class="empty"><div class="empty-icon">📁</div><div class="empty-msg">Nenhum projeto</div></div>'
+    return
+  }
+  const rows = projetos.map(p => `
+    <tr onclick="abrirProjeto('${p.id}')">
+      <td><span class="nome-proj">${p.projeto_nome || '—'}</span></td>
+      <td>${p.cliente_nome || '—'}</td>
+      <td>${badgeHtml(p.status)}</td>
+      <td><span class="mun">${p.municipio || '—'}</span></td>
+      <td><span class="pts">${p.total_pontos || 0}</span></td>
+      <td><span class="mun">${p.numero_job || '—'}</span></td>
+    </tr>`).join('')
+
+  document.getElementById('tabela-projetos').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Projeto</th><th>Cliente</th><th>Status</th>
+        <th>Município</th><th>Pontos</th><th>Job</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`
+}
+
+function filtrarProjetos(q) {
+  const f = q.toLowerCase()
+  const filtrado = todosProjetos.filter(p =>
+    (p.projeto_nome || '').toLowerCase().includes(f) ||
+    (p.cliente_nome || '').toLowerCase().includes(f) ||
+    (p.municipio || '').toLowerCase().includes(f)
+  )
+  renderTabelaProjetos(filtrado)
+}
+
+// ── DETALHE PROJETO ──
+async function abrirProjeto(id) {
+  ir('detalhe')
+  document.getElementById('detalhe-titulo').textContent = 'Carregando...'
+  document.getElementById('detalhe-fields').innerHTML = '<div class="loading"><div class="spinner"></div></div>'
+  try {
+    const r = await fetch(`${API_URL}/projetos/${id}`)
+    const p = await r.json()
+    projetoAtual = p
+
+    document.getElementById('detalhe-titulo').textContent = p.projeto_nome
+    document.getElementById('detalhe-badge').innerHTML = badgeHtml(p.status)
+
+    const campos = [
+      ['Cliente',    p.cliente_nome],
+      ['Município',  p.municipio],
+      ['Estado',     p.estado],
+      ['Comarca',    p.comarca],
+      ['Matrícula',  p.matricula],
+      ['Nº Job',     p.numero_job],
+      ['Área',       p.area_ha ? p.area_ha + ' ha' : null],
+      ['Zona UTM',   p.zona_utm],
+    ].filter(([,v]) => v)
+
+    document.getElementById('detalhe-fields').innerHTML = campos.map(([l, v]) => `
+      <div class="field-row">
+        <span class="field-label">${l}</span>
+        <span class="field-value">${v}</span>
+      </div>`).join('')
+
+    const pontos = p.pontos || []
+    document.getElementById('detalhe-total-pts').textContent = pontos.length + ' pts'
+
+    if (pontos.length) {
+      const rows = pontos.slice(0, 10).map(pt => `
+        <div class="field-row">
+          <span class="field-label field-mono">${pt.nome}</span>
+          <span class="field-value field-mono" style="font-size:11px;color:var(--muted)">
+            N ${pt.norte_utm?.toFixed(3) || '—'} | E ${pt.este_utm?.toFixed(3) || '—'}
+          </span>
+        </div>`).join('')
+      document.getElementById('detalhe-pontos').innerHTML = rows +
+        (pontos.length > 10 ? `<div style="padding:10px 20px;font-size:11px;color:var(--muted)">+ ${pontos.length - 10} pontos</div>` : '')
+    } else {
+      document.getElementById('detalhe-pontos').innerHTML =
+        '<div class="empty"><div class="empty-icon">📍</div><div class="empty-msg">Sem pontos</div><div class="empty-sub">Colete em campo com o CHC i73+</div></div>'
+    }
+  } catch(e) {
+    toast('Erro ao carregar projeto: ' + e.message, 'error')
+    ir('projetos')
+  }
+}
+
+async function gerarMagicLink() {
+  if (!projetoAtual) return
+  try {
+    const r   = await fetch(`${API_URL}/projetos/${projetoAtual.id}/magic-link`, { method: 'POST' })
+    const d   = await r.json()
+    await navigator.clipboard.writeText(d.mensagem_whatsapp || d.link)
+    toast('Mensagem WhatsApp copiada! Cole no chat do cliente.', 'success')
+  } catch(e) {
+    toast('Erro ao gerar link: ' + e.message, 'error')
+  }
+}
+
+async function gerarDocumentos() {
+  if (!projetoAtual) return
+  toast('Gerando documentos...', '')
+  try {
+    const r = await fetch(`${API_URL}/projetos/${projetoAtual.id}/gerar-documentos`, { method: 'POST' })
+    if (!r.ok) {
+      const err = await r.json()
+      toast(err.erro || 'Erro ao gerar', 'error')
+      return
+    }
+    const blob = await r.blob()
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url
+    a.download = `GPRF_${projetoAtual.projeto_nome.replace(/\s/g,'_')}.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast('ZIP baixado com os 7 documentos GPRF!', 'success')
+  } catch(e) {
+    toast('Erro: ' + e.message, 'error')
+  }
+}
+
+async function exportarTxt() {
+  if (!projetoAtual) return
+  window.open(`${API_URL}/projetos/${projetoAtual.id}/metrica/txt`, '_blank')
+}
+
+async function exportarKml() {
+  if (!projetoAtual) return
+  window.open(`${API_URL}/projetos/${projetoAtual.id}/metrica/kml`, '_blank')
+}
+
+async function exportarDxf() {
+  if (!projetoAtual) return
+  window.open(`${API_URL}/projetos/${projetoAtual.id}/metrica/dxf`, '_blank')
+}
+
+// ── CÁLCULOS ──
+function abrirCalc(nome) {
+  if (nome === 'inverso') {
+    document.getElementById('calc-grade').style.display = 'none'
+    document.getElementById('calc-inverso').style.display = 'block'
+    document.getElementById('calc-titulo').textContent = 'Inverso'
+    document.getElementById('btn-voltar-calc').style.display = 'flex'
+  }
+}
+
+function voltarCalc() {
+  document.getElementById('calc-grade').style.display = 'block'
+  document.getElementById('calc-inverso').style.display = 'none'
+  document.getElementById('calc-titulo').textContent = 'Ferramentas de Cálculo'
+  document.getElementById('btn-voltar-calc').style.display = 'none'
+}
+
+function carregarGabarito() {
+  document.getElementById('p1-nome').value  = 'P01'
+  document.getElementById('p1-norte').value = '7395000'
+  document.getElementById('p1-este').value  = '313500'
+  document.getElementById('p2-nome').value  = 'P02'
+  document.getElementById('p2-norte').value = '7395400'
+  document.getElementById('p2-este').value  = '313800'
+}
+
+function limparInverso() {
+  ['p1-nome','p1-norte','p1-este','p2-nome','p2-norte','p2-este'].forEach(id => {
+    document.getElementById(id).value = ''
+  })
+  document.getElementById('res-inverso').innerHTML =
+    '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">Preencha os pontos e clique em Calcular</div>'
+}
+
+async function calcularInverso() {
+  const x1 = parseFloat(document.getElementById('p1-este').value)
+  const y1 = parseFloat(document.getElementById('p1-norte').value)
+  const x2 = parseFloat(document.getElementById('p2-este').value)
+  const y2 = parseFloat(document.getElementById('p2-norte').value)
+
+  if ([x1,y1,x2,y2].some(isNaN)) {
+    toast('Preencha Norte e Este dos dois pontos', 'error')
+    return
+  }
+
+  try {
+    const r = await fetch(`${API_URL}/geo/inverso`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x1, y1, x2, y2 })
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    const d = await r.json()
+
+    document.getElementById('res-inverso').innerHTML = `
+      <div class="res-valor-big">${d.distancia.toFixed(3)} m</div>
+      <div class="res-label-big">Distância</div>
+      <div class="res-divider"></div>
+      <div class="res-valor-big" style="font-size:24px">${d.azimute_dms}</div>
+      <div class="res-label-big">Azimute</div>
+      ${d.azimute_decimal !== undefined ? `<div class="res-divider"></div><div style="font-family:var(--mono);font-size:13px;color:var(--muted)">${d.azimute_decimal?.toFixed(6)}°</div>` : ''}
+    `
+  } catch(e) {
+    toast('Erro no cálculo: ' + e.message, 'error')
+  }
+}
+
+// ── EXPORTAR TXT MANUAL ──
+async function gerarTxt() {
+  const linhas = document.getElementById('pontos-txt').value.trim().split('\n')
+  const nome   = document.getElementById('nome-projeto-txt').value || 'Projeto'
+  const job    = document.getElementById('job-txt').value || ''
+
+  const pontos = linhas.map(l => {
+    const [nome, norte, este, cota, codigo] = l.split(',').map(s => s.trim())
+    return { nome, norte: parseFloat(norte), este: parseFloat(este), cota: parseFloat(cota) || 0, codigo: codigo || 'TP' }
+  }).filter(p => p.nome && !isNaN(p.norte))
+
+  if (!pontos.length) { toast('Nenhum ponto válido', 'error'); return }
+
+  try {
+    const r = await fetch(`${API_URL}/metrica/txt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projeto_nome: nome, numero_job: job, zona_utm: '23S', pontos })
+    })
+    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    const blob = await r.blob()
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = `${job || nome}_pontos.txt`; a.click()
+    URL.revokeObjectURL(url)
+    toast(`TXT gerado com ${pontos.length} pontos`, 'success')
+  } catch(e) {
+    toast('Erro: ' + e.message, 'error')
+  }
+}
+
+// ── TOAST ──
+let toastTimer
+function toast(msg, tipo) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.className = 'toast show' + (tipo ? ' ' + tipo : '')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { el.classList.remove('show') }, 3500)
+}
+
+// ── INIT ──
+checarApi()
+setInterval(checarApi, 30000)
+carregarProjetos()
+</script>
+</body>
+</html>
