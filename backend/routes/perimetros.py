@@ -101,6 +101,38 @@ def salvar_perimetro(payload: PerimetroCreate):
     return res.data[0] if res.data else {"status": "ok"}
 
 
+@router.patch("/{perimetro_id}/definitivo")
+def marcar_definitivo(perimetro_id: str):
+    """Marca um perímetro como definitivo para geração de documentos.
+    Arquiva qualquer outro 'definitivo' anterior do mesmo projeto.
+    """
+    from datetime import datetime, timezone
+    c = sb()
+    now = datetime.now(timezone.utc).isoformat()
+
+    peri = (
+        c.table("perimetros")
+        .select("id, projeto_id")
+        .eq("id", perimetro_id)
+        .is_("deleted_at", "null")
+        .execute()
+    )
+    if not peri.data:
+        raise HTTPException(status_code=404, detail="Perímetro não encontrado")
+
+    projeto_id = peri.data[0]["projeto_id"]
+
+    # Arquivar definitivos anteriores deste projeto
+    c.table("perimetros").update({"deleted_at": now}).eq(
+        "projeto_id", projeto_id
+    ).eq("tipo", "definitivo").is_("deleted_at", "null").execute()
+
+    # Promover o atual
+    c.table("perimetros").update({"tipo": "definitivo"}).eq("id", perimetro_id).execute()
+
+    return {"status": "ok", "id": perimetro_id}
+
+
 @router.delete("/{perimetro_id}")
 def deletar_perimetro(perimetro_id: str):
     """Soft-delete de um perímetro."""

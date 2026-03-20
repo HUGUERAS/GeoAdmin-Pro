@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
@@ -7,16 +7,16 @@ import { FerramentaBtn } from '../../../components/FerramentaBtn'
 const FERRAMENTAS = [
   { id: 'inverso',    label: 'Inverso',       icone: 'arrow-right',       rota: '/calculos/inverso' },
   { id: 'rag',        label: 'Normas INCRA',  icone: 'book-open',         rota: '/calculos/rag' },
-  { id: 'bluetooth',  label: 'GNSS BT',       icone: 'radio',             rota: '/bluetooth' },
-  { id: 'area',       label: 'Área',          icone: 'square',            rota: null },
-  { id: 'subdivisao', label: 'Subdivisão',    icone: 'scissors',          rota: null },
-  { id: 'conversao',  label: 'Conversão',     icone: 'refresh-cw',        rota: null },
-  { id: 'deflexao',   label: 'Deflexão',      icone: 'corner-down-right', rota: null },
-  { id: 'intersecao', label: 'Interseção',    icone: 'git-merge',         rota: null },
-  { id: 'distancia',  label: 'Dist. P-L',     icone: 'move',              rota: null },
-  { id: 'rotacao',    label: 'Rotação',       icone: 'rotate-cw',         rota: null },
-  { id: 'media',      label: 'Média Pts',     icone: 'target',            rota: null },
-  { id: 'irradiacao', label: 'Irradiação',    icone: 'navigation',        rota: null },
+  { id: 'bluetooth',  label: 'GNSS BT',       icone: 'radio',             rota: Platform.OS === 'web' ? null : '/bluetooth' },
+  { id: 'area',       label: 'Área',          icone: 'square',            rota: '/calculos/area' },
+  { id: 'conversao',  label: 'Conversão',     icone: 'refresh-cw',        rota: '/calculos/conversao' },
+  { id: 'deflexao',   label: 'Deflexão',      icone: 'corner-down-right', rota: '/calculos/deflexao' },
+  { id: 'intersecao', label: 'Interseção',    icone: 'git-merge',         rota: '/calculos/intersecao' },
+  { id: 'distancia',  label: 'Dist. P-L',     icone: 'move',              rota: '/calculos/distancia' },
+  { id: 'rotacao',    label: 'Rotação',       icone: 'rotate-cw',         rota: '/calculos/rotacao' },
+  { id: 'media',      label: 'Média Pts',     icone: 'target',            rota: '/calculos/media' },
+  { id: 'irradiacao', label: 'Irradiação',    icone: 'navigation',        rota: '/calculos/irradiacao' },
+  { id: 'subdivisao', label: 'Subdivisão',    icone: 'scissors',          rota: '/calculos/subdivisao' },
 ]
 
 export default function CalculosScreen() {

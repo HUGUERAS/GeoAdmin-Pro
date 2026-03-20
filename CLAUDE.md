@@ -25,8 +25,17 @@ Rotas:
 - `GET /projetos/{id}` — detalhe do projeto
 - `POST /projetos/{id}/magic-link` — gera link WhatsApp para cliente
 - `POST /projetos/{id}/gerar-documentos` — gera docs GPRF
-- `POST /geo/inverso` — calcula distância e azimute entre 2 pontos (UTM)
+- `POST /geo/inverso` — distância e azimute entre 2 pontos (UTM)
+- `POST /geo/area` — área (m², ha) e perímetro de polígono UTM
+- `POST /geo/converter/utm-geo` — UTM → Geográfico (SIRGAS 2000 / pyproj)
+- `POST /geo/converter/geo-utm` — Geográfico → UTM (SIRGAS 2000 / pyproj)
+- `POST /geo/intersecao` — interseção de duas semiretas (ponto + azimute)
+- `POST /geo/distancia-ponto-linha` — distância perpendicular ponto-segmento
+- `POST /geo/rotacao` — rotação de pontos UTM em torno de origem
+- `POST /geo/subdivisao` — subdivisão de polígono por área alvo (bisseção)
 - `POST /metrica/txt` — exportação para Métrica TOPO (recebe JSON, retorna TXT)
+
+**Rotas de cálculo** definidas em `backend/routes/geo.py` e registradas em `main.py`.
 
 **Deploy:** Railway — configurado via `backend/railway.json` e `backend/Procfile`
 
@@ -41,11 +50,38 @@ SUPABASE_KEY=<service_key>
 
 **Tabs ativas:**
 - `Projetos` — lista + detalhe (`projeto/index.tsx`, `projeto/[id].tsx`)
-- `Cálculos` — grade de ferramentas; só `Inverso` implementado (`calculos/inverso.tsx`)
+- `Cálculos` — grade de ferramentas geodésicas (`calculos/index.tsx`)
+- `Mapa` — Vista CAD + editor de perímetro (`mapa/[id].tsx`)
 
-**Tabs placeholder (Fase 2):**
-- `Mapa` — Vista CAD
+**Tabs placeholder:**
 - `Clientes` — gestão de clientes
+
+### Filosofia das Ferramentas de Cálculo
+
+> **Todas as ferramentas da aba Cálculos existem para servir o ambiente CAD.**
+
+Cada ferramenta é um auxílio ao trabalho topográfico dentro do editor de perímetro e da vista CAD. O fluxo esperado é:
+- O topógrafo trabalha na **Vista CAD** (aba Mapa) editando vértices do perímetro
+- Quando precisa de um cálculo auxiliar (azimute, área, irradiação, interseção etc.), acessa a **aba Cálculos**
+- O resultado alimenta o trabalho de volta no CAD
+
+Consequência direta: qualquer nova ferramenta deve ser projetada pensando em **como ela apoia a edição de vértices, perímetros e a vista CAD**. Ferramentas que calculam coordenadas de novos pontos (Irradiação, Interseção) devem, em versões futuras, permitir inserir o ponto resultante diretamente no perímetro ativo.
+
+**Ferramentas implementadas** (`calculos/`):
+| Ferramenta | Arquivo | Tipo | Endpoint |
+|---|---|---|---|
+| Inverso | `inverso.tsx` | backend | `POST /geo/inverso` |
+| Área | `area.tsx` | backend | `POST /geo/area` |
+| Conversão | `conversao.tsx` | backend | `POST /geo/converter/*` |
+| Deflexão | `deflexao.tsx` | frontend | — |
+| Interseção | `intersecao.tsx` | backend | `POST /geo/intersecao` |
+| Dist. P-L | `distancia.tsx` | backend | `POST /geo/distancia-ponto-linha` |
+| Rotação | `rotacao.tsx` | backend | `POST /geo/rotacao` |
+| Média Pts | `media.tsx` | frontend | — |
+| Irradiação | `irradiacao.tsx` | frontend | — |
+| Subdivisão | `subdivisao.tsx` | backend | `POST /geo/subdivisao` |
+| Normas INCRA | `rag.tsx` | backend | `POST /rag/consultar` |
+| GNSS BT | `bluetooth.tsx` | nativo | — (Android only) |
 
 **Componentes reutilizáveis:** `ProjetoCard`, `StatusBadge`, `FerramentaBtn`
 
@@ -69,9 +105,11 @@ npx eas-cli@latest build --platform android --profile preview
 | Cálculo Inverso | ✅ Implementado |
 | Exportação Métrica TOPO | ✅ Implementado |
 | Geração de Documentos GPRF | ✅ Implementado |
-| Mapa / Vista CAD | 🔜 Fase 2 |
+| Mapa / Vista CAD + editor de perímetro | ✅ Implementado |
+| Ferramentas geodésicas (Área, Conversão, Deflexão, Interseção, Dist.P-L, Rotação, Média, Irradiação, Subdivisão) | ✅ Implementado |
+| Versão web (browser) | ✅ Implementado |
 | Gestão de Clientes | 🔜 Em breve |
-| Cálculos adicionais (Área, Subdivisão…) | 🔜 Em breve |
+| Integração Ferramentas → CAD (inserir ponto calculado direto no perímetro) | 🔜 Próxima fase |
 
 ## Convenções
 - Tema: **dark only** — sempre usar `Colors.dark`
