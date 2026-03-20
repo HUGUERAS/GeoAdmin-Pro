@@ -64,6 +64,7 @@ export async function initDB(): Promise<void> {
       sync_em         TEXT
     );
   `)
+  await initProjetosCache()
 }
 
 export async function salvarPonto(p: Omit<PontoLocal, 'sync_status' | 'sync_tentativas'>): Promise<string> {
@@ -145,4 +146,53 @@ export async function ultimoNomePonto(projeto_id: string): Promise<string> {
   if (!match) return 'PT0001'
   const n = parseInt(match[1], 10) + 1
   return row.nome.replace(/\d+$/, String(n).padStart(match[1].length, '0'))
+}
+
+// ── Cache de projetos ─────────────────────────────────────────────────────────
+
+export async function initProjetosCache(): Promise<void> {
+  const db = getDb()
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS projetos_cache (
+      id          TEXT PRIMARY KEY,
+      dados       TEXT NOT NULL,   -- JSON completo do projeto
+      cached_em   TEXT NOT NULL
+    );
+  `)
+}
+
+export async function cacheProjetos(projetos: any[]): Promise<void> {
+  const db = getDb()
+  const agora = new Date().toISOString()
+  for (const p of projetos) {
+    await db.runAsync(
+      `INSERT OR REPLACE INTO projetos_cache (id, dados, cached_em) VALUES (?, ?, ?)`,
+      [p.id, JSON.stringify(p), agora]
+    )
+  }
+}
+
+export async function getCachedProjetos(): Promise<any[]> {
+  const db = getDb()
+  const rows = await db.getAllAsync<{ dados: string }>(
+    `SELECT dados FROM projetos_cache ORDER BY cached_em DESC`
+  )
+  return rows.map(r => JSON.parse(r.dados))
+}
+
+export async function cacheProjetoDetalhe(id: string, projeto: any): Promise<void> {
+  const db = getDb()
+  await db.runAsync(
+    `INSERT OR REPLACE INTO projetos_cache (id, dados, cached_em) VALUES (?, ?, ?)`,
+    [id, JSON.stringify(projeto), new Date().toISOString()]
+  )
+}
+
+export async function getCachedProjetoDetalhe(id: string): Promise<any | null> {
+  const db = getDb()
+  const row = await db.getFirstAsync<{ dados: string }>(
+    `SELECT dados FROM projetos_cache WHERE id = ?`,
+    [id]
+  )
+  return row ? JSON.parse(row.dados) : null
 }

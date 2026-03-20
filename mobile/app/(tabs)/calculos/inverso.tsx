@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native'
 import { Colors } from '../../../constants/Colors'
 import { API_URL } from '../../../constants/Api'
 
@@ -125,16 +125,16 @@ const s = StyleSheet.create({
   label:      { fontSize: 10, fontWeight: '600', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.3 },
   input:      { borderWidth: 0.5, borderRadius: 8, padding: 12, fontSize: 16, fontFamily: 'monospace' },
   btns:       { flexDirection: 'row', gap: 10, marginTop: 20 },
-  btnPri:     { flex: 2, padding: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  btnPri:     { flex: 2, padding: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
   btnPriTxt:  { fontSize: 16, fontWeight: '700' },
-  btnSec:     { flex: 1, padding: 16, borderRadius: 10, alignItems: 'center', borderWidth: 0.5 },
+  btnSec:     { flex: 1, padding: 16, borderRadius: 10, alignItems: 'center', borderWidth: 0.5, minHeight: 52 },
   btnSecTxt:  { fontSize: 16, fontWeight: '500' },
   resultado:  { marginTop: 20, borderRadius: 12, borderWidth: 1, padding: 20 },
   resLabel:   { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 },
   resRow:     { flexDirection: 'row', alignItems: 'center' },
   resItem:    { flex: 1, alignItems: 'center' },
-  resValor:   { fontSize: 22, fontWeight: '700', fontFamily: 'monospace' },
-  resSub:     { fontSize: 12, marginTop: 4 },
+  resValor:   { fontSize: 22, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  resSub:     { fontSize: 14, marginTop: 4 },
   resDivider: { width: 0.5, height: 40, marginHorizontal: 16 },
   gabarito:   { marginTop: 16, borderWidth: 0.5, borderRadius: 8, padding: 12, borderStyle: 'dashed' },
   gabaritoTxt:{ fontSize: 12, textAlign: 'center' },

@@ -20,6 +20,7 @@ import {
   isConectado, iniciarLeitura, pararLeitura,
 } from '../lib/bluetooth'
 import { NmeaFix, labelQualidade, corQualidade } from '../lib/nmea'
+import { GpsIndicador } from '../components/GpsIndicador'
 import { salvarPonto, ultimoNomePonto } from '../lib/db'
 import { sincronizar } from '../lib/sync'
 
@@ -169,13 +170,9 @@ export default function BluetoothScreen() {
         </View>
 
         {/* Status do fix — visível apenas quando conectado */}
-        {conectado && fix && (
-          <View style={[s.fixBar, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
-            <View style={[s.qualBadge, { backgroundColor: corQualidade(fix.qualidade) }]}>
-              <Text style={s.qualTxt}>{labelQualidade(fix.qualidade)}</Text>
-            </View>
-            <Text style={[s.fixInfo, { color: C.text }]}>{fix.satelites} sat</Text>
-            <Text style={[s.fixInfo, { color: C.text }]}>HDOP {fix.hdop.toFixed(1)}</Text>
+        {conectado && (
+          <View style={s.fixIndicadorWrapper}>
+            <GpsIndicador fix={fix} />
           </View>
         )}
 
@@ -188,13 +185,6 @@ export default function BluetoothScreen() {
             <Text style={[s.coord, { color: C.primary }]}>{fix.lon.toFixed(8)}°</Text>
             <Text style={[s.coordLabel, { color: C.muted }]}>ALT</Text>
             <Text style={[s.coord, { color: C.primary }]}>{fix.alt.toFixed(3)} m</Text>
-          </View>
-        )}
-
-        {conectado && !fix && (
-          <View style={[s.aguardando, { backgroundColor: C.card }]}>
-            <ActivityIndicator color={C.primary} />
-            <Text style={[s.aguardandoTxt, { color: C.muted }]}>Aguardando sinal GNSS...</Text>
           </View>
         )}
 
@@ -282,15 +272,11 @@ const s = StyleSheet.create({
   devAddr:        { fontSize: 11, fontFamily: 'monospace', marginTop: 2 },
   devBtn:         { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10, minWidth: 110, alignItems: 'center' },
   devBtnTxt:      { color: '#fff', fontWeight: '700', fontSize: 13 },
-  fixBar:         { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, borderRadius: 10, borderWidth: 0.5, padding: 12 },
-  qualBadge:      { borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 },
-  qualTxt:        { color: '#fff', fontWeight: '700', fontSize: 12 },
-  fixInfo:        { fontSize: 13, fontWeight: '500' },
+  fixIndicadorWrapper: { marginHorizontal: 16, marginBottom: 4 },
   coordBox:       { margin: 16, borderRadius: 12, borderWidth: 1, padding: 16 },
   coordLabel:     { fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, marginTop: 8 },
   coord:          { fontSize: 28, fontFamily: 'monospace', fontWeight: '700' },
-  aguardando:     { margin: 16, borderRadius: 12, padding: 24, alignItems: 'center', gap: 10 },
-  aguardandoTxt:  { fontSize: 14 },
+
   btnColetar:     { marginHorizontal: 16, marginTop: 8, borderRadius: 12, height: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   btnColetarTxt:  { fontSize: 20, fontWeight: '800', letterSpacing: 1 },
   chip:           { flexDirection: 'row', alignItems: 'center', borderRadius: 20, borderWidth: 0.5, paddingHorizontal: 12, paddingVertical: 6, marginRight: 8, gap: 6 },

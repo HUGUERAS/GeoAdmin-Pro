@@ -1,25 +1,22 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, Dimensions, PanResponder, GestureResponderEvent,
+  ActivityIndicator, Alert, Dimensions, PanResponder, GestureResponderEvent, Platform,
 } from 'react-native'
-import MapView, { Marker, Polyline, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps'
+import { WebView } from 'react-native-webview'
 import Svg, { G, Line, Text as SvgText, Polyline as SvgPolyline, Circle } from 'react-native-svg'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
 import { API_URL } from '../../../constants/Api'
 
-const ESRI_IMAGERY =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-
-type Ponto = { id: string; nome: string; altitude_m: number; lon: number; lat: number }
-type Vertice = { lon: number; lat: number; nome: string }
-type Layers = { pontos: boolean; poligono: boolean; rotulos: boolean }
-type Mode = 'mapa' | 'cad'
+type Ponto    = { id: string; nome: string; altitude_m: number; lon: number; lat: number }
+type Vertice  = { lon: number; lat: number; nome: string }
+type Layers   = { pontos: boolean; poligono: boolean; rotulos: boolean }
+type Mode     = 'mapa' | 'cad'
 type EditTool = 'mover' | 'adicionar' | 'deletar'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────────────────────
 
 function computeTransform(pontos: { lon: number; lat: number }[], svgW: number, svgH: number, pad = 48) {
   const lons = pontos.map(p => p.lon), lats = pontos.map(p => p.lat)
@@ -61,98 +58,98 @@ function azimute(lat1: number, lon1: number, lat2: number, lon2: number) {
   return `${g}°${String(m).padStart(2,'0')}'${String(s).padStart(2,'0')}"`
 }
 
-// ── Satellite view ────────────────────────────────────────────────────────────
+// ── Leaflet HTML ──────────────────────────────────────────────────────────────
 
-function SatelliteView({
-  pontos, layers, region, C, editMode, editTool, editVertices, origVertices,
-  onVertexDrag, onVertexDelete, onMidpointAdd,
-}: any) {
-  const mapRef = useRef<MapView>(null)
+const MAP_HTML = `<!DOCTYPE html>
+<html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#111;overflow:hidden}
+  #map{width:100vw;height:100vh}
+  .leaflet-control-attribution{display:none}
+  .leaflet-control-zoom{margin:8px}
+</style>
+</head><body>
+<div id="map"></div>
+<script>
+var map = L.map('map',{zoomControl:true});
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
+var lg = L.layerGroup().addTo(map);
+var pontos = [];
 
-  useEffect(() => {
-    if (region) mapRef.current?.animateToRegion(region, 800)
-  }, [region])
+function render(layers) {
+  lg.clearLayers();
+  if (!pontos.length) return;
+  var ll = pontos.map(function(p){return [p.lat,p.lon];});
+  if (layers.poligono && pontos.length > 1) {
+    L.polygon(ll,{color:'#EF9F27',weight:2.5,fillOpacity:0.07}).addTo(lg);
+  }
+  if (layers.pontos) {
+    pontos.forEach(function(p) {
+      L.circleMarker([p.lat,p.lon],{radius:5,color:'#fff',fillColor:'#EF9F27',fillOpacity:1,weight:1.5})
+        .bindPopup(p.nome).addTo(lg);
+      if (layers.rotulos) {
+        L.marker([p.lat,p.lon],{
+          icon:L.divIcon({
+            className:'',
+            html:'<span style="color:#fff;font-size:9px;font-weight:700;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;padding-left:9px">'+p.nome+'</span>',
+            iconAnchor:[0,9]
+          }),interactive:false
+        }).addTo(lg);
+      }
+    });
+  }
+  map.fitBounds(ll,{padding:[40,40]});
+}
 
-  const polyCoords = pontos.length > 1
-    ? [...pontos.map((p: Ponto) => ({ latitude: p.lat, longitude: p.lon })),
-       { latitude: pontos[0].lat, longitude: pontos[0].lon }]
-    : []
+function updateMap(d) {
+  pontos = d.pontos||[];
+  render(d.layers||{pontos:true,poligono:true,rotulos:true});
+}
 
-  const editCoords = editVertices?.length > 1
-    ? [...editVertices.map((v: Vertice) => ({ latitude: v.lat, longitude: v.lon })),
-       { latitude: editVertices[0].lat, longitude: editVertices[0].lon }]
-    : []
+document.addEventListener('message',function(e){try{var d=JSON.parse(e.data);updateMap(d);}catch(_){}});
+window.addEventListener('message',function(e){try{var d=JSON.parse(e.data);updateMap(d);}catch(_){}});
+</script>
+</body></html>`
 
-  const origCoords = origVertices?.length > 1
-    ? [...origVertices.map((v: Vertice) => ({ latitude: v.lat, longitude: v.lon })),
-       { latitude: origVertices[0].lat, longitude: origVertices[0].lon }]
-    : []
+// ── WebView satellite view ────────────────────────────────────────────────────
+
+function MapaWebView({ pontos, layers }: { pontos: Ponto[]; layers: Layers }) {
+  const webRef  = useRef<WebView>(null)
+  const ready   = useRef(false)
+
+  const inject = useCallback((pts: Ponto[], lyr: Layers) => {
+    if (!ready.current || !webRef.current) return
+    webRef.current.injectJavaScript(
+      `updateMap(${JSON.stringify({ pontos: pts, layers: lyr })});true;`
+    )
+  }, [])
+
+  useEffect(() => { inject(pontos, layers) }, [pontos, layers, inject])
 
   return (
-    <MapView
-      ref={mapRef}
+    <WebView
+      ref={webRef}
       style={StyleSheet.absoluteFillObject}
-      provider={PROVIDER_DEFAULT}
-      mapType="none"
-      initialRegion={region}
-    >
-      <UrlTile urlTemplate={ESRI_IMAGERY} maximumZ={19} flipY={false} tileSize={256} />
-
-      {/* Normal mode */}
-      {!editMode && layers.poligono && polyCoords.length > 1 && (
-        <Polyline coordinates={polyCoords} strokeColor={C.primary} strokeWidth={2.5} />
-      )}
-      {!editMode && layers.pontos && pontos.map((p: Ponto) => (
-        <Marker key={p.id} coordinate={{ latitude: p.lat, longitude: p.lon }}
-          title={p.nome} pinColor={C.primary} />
-      ))}
-
-      {/* Edit mode */}
-      {editMode && origCoords.length > 1 && (
-        <Polyline coordinates={origCoords} strokeColor="#666460" strokeWidth={1.5}
-          lineDashPattern={[8, 4]} />
-      )}
-      {editMode && editCoords.length > 1 && (
-        <Polyline coordinates={editCoords} strokeColor={C.primary} strokeWidth={2.5} />
-      )}
-      {editMode && editVertices?.map((v: Vertice, i: number) => (
-        <Marker
-          key={`ev${i}`}
-          coordinate={{ latitude: v.lat, longitude: v.lon }}
-          title={v.nome || `Vértice ${i+1}`}
-          draggable={editTool === 'mover'}
-          pinColor={editTool === 'deletar' ? '#E24B4A' : C.primary}
-          onDragEnd={e => onVertexDrag(i, e.nativeEvent.coordinate.longitude, e.nativeEvent.coordinate.latitude)}
-          onPress={() => editTool === 'deletar' && onVertexDelete(i)}
-        />
-      ))}
-      {editMode && editTool === 'adicionar' && editVertices?.map((_: any, i: number) => {
-        const j = (i + 1) % editVertices.length
-        const v = editVertices[i], vj = editVertices[j]
-        const midLat = (v.lat + vj.lat) / 2, midLon = (v.lon + vj.lon) / 2
-        return (
-          <Marker
-            key={`mp${i}`}
-            coordinate={{ latitude: midLat, longitude: midLon }}
-            pinColor="#ffffff"
-            opacity={0.7}
-            onPress={() => onMidpointAdd(i)}
-          />
-        )
-      })}
-    </MapView>
+      source={{ html: MAP_HTML }}
+      javaScriptEnabled
+      originWhitelist={['*']}
+      onLoad={() => { ready.current = true; inject(pontos, layers) }}
+    />
   )
 }
 
-// ── CAD view ─────────────────────────────────────────────────────────────────
+// ── CAD view ──────────────────────────────────────────────────────────────────
 
 function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVertices,
   onVertexDrag, onVertexDelete, onMidpointAdd, onDragStart }: any) {
   const { width: W, height: H } = Dimensions.get('window')
   const svgH = H - 56 - 50 - 50
-  const TOUCH_R = 20   // hit radius px
+  const TOUCH_R = 20
 
-  // Memoize allPts to avoid thrashing xform recalculation
   const allPts = useMemo(
     () => editMode ? [...(editVertices || []), ...(origVertices || [])] : pontos,
     [editMode, editVertices, origVertices, pontos]
@@ -163,7 +160,6 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
   )
   const { toX, toY, fromX, fromY, minLon, maxLon, minLat, maxLat } = xform
 
-  // Refs keep latest values without recreating panResponder
   const stateRef = useRef({ editMode, editTool, editVertices, toX, toY, fromX, fromY, onVertexDrag, onDragStart })
   useEffect(() => {
     stateRef.current = { editMode, editTool, editVertices, toX, toY, fromX, fromY, onVertexDrag, onDragStart }
@@ -171,7 +167,6 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
 
   const panRef = useRef<{ idx: number } | null>(null)
 
-  // PanResponder created ONCE — uses stateRef for always-current values
   const panResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () =>
       stateRef.current.editMode && stateRef.current.editTool === 'mover',
@@ -187,7 +182,7 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
         if (d < minD) { minD = d; closest = i }
       })
       if (closest >= 0) {
-        stateRef.current.onDragStart?.()   // push undo history before drag
+        stateRef.current.onDragStart?.()
         panRef.current = { idx: closest }
       } else {
         panRef.current = null
@@ -218,7 +213,6 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
 
   return (
     <Svg width={W} height={svgH} {...panResponder.panHandlers}>
-      {/* Grid */}
       <G>
         {lonGrid.map(lon => (
           <Line key={`gx${lon}`} x1={toX(lon)} y1={0} x2={toX(lon)} y2={svgH}
@@ -238,7 +232,6 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
         ))}
       </G>
 
-      {/* Normal mode */}
       {!editMode && layers.poligono && pontos.length > 1 && (
         <SvgPolyline points={closedPts(pontos)} stroke={C.primary} strokeWidth={1.5}
           fill="rgba(239,159,39,0.08)" />
@@ -256,19 +249,14 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
         )
       })}
 
-      {/* Edit mode — original (gray dashed) */}
       {editMode && origVertices?.length > 1 && (
         <SvgPolyline points={closedPts(origVertices)} stroke="#666460"
           strokeWidth={1} strokeDasharray="6,4" fill="none" />
       )}
-
-      {/* Edit mode — edited polygon */}
       {editMode && editVertices?.length > 1 && (
         <SvgPolyline points={closedPts(editVertices)} stroke={C.primary}
           strokeWidth={2} fill="rgba(239,159,39,0.08)" />
       )}
-
-      {/* Edit mode — edge measurements */}
       {editMode && editVertices?.map((_: any, i: number) => {
         const j = (i + 1) % editVertices.length
         const v = editVertices[i], vj = editVertices[j]
@@ -287,8 +275,6 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
           </G>
         )
       })}
-
-      {/* Edit mode — midpoints (adicionar) */}
       {editMode && editTool === 'adicionar' && editVertices?.map((_: any, i: number) => {
         const j = (i + 1) % editVertices.length
         const v = editVertices[i], vj = editVertices[j]
@@ -300,8 +286,6 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
             onPress={() => onMidpointAdd(i)} />
         )
       })}
-
-      {/* Edit mode — vertex handles */}
       {editMode && editVertices?.map((v: Vertice, i: number) => {
         const x = toX(v.lon), y = toY(v.lat)
         const color = editTool === 'deletar' ? '#E24B4A' : C.primary
@@ -322,19 +306,18 @@ export default function MapaProjetoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router  = useRouter()
 
-  const [projeto,      setProjeto]   = useState<any>(null)
-  const [pontos,       setPontos]    = useState<Ponto[]>([])
-  const [loading,      setLoading]   = useState(true)
-  const [mode,         setMode]      = useState<Mode>('mapa')
-  const [layers,       setLayers]    = useState<Layers>({ pontos: true, poligono: true, rotulos: true })
-  const [showLayers,   setShowLayers] = useState(false)
+  const [projeto,     setProjeto]  = useState<any>(null)
+  const [pontos,      setPontos]   = useState<Ponto[]>([])
+  const [loading,     setLoading]  = useState(true)
+  const [mode,        setMode]     = useState<Mode>('mapa')
+  const [layers,      setLayers]   = useState<Layers>({ pontos: true, poligono: true, rotulos: true })
+  const [showLayers,  setShowLayers] = useState(false)
 
-  // Edit state
-  const [editMode,     setEditMode]  = useState(false)
-  const [editTool,     setEditTool]  = useState<EditTool>('mover')
-  const [editVerts,    setEditVerts] = useState<Vertice[]>([])
-  const [origVerts,    setOrigVerts] = useState<Vertice[]>([])
-  const [editHistory,  setEditHist]  = useState<Vertice[][]>([])
+  const [editMode,    setEditMode] = useState(false)
+  const [editTool,    setEditTool] = useState<EditTool>('mover')
+  const [editVerts,   setEditVerts] = useState<Vertice[]>([])
+  const [origVerts,   setOrigVerts] = useState<Vertice[]>([])
+  const [editHistory, setEditHist] = useState<Vertice[][]>([])
 
   useEffect(() => {
     fetch(`${API_URL}/projetos/${id}`)
@@ -363,18 +346,15 @@ export default function MapaProjetoScreen() {
   const toggleLayer = (key: keyof Layers) =>
     setLayers(prev => ({ ...prev, [key]: !prev[key] }))
 
-  // ── Edit handlers ──────────────────────────────────────────────────────────
-
   const entrarEdit = useCallback(async () => {
     if (!pontos.length) { Alert.alert('Sem pontos', 'Projeto sem pontos com coordenadas.'); return }
+    setMode('cad')
     const verts: Vertice[] = pontos.map(p => ({ lon: p.lon, lat: p.lat, nome: p.nome }))
     setOrigVerts(verts)
     setEditVerts([...verts])
     setEditHist([])
     setEditTool('mover')
     setEditMode(true)
-
-    // Salvar original
     try {
       await fetch(`${API_URL}/perimetros/`, {
         method: 'POST',
@@ -393,7 +373,6 @@ export default function MapaProjetoScreen() {
     setEditHist(prev => [...prev.slice(-49), verts.map(v => ({ ...v }))])
   }, [])
 
-  // Called by CadView's PanResponder at drag start — before any position change
   const handleDragStart = useCallback(() => {
     setEditVerts(prev => {
       setEditHist(h => [...h.slice(-49), prev.map(v => ({ ...v }))])
@@ -507,7 +486,6 @@ export default function MapaProjetoScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        /* Edit toolbar */
         <View style={[s.editToolbar, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
           <View style={[s.editTag, { borderColor: C.primary + '60', backgroundColor: C.primary + '20' }]}>
             <Text style={{ color: C.primary, fontSize: 9, fontWeight: '700', letterSpacing: 1 }}>EDITANDO</Text>
@@ -546,14 +524,7 @@ export default function MapaProjetoScreen() {
             <Text style={[s.emptyMsg, { color: C.muted }]}>Nenhum ponto com coordenadas</Text>
           </View>
         ) : mode === 'mapa' ? (
-          <SatelliteView
-            pontos={pontos} layers={layers} region={region} C={C}
-            editMode={editMode} editTool={editTool}
-            editVertices={editVerts} origVertices={origVerts}
-            onVertexDrag={handleVertexDrag}
-            onVertexDelete={handleVertexDelete}
-            onMidpointAdd={handleMidpointAdd}
-          />
+          <MapaWebView pontos={pontos} layers={layers} />
         ) : (
           <CadView
             pontos={pontos} layers={layers} C={C}
@@ -565,11 +536,27 @@ export default function MapaProjetoScreen() {
             onDragStart={handleDragStart}
           />
         )}
+
+        {/* Coordinate overlay — Padrão 7 */}
+        {pontos.length > 0 && !editMode && region && (
+          <View style={s.coordOverlay} pointerEvents="none">
+            <Text style={s.coordText}>
+              {`Lat  ${region.latitude.toFixed(5)}°   Lon  ${region.longitude.toFixed(5)}°`}
+            </Text>
+            <Text style={s.coordMuted}>{`N pontos: ${pontos.length}`}</Text>
+          </View>
+        )}
       </View>
 
-      {/* Layer panel (normal mode only) */}
+      {/* Layer panel */}
       {!editMode && showLayers && (
         <View style={[s.layerPanel, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={{ color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>CAMADAS</Text>
+            <TouchableOpacity onPress={() => setShowLayers(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={C.muted} />
+            </TouchableOpacity>
+          </View>
           {([
             ['pontos',   '🔵 Pontos'],
             ['poligono', '🟧 Polígono'],
@@ -604,8 +591,10 @@ const s = StyleSheet.create({
   layerPanel:  { position: 'absolute', right: 12, top: 56 + 50 + 12, borderWidth: 0.5, borderRadius: 10, padding: 12, gap: 10 },
   layerRow:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
   check:       { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: '#555', alignItems: 'center', justifyContent: 'center' },
-  // edit toolbar
   editToolbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderBottomWidth: 0.5, gap: 4 },
   editTag:     { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5, borderWidth: 1, marginRight: 4 },
   etool:       { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 7, borderWidth: 1, borderColor: '#333330' },
+  coordOverlay: { position: 'absolute', bottom: 8, left: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 8, padding: 8, alignItems: 'center' },
+  coordText:    { fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier', fontSize: 13, color: '#ffffff', letterSpacing: 0.2 },
+  coordMuted:   { fontSize: 11, color: '#9c9a92', marginTop: 2 },
 })

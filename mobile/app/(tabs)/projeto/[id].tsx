@@ -5,7 +5,7 @@ import { Colors } from '../../../constants/Colors'
 import { API_URL } from '../../../constants/Api'
 import { StatusBadge } from '../../../components/StatusBadge'
 import { SyncBadge } from '../../../components/SyncBadge'
-import { contarPendentes } from '../../../lib/db'
+import { contarPendentes, initDB, cacheProjetoDetalhe, getCachedProjetoDetalhe } from '../../../lib/db'
 import { sincronizar } from '../../../lib/sync'
 
 export default function DetalheProjetoScreen() {
@@ -17,6 +17,8 @@ export default function DetalheProjetoScreen() {
   const [gerando, setGerando]       = useState(false)
   const [pendentes, setPendentes]   = useState(0)
   const [sincronizando, setSinc]    = useState(false)
+  const [offline, setOffline]       = useState(false)
+  const [semCache, setSemCache]     = useState(false)
 
   const atualizarPendentes = useCallback(async () => {
     const n = await contarPendentes(id)
@@ -33,11 +35,32 @@ export default function DetalheProjetoScreen() {
   }
 
   useEffect(() => {
-    fetch(`${API_URL}/projetos/${id}`)
-      .then(r => r.json())
-      .then(setProjeto)
-      .catch(() => Alert.alert('Erro', 'Projeto não encontrado'))
-      .finally(() => setLoading(false))
+    const iniciar = async () => {
+      try {
+        await initDB()
+        setOffline(false)
+        setSemCache(false)
+        const res = await fetch(`${API_URL}/projetos/${id}`)
+        const data = await res.json()
+        await cacheProjetoDetalhe(id, data)
+        setProjeto(data)
+      } catch {
+        try {
+          const cached = await getCachedProjetoDetalhe(id)
+          if (cached) {
+            setProjeto(cached)
+            setOffline(true)
+          } else {
+            setSemCache(true)
+          }
+        } catch {
+          setSemCache(true)
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    iniciar()
     atualizarPendentes()
   }, [id])
 
@@ -75,6 +98,12 @@ export default function DetalheProjetoScreen() {
     </View>
   )
 
+  if (semCache) return (
+    <View style={[s.centro, { backgroundColor: C.background }]}>
+      <Text style={[s.semCacheTxt, { color: C.muted }]}>Sem conexão e sem cache para este projeto.</Text>
+    </View>
+  )
+
   if (!projeto) return (
     <View style={[s.centro, { backgroundColor: C.background }]}>
       <Text style={{ color: C.muted }}>Projeto não encontrado.</Text>
@@ -83,6 +112,12 @@ export default function DetalheProjetoScreen() {
 
   return (
     <ScrollView style={[s.container, { backgroundColor: C.background }]}>
+      {offline && (
+        <View style={s.bannerOffline}>
+          <Text style={s.bannerTxt}>📡 Offline — exibindo dados em cache</Text>
+        </View>
+      )}
+
       <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
         <View style={s.headerRow}>
           <Text style={[s.titulo, { color: C.text, flex: 1 }]} numberOfLines={2}>{projeto.projeto_nome}</Text>
@@ -134,15 +169,18 @@ export default function DetalheProjetoScreen() {
 }
 
 const s = StyleSheet.create({
-  container:  { flex: 1 },
-  centro:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header:     { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
-  headerRow:  { flexDirection: 'row', alignItems: 'flex-start' },
-  titulo:     { fontSize: 22, fontWeight: '700' },
-  body:       { padding: 16 },
-  campo:      { paddingVertical: 12, borderBottomWidth: 0.5 },
-  campoLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  campoValor: { fontSize: 15, fontWeight: '500' },
-  btn:        { borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 12, borderWidth: 1 },
-  btnTxt:     { fontSize: 15, fontWeight: '700' },
+  container:     { flex: 1 },
+  centro:        { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header:        { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
+  headerRow:     { flexDirection: 'row', alignItems: 'flex-start' },
+  titulo:        { fontSize: 22, fontWeight: '700' },
+  body:          { padding: 16 },
+  campo:         { paddingVertical: 12, borderBottomWidth: 0.5 },
+  campoLabel:    { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  campoValor:    { fontSize: 15, fontWeight: '500' },
+  btn:           { borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 12, borderWidth: 1 },
+  btnTxt:        { fontSize: 15, fontWeight: '700' },
+  bannerOffline: { backgroundColor: '#B8860B', paddingVertical: 6, paddingHorizontal: 14 },
+  bannerTxt:     { color: '#FFF8DC', fontSize: 12, fontWeight: '500', textAlign: 'center' },
+  semCacheTxt:   { fontSize: 14, textAlign: 'center', paddingHorizontal: 24 },
 })

@@ -43,8 +43,8 @@ def _get_supabase():
 
 
 def _projeto_ou_404(sb, projeto_id: str) -> dict:
-    res = sb.table("projetos").select("*").eq("id", projeto_id).maybe_single().execute()
-    if not res.data:
+    res = sb.table("vw_projetos_completo").select("*").eq("id", projeto_id).maybe_single().execute()
+    if res is None or not res.data:
         raise HTTPException(status_code=404, detail={"erro": "Projeto não encontrado", "codigo": 404})
     return res.data
 
@@ -73,15 +73,8 @@ def buscar_projeto(projeto_id: str):
     sb = _get_supabase()
     projeto = _projeto_ou_404(sb, projeto_id)
 
-    # Aliases para o app mobile
+    # Alias para o app mobile
     projeto["projeto_nome"] = projeto.get("nome", "")
-
-    # Busca nome do cliente
-    if projeto.get("cliente_id"):
-        cli = sb.table("clientes").select("nome, municipio").eq("id", projeto["cliente_id"]).maybe_single().execute()
-        if cli.data:
-            projeto["cliente_nome"] = cli.data.get("nome", "")
-            projeto.setdefault("municipio", cli.data.get("municipio", ""))
 
     # Pontos do projeto (com coordenadas geográficas via view)
     pontos_res = (
@@ -90,8 +83,8 @@ def buscar_projeto(projeto_id: str):
         .eq("projeto_id", projeto_id)
         .execute()
     )
-    projeto["pontos"] = pontos_res.data
-    projeto["total_pontos"] = len(pontos_res.data)
+    projeto["pontos"] = pontos_res.data or []
+    projeto["total_pontos"] = len(projeto["pontos"])
     return projeto
 
 
