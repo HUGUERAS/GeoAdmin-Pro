@@ -43,7 +43,7 @@ def _get_supabase():
 
 
 def _projeto_ou_404(sb, projeto_id: str) -> dict:
-    res = sb.table("vw_projetos_completo").select("*").eq("id", projeto_id).maybe_single().execute()
+    res = sb.table("vw_projetos_completo").select("*").eq("id", projeto_id).single().execute()
     if res is None or not res.data:
         raise HTTPException(status_code=404, detail={"erro": "Projeto não encontrado", "codigo": 404})
     return res.data
@@ -55,7 +55,8 @@ def _projeto_ou_404(sb, projeto_id: str) -> dict:
 def listar_projetos():
     sb = _get_supabase()
     res = sb.table("vw_projetos_completo").select("*").order("criado_em", desc=True).execute()
-    return {"total": len(res.data), "projetos": res.data}
+    projetos = res.data or []
+    return {"total": len(projetos), "projetos": projetos}
 
 
 @router.post("", summary="Criar novo projeto", status_code=201)
@@ -72,6 +73,7 @@ def criar_projeto(payload: ProjetoCreate):
 def buscar_projeto(projeto_id: str):
     sb = _get_supabase()
     projeto = _projeto_ou_404(sb, projeto_id)
+    from routes.perimetros import buscar_perimetro_ativo
 
     # Alias para o app mobile
     projeto["projeto_nome"] = projeto.get("nome", "")
@@ -85,6 +87,7 @@ def buscar_projeto(projeto_id: str):
     )
     projeto["pontos"] = pontos_res.data or []
     projeto["total_pontos"] = len(projeto["pontos"])
+    projeto["perimetro_ativo"] = buscar_perimetro_ativo(projeto_id, supabase=sb)
     return projeto
 
 

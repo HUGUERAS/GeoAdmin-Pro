@@ -12,6 +12,8 @@ export function FerramentaBtn({
       style={[s.btn, { borderColor: ativo ? C.primary : C.cardBorder, backgroundColor: C.card }]}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <View style={s.icone}>{icone}</View>
       <Text style={[s.label, { color: ativo ? C.primary : C.muted }]} numberOfLines={2}>{label}</Text>

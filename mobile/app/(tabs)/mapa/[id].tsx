@@ -85,6 +85,41 @@ function calcPerimetro(verts: Vertice[]): number {
   return p
 }
 
+function pontosParaVertices(pontos: Ponto[]): Vertice[] {
+  return pontos.map((p) => ({ lon: p.lon, lat: p.lat, nome: p.nome }))
+}
+
+function coordKey(lon: number, lat: number) {
+  return `${lon.toFixed(8)}:${lat.toFixed(8)}`
+}
+
+function pontosVisiveis(pontos: Ponto[], polygonVerts: Vertice[]): Ponto[] {
+  const visiveis: Ponto[] = []
+  const usados = new Set<string>()
+
+  pontos.forEach((p) => {
+    const key = coordKey(p.lon, p.lat)
+    if (usados.has(key)) return
+    usados.add(key)
+    visiveis.push(p)
+  })
+
+  polygonVerts.forEach((v, idx) => {
+    const key = coordKey(v.lon, v.lat)
+    if (usados.has(key)) return
+    usados.add(key)
+    visiveis.push({
+      id: `vertice-${idx}-${key}`,
+      nome: v.nome?.trim() || `V${idx + 1}`,
+      altitude_m: 0,
+      lon: v.lon,
+      lat: v.lat,
+    })
+  })
+
+  return visiveis
+}
+
 function dmsParaDecimal(dms: string): number {
   const match = dms.match(/(\d+)°(\d+)'([\d.]+)"/)
   if (!match) return parseFloat(dms)
@@ -203,13 +238,15 @@ var map = L.map('map',{zoomControl:true});
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
 var lg = L.layerGroup().addTo(map);
 var pontos = [];
+var poligono = [];
 
 function render(layers) {
   lg.clearLayers();
-  if (!pontos.length) return;
-  var ll = pontos.map(function(p){return [p.lat,p.lon];});
-  if (layers.poligono && pontos.length > 1) {
-    L.polygon(ll,{color:'#EF9F27',weight:2.5,fillOpacity:0.07}).addTo(lg);
+  var bounds = [];
+  if (layers.poligono && poligono.length > 1) {
+    var poly = poligono.map(function(v){return [v.lat,v.lon];});
+    L.polygon(poly,{color:'#EF9F27',weight:2.5,fillOpacity:0.07}).addTo(lg);
+    bounds = bounds.concat(poly);
   }
   if (layers.pontos) {
     pontos.forEach(function(p) {
@@ -224,13 +261,17 @@ function render(layers) {
           }),interactive:false
         }).addTo(lg);
       }
+      bounds.push([p.lat, p.lon]);
     });
   }
-  map.fitBounds(ll,{padding:[40,40]});
+  if (bounds.length) {
+    map.fitBounds(bounds,{padding:[40,40]});
+  }
 }
 
 function updateMap(d) {
   pontos = d.pontos||[];
+  poligono = d.poligono||[];
   render(d.layers||{pontos:true,poligono:true,rotulos:true});
 }
 
@@ -241,18 +282,18 @@ window.addEventListener('message',function(e){try{var d=JSON.parse(e.data);updat
 
 // ── WebView satellite view ────────────────────────────────────────────────────
 
-function MapaWebView({ pontos, layers }: { pontos: Ponto[]; layers: Layers }) {
+function MapaWebView({ pontos, poligono, layers }: { pontos: Ponto[]; poligono: Vertice[]; layers: Layers }) {
   const webRef  = useRef<WebView>(null)
   const ready   = useRef(false)
 
-  const inject = useCallback((pts: Ponto[], lyr: Layers) => {
+  const inject = useCallback((pts: Ponto[], poly: Vertice[], lyr: Layers) => {
     if (!ready.current || !webRef.current) return
     webRef.current.injectJavaScript(
-      `updateMap(${JSON.stringify({ pontos: pts, layers: lyr })});true;`
+      `updateMap(${JSON.stringify({ pontos: pts, poligono: poly, layers: lyr })});true;`
     )
   }, [])
 
-  useEffect(() => { inject(pontos, layers) }, [pontos, layers, inject])
+  useEffect(() => { inject(pontos, poligono, layers) }, [pontos, poligono, layers, inject])
 
   return (
     <WebView
@@ -261,14 +302,14 @@ function MapaWebView({ pontos, layers }: { pontos: Ponto[]; layers: Layers }) {
       source={{ html: MAP_HTML }}
       javaScriptEnabled
       originWhitelist={['*']}
-      onLoad={() => { ready.current = true; inject(pontos, layers) }}
+      onLoad={() => { ready.current = true; inject(pontos, poligono, layers) }}
     />
   )
 }
 
 // ── CAD view ──────────────────────────────────────────────────────────────────
 
-function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVertices,
+function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVertices, origVertices,
   onVertexDrag, onVertexDelete, onMidpointAdd, onDragStart,
   onVertexTap, selecaoAtiva, vxSelecionados }: any) {
   const { width: W, height: H } = Dimensions.get('window')
@@ -276,8 +317,8 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
   const TOUCH_R = 20
 
   const allPts = useMemo(
-    () => editMode ? [...(editVertices || []), ...(origVertices || [])] : pontos,
-    [editMode, editVertices, origVertices, pontos]
+    () => editMode ? [...(editVertices || []), ...(origVertices || [])] : [...(pontos || []), ...(polygonVerts || [])],
+    [editMode, editVertices, origVertices, pontos, polygonVerts]
   )
   const xform = useMemo(
     () => computeTransform(allPts.length ? allPts : pontos, W, svgH),
@@ -357,8 +398,8 @@ function CadView({ pontos, layers, C, editMode, editTool, editVertices, origVert
         ))}
       </G>
 
-      {!editMode && layers.poligono && pontos.length > 1 && (
-        <SvgPolyline points={closedPts(pontos)} stroke={C.primary} strokeWidth={1.5}
+      {!editMode && layers.poligono && polygonVerts?.length > 1 && (
+        <SvgPolyline points={closedPts(polygonVerts)} stroke={C.primary} strokeWidth={1.5}
           fill="rgba(239,159,39,0.08)" />
       )}
       {!editMode && layers.pontos && pontos.map((p: Ponto) => {
@@ -451,6 +492,7 @@ export default function MapaProjetoScreen() {
 
   const [projeto,     setProjeto]  = useState<any>(null)
   const [pontos,      setPontos]   = useState<Ponto[]>([])
+  const [polygonVerts, setPolygonVerts] = useState<Vertice[]>([])
   const [loading,     setLoading]  = useState(true)
   const [mode,        setMode]     = useState<Mode>('mapa')
   const [layers,      setLayers]   = useState<Layers>({ pontos: true, poligono: true, rotulos: true })
@@ -486,20 +528,30 @@ export default function MapaProjetoScreen() {
   // resultados
   const [resultado,    setResultado]    = useState<any>(null)
 
+  const visiblePoints = useMemo(
+    () => pontosVisiveis(pontos, polygonVerts),
+    [pontos, polygonVerts]
+  )
+
   useEffect(() => {
     fetch(`${API_URL}/projetos/${id}`)
       .then(r => r.json())
       .then(data => {
+        const pontosProjeto = (data.pontos || []).filter((p: any) => p.lon != null && p.lat != null)
+        const perimetroAtivo = (data.perimetro_ativo?.vertices || []).filter((v: any) => v.lon != null && v.lat != null)
+
         setProjeto(data)
-        setPontos((data.pontos || []).filter((p: any) => p.lon != null && p.lat != null))
+        setPontos(pontosProjeto)
+        setPolygonVerts(perimetroAtivo.length > 0 ? perimetroAtivo : pontosParaVertices(pontosProjeto))
       })
       .catch(() => Alert.alert('Erro', 'Não foi possível carregar o projeto.'))
       .finally(() => setLoading(false))
   }, [id])
 
   const region = useMemo(() => {
-    if (!pontos.length) return undefined
-    const lons = pontos.map(p => p.lon), lats = pontos.map(p => p.lat)
+    const boundsSource = polygonVerts.length ? polygonVerts : pontos
+    if (!boundsSource.length) return undefined
+    const lons = boundsSource.map(p => p.lon), lats = boundsSource.map(p => p.lat)
     const minLon = Math.min(...lons), maxLon = Math.max(...lons)
     const minLat = Math.min(...lats), maxLat = Math.max(...lats)
     return {
@@ -508,17 +560,17 @@ export default function MapaProjetoScreen() {
       latitudeDelta: Math.max((maxLat - minLat) * 1.4, 0.002),
       longitudeDelta: Math.max((maxLon - minLon) * 1.4, 0.002),
     }
-  }, [pontos])
+  }, [pontos, polygonVerts])
 
   const toggleLayer = (key: keyof Layers) =>
     setLayers(prev => ({ ...prev, [key]: !prev[key] }))
 
   const entrarEdit = useCallback(async () => {
-    if (!pontos.length) { Alert.alert('Sem pontos', 'Projeto sem pontos com coordenadas.'); return }
+    if (!polygonVerts.length) { Alert.alert('Sem perímetro', 'Projeto sem geometria disponível para edição.'); return }
     setMode('cad')
-    const verts: Vertice[] = pontos.map(p => ({ lon: p.lon, lat: p.lat, nome: p.nome }))
-    setOrigVerts(verts)
-    setEditVerts([...verts])
+    const verts = polygonVerts.map(v => ({ ...v }))
+    setOrigVerts(verts.map(v => ({ ...v })))
+    setEditVerts(verts.map(v => ({ ...v })))
     setEditHist([])
     setEditTool('mover')
     setEditMode(true)
@@ -534,7 +586,7 @@ export default function MapaProjetoScreen() {
         }),
       })
     } catch {}
-  }, [pontos, projeto, id])
+  }, [polygonVerts, projeto, id])
 
   const pushHist = useCallback((verts: Vertice[]) => {
     setEditHist(prev => [...prev.slice(-49), verts.map(v => ({ ...v }))])
@@ -596,6 +648,19 @@ export default function MapaProjetoScreen() {
         }),
       })
       if (!res.ok) throw new Error()
+      const salvo = await res.json().catch(() => null)
+      const proximosVertices = (salvo?.vertices || editVerts).map((v: Vertice) => ({ ...v }))
+
+      setPolygonVerts(proximosVertices)
+      setProjeto((atual: any) => atual ? {
+        ...atual,
+        perimetro_ativo: salvo
+          ? { ...salvo, vertices: proximosVertices }
+          : atual.perimetro_ativo,
+      } : atual)
+      setOrigVerts(proximosVertices.map((v: Vertice) => ({ ...v })))
+      setEditVerts(proximosVertices.map((v: Vertice) => ({ ...v })))
+      setEditHist([])
       Alert.alert('Salvo!', `Perímetro editado salvo — ${editVerts.length} vértices.`)
       setEditMode(false)
     } catch {
@@ -606,9 +671,18 @@ export default function MapaProjetoScreen() {
   const cancelarEdit = useCallback(() => {
     Alert.alert('Cancelar edição', 'Descartar alterações?', [
       { text: 'Não', style: 'cancel' },
-      { text: 'Sim', onPress: () => setEditMode(false) },
+      {
+        text: 'Sim',
+        onPress: () => {
+          const atuais = polygonVerts.map(v => ({ ...v }))
+          setOrigVerts(atuais.map(v => ({ ...v })))
+          setEditVerts(atuais)
+          setEditHist([])
+          setEditMode(false)
+        },
+      },
     ])
-  }, [])
+  }, [polygonVerts])
 
   // ── ferramentas ──────────────────────────────────────────────────────────────
 
@@ -875,6 +949,7 @@ export default function MapaProjetoScreen() {
   }, [resultado, editVerts, pushHist, limparFerramenta])
 
   const selecaoAtiva = ferrAtiva !== null && vxNecessarios(ferrAtiva) !== 0
+  const hasGeometry = visiblePoints.length > 0 || polygonVerts.length > 0
 
   if (loading) return (
     <View style={[s.fill, s.centro, { backgroundColor: C.background }]}>
@@ -893,7 +968,9 @@ export default function MapaProjetoScreen() {
           <Text style={[s.titulo, { color: C.text }]} numberOfLines={1}>
             {projeto?.projeto_nome || '...'}
           </Text>
-          <Text style={[s.sub, { color: C.muted }]}>{pontos.length} pontos</Text>
+          <Text style={[s.sub, { color: C.muted }]}>
+            {`${pontos.length} medidos • ${visiblePoints.length} visíveis • ${polygonVerts.length} vértices`}
+          </Text>
         </View>
       </View>
 
@@ -957,16 +1034,16 @@ export default function MapaProjetoScreen() {
 
       {/* Map area */}
       <View style={s.fill}>
-        {pontos.length === 0 ? (
+        {!hasGeometry ? (
           <View style={[s.fill, s.centro]}>
             <Feather name="map-pin" size={40} color={C.muted} />
-            <Text style={[s.emptyMsg, { color: C.muted }]}>Nenhum ponto com coordenadas</Text>
+            <Text style={[s.emptyMsg, { color: C.muted }]}>Nenhuma geometria disponível</Text>
           </View>
         ) : mode === 'mapa' ? (
-          <MapaWebView pontos={pontos} layers={layers} />
+          <MapaWebView pontos={visiblePoints} poligono={polygonVerts} layers={layers} />
         ) : (
           <CadView
-            pontos={pontos} layers={layers} C={C}
+            pontos={visiblePoints} polygonVerts={polygonVerts} layers={layers} C={C}
             editMode={editMode} editTool={editTool}
             editVertices={editVerts} origVertices={origVerts}
             onVertexDrag={handleVertexDrag}
@@ -1001,12 +1078,14 @@ export default function MapaProjetoScreen() {
         )}
 
         {/* Coordinate overlay */}
-        {pontos.length > 0 && !editMode && region && (
+        {hasGeometry && !editMode && region && (
           <View style={s.coordOverlay} pointerEvents="none">
             <Text style={s.coordText}>
               {`Lat  ${region.latitude.toFixed(5)}°   Lon  ${region.longitude.toFixed(5)}°`}
             </Text>
-            <Text style={s.coordMuted}>{`N pontos: ${pontos.length}`}</Text>
+            <Text style={s.coordMuted}>
+              {`Medidos: ${pontos.length} • Visíveis: ${visiblePoints.length} • Vértices: ${polygonVerts.length}`}
+            </Text>
           </View>
         )}
       </View>
@@ -1021,7 +1100,7 @@ export default function MapaProjetoScreen() {
             </TouchableOpacity>
           </View>
           {([
-            ['pontos',   '🔵 Pontos'],
+            ['pontos',   '🔵 Pontos visíveis'],
             ['poligono', '🟧 Polígono'],
             ['rotulos',  '🏷 Rótulos'],
           ] as [keyof Layers, string][]).map(([key, label]) => (

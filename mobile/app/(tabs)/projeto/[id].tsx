@@ -76,6 +76,10 @@ export default function DetalheProjetoScreen() {
   }
 
   const gerarDocumentos = async () => {
+    if (!projeto.total_pontos || projeto.total_pontos === 0) {
+      Alert.alert('Sem pontos', 'Este projeto não tem pontos coletados. Colete os pontos antes de gerar os documentos.')
+      return
+    }
     setGerando(true)
     try {
       const res = await fetch(`${API_URL}/projetos/${id}/gerar-documentos`, { method: 'POST' })
@@ -145,11 +149,18 @@ export default function DetalheProjetoScreen() {
         <TouchableOpacity
           style={[s.btn, { backgroundColor: C.card, borderColor: C.info }]}
           onPress={() => router.push(`/(tabs)/mapa/${id}` as any)}
+          accessibilityRole="button"
+          accessibilityLabel="Ver projeto no mapa"
         >
           <Text style={[s.btnTxt, { color: C.info }]}>🗺 Ver no Mapa</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[s.btn, { backgroundColor: C.card, borderColor: C.primary }]} onPress={gerarMagicLink}>
+        <TouchableOpacity
+          style={[s.btn, { backgroundColor: C.card, borderColor: C.primary }]}
+          onPress={gerarMagicLink}
+          accessibilityRole="button"
+          accessibilityLabel="Copiar link do cliente para WhatsApp"
+        >
           <Text style={[s.btnTxt, { color: C.primary }]}>📱 Copiar Link do Cliente</Text>
         </TouchableOpacity>
 
@@ -157,6 +168,9 @@ export default function DetalheProjetoScreen() {
           style={[s.btn, { backgroundColor: C.primary }]}
           onPress={gerarDocumentos}
           disabled={gerando}
+          accessibilityRole="button"
+          accessibilityLabel="Gerar documentos GPRF"
+          accessibilityState={{ disabled: gerando }}
         >
           {gerando
             ? <ActivityIndicator color={C.primaryText} />

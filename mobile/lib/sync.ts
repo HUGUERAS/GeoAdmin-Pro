@@ -14,6 +14,16 @@ export interface SyncResult {
   total: number
 }
 
+interface SyncApiResult {
+  sincronizados: number
+  duplicados: number
+  erros: Array<{ local_id?: string; nome?: string; erro?: string }>
+  itens?: Array<{ local_id?: string; status: string }>
+  sincronizados_local_ids?: string[]
+  duplicados_local_ids?: string[]
+  erro_local_ids?: string[]
+}
+
 export async function sincronizar(projeto_id?: string): Promise<SyncResult> {
   const pendentes = await listarPendentes(projeto_id)
 
@@ -44,20 +54,51 @@ export async function sincronizar(projeto_id?: string): Promise<SyncResult> {
       })),
     }
 
-    const result = await apiPost<{ sincronizados: number; duplicados: number; erros: any[] }>(
+    const result = await apiPost<SyncApiResult>(
       '/pontos/sync',
       payload
     )
 
-    // Marca todos como synced (servidor fez dedup via local_id)
-    for (const p of pendentes) {
-      await marcarSincronizado(p.id)
+    const sincronizadosIds = new Set<string>([
+      ...(result.sincronizados_local_ids ?? []),
+      ...(result.duplicados_local_ids ?? []),
+    ])
+    const erroIds = new Set<string>([
+      ...(result.erro_local_ids ?? []),
+      ...((result.erros ?? []).map((item) => item.local_id).filter(Boolean) as string[]),
+    ])
+    const possuiResultadoPorItem = (
+      Array.isArray(result.itens)
+      || Array.isArray(result.sincronizados_local_ids)
+      || Array.isArray(result.duplicados_local_ids)
+      || Array.isArray(result.erro_local_ids)
+    )
+
+    if (possuiResultadoPorItem) {
+      for (const p of pendentes) {
+        if (sincronizadosIds.has(p.id)) {
+          await marcarSincronizado(p.id)
+          continue
+        }
+
+        if (erroIds.has(p.id) || !sincronizadosIds.has(p.id)) {
+          await marcarErro(p.id)
+        }
+      }
+    } else if ((result.erros?.length ?? 0) === 0 && (result.sincronizados + result.duplicados) === pendentes.length) {
+      for (const p of pendentes) {
+        await marcarSincronizado(p.id)
+      }
+    } else {
+      for (const p of pendentes) {
+        await marcarErro(p.id)
+      }
     }
 
     return {
       sincronizados: result.sincronizados,
       duplicados:    result.duplicados,
-      erros:         result.erros?.length ?? 0,
+      erros:         (result.erro_local_ids?.length ?? result.erros?.length ?? 0),
       total:         pendentes.length,
     }
   } catch {

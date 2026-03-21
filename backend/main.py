@@ -52,7 +52,7 @@ class InversoRequest(BaseModel):
 class InversoResponse(BaseModel):
   distancia: float
   azimute_decimal: float
-  azimute_graus_ms: str
+  azimute_dms: str
 
 
 @app.get("/health")
@@ -133,7 +133,7 @@ def calcular_inverso(payload: InversoRequest) -> InversoResponse:
     return InversoResponse(
       distancia=round(distancia, 6),
       azimute_decimal=round(ang_deg, 6),
-      azimute_graus_ms=azimute_gms,
+      azimute_dms=azimute_gms,
     )
   except Exception as exc:  # tipo amplo apenas para MVP
     raise HTTPException(

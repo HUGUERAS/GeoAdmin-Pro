@@ -18,7 +18,13 @@ export function SyncBadge({ pendentes, onPress, sincronizando }: Props) {
   const cor = pendentes > 0 ? C.primary : C.muted
 
   return (
-    <TouchableOpacity onPress={onPress} style={s.container} activeOpacity={0.7}>
+    <TouchableOpacity
+      onPress={onPress}
+      style={s.container}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={sincronizando ? 'Sincronizando' : pendentes > 0 ? `Sincronizar ${pendentes} ponto(s) pendente(s)` : 'Sincronizado'}
+    >
       {sincronizando
         ? <ActivityIndicator size="small" color={C.primary} />
         : <Feather name="cloud" size={22} color={cor} />

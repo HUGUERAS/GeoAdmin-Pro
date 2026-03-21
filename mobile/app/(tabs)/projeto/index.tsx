@@ -68,7 +68,7 @@ export default function ProjetosScreen() {
       ) : erro ? (
         <View style={s.centro}>
           <Text style={[s.msg, { color: C.danger }]}>{erro}</Text>
-          <TouchableOpacity onPress={carregar} style={[s.btnRetry, { borderColor: C.primary }]}>
+          <TouchableOpacity onPress={carregar} style={[s.btnRetry, { borderColor: C.primary }]} accessibilityRole="button" accessibilityLabel="Tentar novamente">
             <Text style={{ color: C.primary, fontWeight: '600' }}>Tentar novamente</Text>
           </TouchableOpacity>
         </View>
@@ -96,7 +96,7 @@ const s = StyleSheet.create({
   lista:         { padding: 14 },
   centro:        { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   msg:           { fontSize: 14, textAlign: 'center', marginTop: 12, lineHeight: 22 },
-  btnRetry:      { marginTop: 16, borderWidth: 1, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10 },
+  btnRetry:      { marginTop: 16, borderWidth: 1, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 14 },
   bannerOffline: { backgroundColor: '#B8860B', paddingVertical: 6, paddingHorizontal: 14 },
   bannerTxt:     { color: '#FFF8DC', fontSize: 12, fontWeight: '500', textAlign: 'center' },
 })

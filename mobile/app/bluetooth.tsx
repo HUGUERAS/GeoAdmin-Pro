@@ -82,39 +82,54 @@ export default function BluetoothScreen() {
   const salvarLocal = async (sincronizarDepois = false) => {
     const f = fixRef.current
     if (!f || f.qualidade === 0) return
-    setSalvando(true)
-    try {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
-      await salvarPonto({
-        id,
-        projeto_id:  PROJETO_PLACEHOLDER || 'sem_projeto',
-        nome:        nomePonto,
-        lat:         f.lat,
-        lon:         f.lon,
-        norte:       0,   // conversão UTM feita no backend
-        este:        0,
-        cota:        f.alt,
-        codigo:      'TP',
-        status_gnss: labelQualidade(f.qualidade),
-        satelites:   f.satelites,
-        pdop:        f.hdop,
-        sigma_e:     0,
-        sigma_n:     0,
-        sigma_u:     0,
-        origem:      'bluetooth',
-        coletado_em: new Date().toISOString(),
-        sync_em:     undefined,
-      })
 
-      setHistorico(h => [{ nome: nomePonto, q: f.qualidade }, ...h].slice(0, 5))
-      setModalVisivel(false)
-
-      if (sincronizarDepois) {
-        await sincronizar(PROJETO_PLACEHOLDER || undefined)
+    const doSave = async () => {
+      setSalvando(true)
+      try {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+        await salvarPonto({
+          id,
+          projeto_id:  PROJETO_PLACEHOLDER || 'sem_projeto',
+          nome:        nomePonto,
+          lat:         f.lat,
+          lon:         f.lon,
+          norte:       0,   // conversão UTM feita no backend
+          este:        0,
+          cota:        f.alt,
+          codigo:      'TP',
+          status_gnss: labelQualidade(f.qualidade),
+          satelites:   f.satelites,
+          pdop:        f.hdop,
+          sigma_e:     0,
+          sigma_n:     0,
+          sigma_u:     0,
+          origem:      'bluetooth',
+          coletado_em: new Date().toISOString(),
+          sync_em:     undefined,
+        })
+        setHistorico(h => [{ nome: nomePonto, q: f.qualidade }, ...h].slice(0, 5))
+        setModalVisivel(false)
+        if (sincronizarDepois) {
+          await sincronizar(PROJETO_PLACEHOLDER || undefined)
+        }
+      } finally {
+        setSalvando(false)
       }
-    } finally {
-      setSalvando(false)
     }
+
+    if (f.qualidade < 4 || f.hdop > 2) {
+      Alert.alert(
+        'Qualidade insuficiente',
+        `Fix: ${labelQualidade(f.qualidade)}  HDOP: ${f.hdop.toFixed(1)}\n\nPara georreferenciamento INCRA é exigido RTK Fixo com HDOP ≤ 2. Salvar assim mesmo?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Salvar mesmo assim', style: 'destructive', onPress: doSave },
+        ]
+      )
+      return
+    }
+
+    await doSave()
   }
 
   const podeColetarFix = fix && fix.qualidade > 0 && fix.valida
@@ -139,7 +154,7 @@ export default function BluetoothScreen() {
 
           {dispositivos.length === 0 ? (
             <View style={[s.emptyBox, { backgroundColor: C.card }]}>
-              <Feather name="bluetooth-off" size={28} color={C.muted} />
+              <Feather name="bluetooth" size={28} color={C.muted} />
               <Text style={[s.emptyTxt, { color: C.muted }]}>
                 Nenhum dispositivo pareado.{'\n'}Pareie o CHC i73+ nas configurações de Bluetooth do Android.
               </Text>
@@ -152,7 +167,12 @@ export default function BluetoothScreen() {
                   <Text style={[s.devAddr, { color: C.muted }]}>{dev.address}</Text>
                 </View>
                 {enderecoAtivo === dev.address ? (
-                  <TouchableOpacity style={[s.devBtn, { backgroundColor: '#c0392b' }]} onPress={handleDesconectar}>
+                  <TouchableOpacity
+                    style={[s.devBtn, { backgroundColor: '#c0392b' }]}
+                    onPress={handleDesconectar}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Desconectar ${dev.name ?? 'dispositivo'}`}
+                  >
                     <Text style={s.devBtnTxt}>Desconectar</Text>
                   </TouchableOpacity>
                 ) : (
@@ -160,6 +180,9 @@ export default function BluetoothScreen() {
                     style={[s.devBtn, { backgroundColor: C.primary }]}
                     onPress={() => handleConectar(dev.address)}
                     disabled={conectando}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Conectar ${dev.name ?? 'dispositivo'}`}
+                    accessibilityState={{ disabled: conectando }}
                   >
                     {conectando ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.devBtnTxt}>Conectar</Text>}
                   </TouchableOpacity>
@@ -195,6 +218,9 @@ export default function BluetoothScreen() {
             onPress={abrirModalColetar}
             disabled={!podeColetarFix}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Coletar ponto"
+            accessibilityState={{ disabled: !podeColetarFix }}
           >
             <Feather name="map-pin" size={22} color={podeColetarFix ? C.primaryText : C.muted} />
             <Text style={[s.btnColetarTxt, { color: podeColetarFix ? C.primaryText : C.muted }]}>
@@ -236,6 +262,9 @@ export default function BluetoothScreen() {
               style={[s.modalBtn, { backgroundColor: '#27ae60' }]}
               onPress={() => salvarLocal(false)}
               disabled={salvando}
+              accessibilityRole="button"
+              accessibilityLabel="Salvar ponto local"
+              accessibilityState={{ disabled: salvando }}
             >
               {salvando ? <ActivityIndicator color="#fff" /> : <Text style={s.modalBtnTxt}>Salvar Local</Text>}
             </TouchableOpacity>
@@ -243,10 +272,18 @@ export default function BluetoothScreen() {
               style={[s.modalBtn, { backgroundColor: C.primary }]}
               onPress={() => salvarLocal(true)}
               disabled={salvando}
+              accessibilityRole="button"
+              accessibilityLabel="Salvar ponto e sincronizar"
+              accessibilityState={{ disabled: salvando }}
             >
               {salvando ? <ActivityIndicator color="#fff" /> : <Text style={s.modalBtnTxt}>Salvar + Sincronizar</Text>}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setModalVisivel(false)} style={s.modalCancelar}>
+            <TouchableOpacity
+              onPress={() => setModalVisivel(false)}
+              style={s.modalCancelar}
+              accessibilityRole="button"
+              accessibilityLabel="Cancelar coleta"
+            >
               <Text style={[s.modalCancelarTxt, { color: C.muted }]}>Cancelar</Text>
             </TouchableOpacity>
           </View>
@@ -270,7 +307,7 @@ const s = StyleSheet.create({
   devInfo:        { flex: 1 },
   devNome:        { fontSize: 15, fontWeight: '600' },
   devAddr:        { fontSize: 11, fontFamily: 'monospace', marginTop: 2 },
-  devBtn:         { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10, minWidth: 110, alignItems: 'center' },
+  devBtn:         { borderRadius: 8, paddingHorizontal: 16, paddingVertical: 13, minWidth: 110, alignItems: 'center' },
   devBtnTxt:      { color: '#fff', fontWeight: '700', fontSize: 13 },
   fixIndicadorWrapper: { marginHorizontal: 16, marginBottom: 4 },
   coordBox:       { margin: 16, borderRadius: 12, borderWidth: 1, padding: 16 },
@@ -288,6 +325,6 @@ const s = StyleSheet.create({
   modalInput:     { borderRadius: 10, borderWidth: 1, padding: 16, fontSize: 20, fontFamily: 'monospace', fontWeight: '700', height: 60 },
   modalBtn:       { borderRadius: 10, padding: 16, alignItems: 'center' },
   modalBtnTxt:    { color: '#fff', fontSize: 16, fontWeight: '700' },
-  modalCancelar:  { alignItems: 'center', padding: 12 },
+  modalCancelar:  { alignItems: 'center', padding: 14 },
   modalCancelarTxt: { fontSize: 14 },
 })

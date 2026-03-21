@@ -1,22 +1,8 @@
+from datetime import datetime, timezone
+from typing import List, Optional
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
-import os
-from dotenv import load_dotenv
-from supabase import create_client
-
-load_dotenv()
-_sb = None
-
-def sb():
-    global _sb
-    if _sb is None:
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_KEY")
-        if not url or not key:
-            raise HTTPException(status_code=500, detail="Supabase não configurado")
-        _sb = create_client(url, key)
-    return _sb
 
 
 router = APIRouter(prefix="/perimetros", tags=["perimetros"])
@@ -35,19 +21,58 @@ class PerimetroCreate(BaseModel):
     vertices: List[Vertice]
 
 
+def _get_supabase():
+    from main import get_supabase
+
+    return get_supabase()
+
+
+def _serialize_perimetro(row: Optional[dict]) -> Optional[dict]:
+    if not row:
+        return None
+
+    return {
+        "id": row.get("id"),
+        "nome": row.get("nome"),
+        "tipo": row.get("tipo"),
+        "criado_em": row.get("criado_em"),
+        "vertices": row.get("vertices_json") or [],
+    }
+
+
+def buscar_perimetro_ativo(projeto_id: str, supabase=None) -> Optional[dict]:
+    c = supabase or _get_supabase()
+
+    for tipo in ("definitivo", "editado", "original"):
+        res = (
+            c.table("perimetros")
+            .select("id, nome, tipo, vertices_json, criado_em")
+            .eq("projeto_id", projeto_id)
+            .eq("tipo", tipo)
+            .is_("deleted_at", "null")
+            .order("criado_em", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if res.data:
+            return _serialize_perimetro(res.data[0])
+
+    return None
+
+
 @router.get("/{projeto_id}")
 def listar_perimetros(projeto_id: str):
     """Lista todos os perímetros ativos de um projeto."""
     res = (
-        sb()
+        _get_supabase()
         .table("perimetros")
         .select("id, nome, tipo, vertices_json, criado_em")
         .eq("projeto_id", projeto_id)
         .is_("deleted_at", "null")
-        .order("criado_em")
+        .order("criado_em", desc=True)
         .execute()
     )
-    return res.data or []
+    return [_serialize_perimetro(row) for row in (res.data or [])]
 
 
 @router.post("/")
@@ -57,7 +82,7 @@ def salvar_perimetro(payload: PerimetroCreate):
     Se tipo='editado', primeiro arquiva qualquer 'editado' anterior do mesmo projeto.
     Se tipo='original', só insere se ainda não existir um original para o projeto.
     """
-    c = sb()
+    c = _get_supabase()
 
     if payload.tipo not in ("original", "editado"):
         raise HTTPException(status_code=422, detail="tipo deve ser 'original' ou 'editado'")
@@ -74,11 +99,18 @@ def salvar_perimetro(payload: PerimetroCreate):
         )
         if existe.data:
             # Retorna o existente sem duplicar
-            return {"id": existe.data[0]["id"], "status": "ja_existe"}
+            atual = (
+                c.table("perimetros")
+                .select("id, nome, tipo, vertices_json, criado_em")
+                .eq("id", existe.data[0]["id"])
+                .maybe_single()
+                .execute()
+            )
+            perimetro = _serialize_perimetro(atual.data)
+            return {**(perimetro or {"id": existe.data[0]["id"]}), "status": "ja_existe"}
 
     if payload.tipo == "editado":
         # Arquivar editados anteriores
-        from datetime import datetime, timezone
         now = datetime.now(timezone.utc).isoformat()
         c.table("perimetros").update({"deleted_at": now}).eq(
             "projeto_id", payload.projeto_id
@@ -98,7 +130,7 @@ def salvar_perimetro(payload: PerimetroCreate):
         )
         .execute()
     )
-    return res.data[0] if res.data else {"status": "ok"}
+    return _serialize_perimetro(res.data[0]) if res.data else {"status": "ok"}
 
 
 @router.patch("/{perimetro_id}/definitivo")
@@ -106,8 +138,7 @@ def marcar_definitivo(perimetro_id: str):
     """Marca um perímetro como definitivo para geração de documentos.
     Arquiva qualquer outro 'definitivo' anterior do mesmo projeto.
     """
-    from datetime import datetime, timezone
-    c = sb()
+    c = _get_supabase()
     now = datetime.now(timezone.utc).isoformat()
 
     peri = (
@@ -136,7 +167,6 @@ def marcar_definitivo(perimetro_id: str):
 @router.delete("/{perimetro_id}")
 def deletar_perimetro(perimetro_id: str):
     """Soft-delete de um perímetro."""
-    from datetime import datetime, timezone
     now = datetime.now(timezone.utc).isoformat()
-    sb().table("perimetros").update({"deleted_at": now}).eq("id", perimetro_id).execute()
+    _get_supabase().table("perimetros").update({"deleted_at": now}).eq("id", perimetro_id).execute()
     return {"status": "ok"}

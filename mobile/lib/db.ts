@@ -89,12 +89,12 @@ export async function listarPendentes(projeto_id?: string): Promise<PontoLocal[]
   const db = getDb()
   if (projeto_id) {
     return await db.getAllAsync<PontoLocal>(
-      `SELECT * FROM pontos_locais WHERE sync_status = 'pending' AND projeto_id = ? ORDER BY coletado_em`,
+      `SELECT * FROM pontos_locais WHERE sync_status != 'synced' AND projeto_id = ? ORDER BY coletado_em`,
       [projeto_id]
     )
   }
   return await db.getAllAsync<PontoLocal>(
-    `SELECT * FROM pontos_locais WHERE sync_status = 'pending' ORDER BY coletado_em`
+    `SELECT * FROM pontos_locais WHERE sync_status != 'synced' ORDER BY coletado_em`
   )
 }
 
@@ -117,7 +117,7 @@ export async function marcarSincronizado(id: string): Promise<void> {
 export async function marcarErro(id: string): Promise<void> {
   const db = getDb()
   await db.runAsync(
-    `UPDATE pontos_locais SET sync_status = 'error', sync_tentativas = sync_tentativas + 1 WHERE id = ?`,
+    `UPDATE pontos_locais SET sync_status = 'error', sync_tentativas = sync_tentativas + 1, sync_em = NULL WHERE id = ?`,
     [id]
   )
 }
@@ -126,11 +126,11 @@ export async function contarPendentes(projeto_id?: string): Promise<number> {
   const db = getDb()
   const row = projeto_id
     ? await db.getFirstAsync<{ count: number }>(
-        `SELECT COUNT(*) as count FROM pontos_locais WHERE sync_status = 'pending' AND projeto_id = ?`,
+        `SELECT COUNT(*) as count FROM pontos_locais WHERE sync_status != 'synced' AND projeto_id = ?`,
         [projeto_id]
       )
     : await db.getFirstAsync<{ count: number }>(
-        `SELECT COUNT(*) as count FROM pontos_locais WHERE sync_status = 'pending'`
+        `SELECT COUNT(*) as count FROM pontos_locais WHERE sync_status != 'synced'`
       )
   return row?.count ?? 0
 }

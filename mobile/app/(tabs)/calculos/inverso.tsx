@@ -50,6 +50,7 @@ export default function InversoScreen() {
         style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]}
         value={value} onChangeText={onChange} placeholder={placeholder}
         placeholderTextColor={C.muted} keyboardType="numeric" returnKeyType="next"
+        accessibilityLabel={label}
       />
     </View>
   )
@@ -77,10 +78,10 @@ export default function InversoScreen() {
         </View>
 
         <View style={s.btns}>
-          <TouchableOpacity style={[s.btnSec, { borderColor: C.cardBorder }]} onPress={limpar}>
+          <TouchableOpacity style={[s.btnSec, { borderColor: C.cardBorder }]} onPress={limpar} accessibilityRole="button" accessibilityLabel="Limpar campos">
             <Text style={[s.btnSecTxt, { color: C.muted }]}>Limpar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.btnPri, { backgroundColor: C.primary }]} onPress={calcular} disabled={loading}>
+          <TouchableOpacity style={[s.btnPri, { backgroundColor: C.primary }]} onPress={calcular} disabled={loading} accessibilityRole="button" accessibilityLabel="Calcular distância e azimute" accessibilityState={{ disabled: loading }}>
             {loading ? <ActivityIndicator color={C.primaryText} /> : <Text style={[s.btnPriTxt, { color: C.primaryText }]}>Calcular</Text>}
           </TouchableOpacity>
         </View>
@@ -105,6 +106,8 @@ export default function InversoScreen() {
         <TouchableOpacity
           style={[s.gabarito, { borderColor: C.cardBorder }]}
           onPress={() => { setP1({ nome:'P01', norte:'7395000', este:'313500' }); setP2({ nome:'P02', norte:'7395400', este:'313800' }) }}
+          accessibilityRole="button"
+          accessibilityLabel="Carregar gabarito"
         >
           <Text style={[s.gabaritoTxt, { color: C.muted }]}>Carregar gabarito (500m / 36°52')</Text>
         </TouchableOpacity>
@@ -136,6 +139,6 @@ const s = StyleSheet.create({
   resValor:   { fontSize: 22, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
   resSub:     { fontSize: 14, marginTop: 4 },
   resDivider: { width: 0.5, height: 40, marginHorizontal: 16 },
-  gabarito:   { marginTop: 16, borderWidth: 0.5, borderRadius: 8, padding: 12, borderStyle: 'dashed' },
+  gabarito:   { marginTop: 16, borderWidth: 0.5, borderRadius: 8, padding: 14, borderStyle: 'dashed', minHeight: 44, justifyContent: 'center' },
   gabaritoTxt:{ fontSize: 12, textAlign: 'center' },
 })

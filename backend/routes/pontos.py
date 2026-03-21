@@ -7,7 +7,7 @@ GET  /pontos/{id}     → busca ponto por ID
 DELETE /pontos/{id}   → soft-delete
 """
 
-from typing import Optional, List
+from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -41,11 +41,40 @@ class SyncPayload(BaseModel):
     pontos: List[PontoCreate]
 
 
+class SyncItemResultado(BaseModel):
+    local_id: Optional[str] = None
+    nome: str
+    status: str
+    ponto_id: Optional[str] = None
+    erro: Optional[str] = None
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _get_supabase():
     from main import get_supabase
     return get_supabase()
+
+
+def _buscar_existente_por_local_id(sb, local_id: Optional[str]):
+    if not local_id:
+        return None
+
+    res = (
+        sb.table("pontos")
+        .select("id")
+        .eq("local_id", local_id)
+        .maybe_single()
+        .execute()
+    )
+    return res.data
+
+
+def _normalizar_ponto(payload: PontoCreate) -> dict:
+    dados = payload.model_dump(exclude_none=True)
+    dados.setdefault("criado_em", datetime.now(timezone.utc).isoformat())
+    dados.setdefault("altitude_m", dados.get("cota"))
+    return dados
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -55,19 +84,11 @@ def criar_ponto(payload: PontoCreate):
     sb = _get_supabase()
 
     # Dedup: verifica se local_id já existe
-    if payload.local_id:
-        existente = (
-            sb.table("pontos")
-            .select("id")
-            .eq("local_id", payload.local_id)
-            .maybe_single()
-            .execute()
-        )
-        if existente.data:
-            return {**existente.data, "duplicado": True}
+    existente = _buscar_existente_por_local_id(sb, payload.local_id)
+    if existente:
+        return {**existente, "duplicado": True}
 
-    dados = payload.model_dump(exclude_none=True)
-    dados.setdefault("criado_em", datetime.now(timezone.utc).isoformat())
+    dados = _normalizar_ponto(payload)
 
     res = sb.table("pontos").insert(dados).execute()
     if not res.data:
@@ -83,38 +104,78 @@ def sincronizar_pontos(payload: SyncPayload):
     sb = _get_supabase()
     sincronizados = 0
     duplicados = 0
-    erros: list = []
+    itens: list[dict] = []
 
     for p in payload.pontos:
         try:
             # Dedup por local_id
-            if p.local_id:
-                existente = (
-                    sb.table("pontos")
-                    .select("id")
-                    .eq("local_id", p.local_id)
-                    .maybe_single()
-                    .execute()
+            existente = _buscar_existente_por_local_id(sb, p.local_id)
+            if existente:
+                duplicados += 1
+                itens.append(
+                    SyncItemResultado(
+                        local_id=p.local_id,
+                        nome=p.nome,
+                        status="duplicado",
+                        ponto_id=existente.get("id"),
+                    ).model_dump()
                 )
-                if existente.data:
-                    duplicados += 1
-                    continue
+                continue
 
-            dados = p.model_dump(exclude_none=True)
-            dados.setdefault("criado_em", datetime.now(timezone.utc).isoformat())
+            dados = _normalizar_ponto(p)
             res = sb.table("pontos").insert(dados).execute()
             if res.data:
                 sincronizados += 1
+                itens.append(
+                    SyncItemResultado(
+                        local_id=p.local_id,
+                        nome=p.nome,
+                        status="sincronizado",
+                        ponto_id=res.data[0].get("id"),
+                    ).model_dump()
+                )
             else:
-                erros.append({"local_id": p.local_id, "nome": p.nome, "erro": "sem retorno"})
+                itens.append(
+                    SyncItemResultado(
+                        local_id=p.local_id,
+                        nome=p.nome,
+                        status="erro",
+                        erro="sem retorno",
+                    ).model_dump()
+                )
         except Exception as exc:
-            erros.append({"local_id": p.local_id, "nome": p.nome, "erro": str(exc)})
+            itens.append(
+                SyncItemResultado(
+                    local_id=p.local_id,
+                    nome=p.nome,
+                    status="erro",
+                    erro=str(exc),
+                ).model_dump()
+            )
+
+    erros = [item for item in itens if item["status"] == "erro"]
+    sincronizados_local_ids = [
+        item["local_id"] for item in itens
+        if item["status"] == "sincronizado" and item.get("local_id")
+    ]
+    duplicados_local_ids = [
+        item["local_id"] for item in itens
+        if item["status"] == "duplicado" and item.get("local_id")
+    ]
+    erro_local_ids = [
+        item["local_id"] for item in itens
+        if item["status"] == "erro" and item.get("local_id")
+    ]
 
     return {
         "sincronizados": sincronizados,
         "duplicados": duplicados,
         "erros": erros,
         "total_recebido": len(payload.pontos),
+        "itens": itens,
+        "sincronizados_local_ids": sincronizados_local_ids,
+        "duplicados_local_ids": duplicados_local_ids,
+        "erro_local_ids": erro_local_ids,
     }
 
 

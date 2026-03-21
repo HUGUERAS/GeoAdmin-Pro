@@ -14,7 +14,13 @@ type Projeto = {
 export function ProjetoCard({ projeto, onPress }: { projeto: Projeto; onPress: () => void }) {
   const C = Colors.dark
   return (
-    <TouchableOpacity style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Projeto ${projeto.projeto_nome}`}
+    >
       <View style={s.top}>
         <Text style={[s.nome, { color: C.text }]} numberOfLines={1}>{projeto.projeto_nome}</Text>
         <StatusBadge status={projeto.status} />
