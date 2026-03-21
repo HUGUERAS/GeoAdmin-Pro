@@ -122,38 +122,30 @@ def _buscar_pontos(supabase, projeto_id: str) -> list[PontoExportacao]:
 
 def gerar_txt(pontos: list[PontoExportacao], projeto: dict) -> str:
     """
-    Gera arquivo .txt no formato padrão para o Métrica TOPO.
+    Gera arquivo .txt no formato exato que o Métrica TOPO importa.
 
-    Formato de cada linha:
-      NOME          NORTE           ESTE            COTA      CÓDIGO
-      P01     7395200.000000  313650.000000    1172.0000    TP
+    Conforme ImportExportFormat.db (LandStar) — formato SID=1:
+      Nome,código,n,e,elev(*.txt)
 
-    Colunas separadas por tabulação, 6 casas decimais em coordenadas,
-    4 casas decimais em cotas. Cabeçalho com dados do projeto.
+    Especificações (EXPORT_CUSTOM_TABLE):
+      SPLIT_CHAR_NUM=0   → separador vírgula
+      USER_TABLE_HEAD=0  → sem linha de cabeçalho
+      DECIMAL=3          → 3 casas decimais para Norte/Este
+      ELEVATION_DECIMAL=3→ 3 casas decimais para Elevação
+      Ordem das colunas  → Nome, Código, Norte, Este, Elevação
+
+    Exemplo de linha:
+      P01,TP,7395200.000,423061.000,879.100
+
+    Para importar no Métrica TOPO:
+      Arquivo > Importar Pontos > "Nome,código,n,e,elev(*.txt)"
     """
     linhas: list[str] = []
 
-    # Cabeçalho
-    linhas.append(f"* Projeto:    {projeto.get('projeto_nome', '')}")
-    linhas.append(f"* Job:        {projeto.get('numero_job', '')}")
-    linhas.append(f"* Cliente:    {projeto.get('cliente_nome', '')}")
-    linhas.append(f"* Zona UTM:   {projeto.get('zona_utm', '23S')}")
-    linhas.append(f"* Total pts:  {len(pontos)}")
-    linhas.append("* Gerado por: GeoAdmin Pro")
-    linhas.append("*")
-    linhas.append("* NOME\t\tNORTE\t\t\tESTE\t\t\tCOTA\t\tCÓDIGO")
-    linhas.append("*" + "-" * 78)
-
-    # Dados
     for p in pontos:
-        linha = (
-            f"{p.nome:<12}\t"
-            f"{p.norte:>18.6f}\t"
-            f"{p.este:>18.6f}\t"
-            f"{p.cota:>12.4f}\t"
-            f"{p.codigo}"
+        linhas.append(
+            f"{p.nome},{p.codigo},{p.norte:.3f},{p.este:.3f},{p.cota:.3f}"
         )
-        linhas.append(linha)
 
     return "\n".join(linhas)
 
@@ -162,49 +154,37 @@ def gerar_csv(
     pontos: list[PontoExportacao], projeto: dict, separador: str = ";"
 ) -> str:
     """
-    Gera arquivo .csv compatível com Excel brasileiro (separador ponto-e-vírgula).
+    Gera arquivo .csv compatível com Métrica TOPO — formato SID=3 (ou Excel BR).
 
-    Colunas: Nome;Norte;Este;Cota;Codigo;Descricao
-    Decimais com vírgula (padrão Brasil para Excel).
+    Colunas na ordem correta do Métrica TOPO:
+      Nome, Código, Norte, Este, Elevação
 
     Parâmetros:
-        separador: ";" para Excel BR, "," para sistemas internacionais
+        separador: "," para Métrica TOPO (SID=3), ";" para Excel BR
     """
     saida = io.StringIO()
-    writer = csv.writer(saida, delimiter=separador, quoting=csv.QUOTE_MINIMAL)
 
-    # Metadados como comentário
-    if separador == ";":
+    if separador == ",":
+        # Formato Métrica TOPO (SID=3): sem cabeçalho, ponto decimal, 3 decimais
+        for p in pontos:
+            saida.write(
+                f"{p.nome},{p.codigo},{p.norte:.3f},{p.este:.3f},{p.cota:.3f}\n"
+            )
+    else:
+        # Formato Excel BR: cabeçalho + vírgula como decimal
         saida.write(f"# Projeto: {projeto.get('projeto_nome', '')}\n")
         saida.write(f"# Job: {projeto.get('numero_job', '')}\n")
-        saida.write(f"# Cliente: {projeto.get('cliente_nome', '')}\n")
         saida.write(f"# Zona UTM: {projeto.get('zona_utm', '23S')}\n")
-
-    # Cabeçalho
-    writer.writerow(["Nome", "Norte", "Este", "Cota", "Codigo", "Descricao"])
-
-    # Dados
-    for p in pontos:
-        if separador == ";":
-            # Formato brasileiro: vírgula como separador decimal
+        writer = csv.writer(saida, delimiter=separador, quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["Nome", "Codigo", "Norte", "Este", "Cota", "Descricao"])
+        for p in pontos:
             writer.writerow(
                 [
                     p.nome,
-                    f"{p.norte:.6f}".replace(".", ","),
-                    f"{p.este:.6f}".replace(".", ","),
-                    f"{p.cota:.4f}".replace(".", ","),
                     p.codigo,
-                    p.descricao,
-                ]
-            )
-        else:
-            writer.writerow(
-                [
-                    p.nome,
-                    round(p.norte, 6),
-                    round(p.este, 6),
-                    round(p.cota, 4),
-                    p.codigo,
+                    f"{p.norte:.3f}".replace(".", ","),
+                    f"{p.este:.3f}".replace(".", ","),
+                    f"{p.cota:.3f}".replace(".", ","),
                     p.descricao,
                 ]
             )
@@ -216,100 +196,139 @@ def gerar_dxf(pontos: list[PontoExportacao], projeto: dict) -> bytes:
     """
     Gera arquivo DXF compatível com AutoCAD 2010+ e Métrica TOPO.
 
-    Layers criados:
-      PONTOS    — marcadores de ponto (amarelo)
-      TEXTOS    — nomes dos pontos (branco)
-      PERIMETRO — polilinha fechada ligando todos os pontos em ordem (vermelho)
-      INFO      — bloco de legenda com dados do projeto (ciano)
+    Convenções de layers baseadas no CodeImportTemplate.csv (LandStar):
+      Point1    — marcadores de ponto RTK (vermelho, PDMODE=3 = cruz+círculo)
+      TEXTOS    — nomes e cotas dos pontos (branco)
+      PERIMETRO — polilinha fechada do lote (vermelho, espessura 0.25mm)
+      COTAS     — valores de altitude ortométrica (ciano)
+      INFO      — legenda do projeto (magenta)
+
+    Variáveis de cabeçalho DXF (referência: GDAL header.dxf / AC1018):
+      $INSUNITS = 6  → metros (essencial para softwares de engenharia)
+      $PDMODE   = 3  → marcador cruz (X) — padrão topográfico
+      $PDSIZE   = -0.5 → tamanho relativo ao viewport (negativo = % da tela)
+      $AUNITS   = 0  → ângulos em graus decimais
+      $LUPREC   = 4  → 4 casas decimais em distâncias
 
     Requer: pip install ezdxf
     """
     try:
         import ezdxf
-    except ImportError:  # pragma: no cover - dependência opcional
+        from ezdxf import colors as dxf_colors
+    except ImportError:  # pragma: no cover
         raise RuntimeError(
-            "[ERRO-501] ezdxf não instalado. " "Execute: pip install ezdxf"
+            "[ERRO-501] ezdxf não instalado. Execute: pip install ezdxf"
         )
 
     doc = ezdxf.new(dxfversion="R2010")
     msp = doc.modelspace()
 
-    # Layers
-    doc.layers.add("PONTOS", color=2)  # amarelo
-    doc.layers.add("TEXTOS", color=7)  # branco
-    doc.layers.add("PERIMETRO", color=1)  # vermelho
-    doc.layers.add("INFO", color=4)  # ciano
+    # ── Variáveis de cabeçalho (padrão GDAL + topografia) ─────────────────────
+    doc.header["$INSUNITS"] = 6      # metros
+    doc.header["$PDMODE"]   = 3      # ponto como cruz (X)
+    doc.header["$PDSIZE"]   = 0.0    # tamanho auto pelo zoom
+    doc.header["$AUNITS"]   = 0      # graus decimais
+    doc.header["$AUPREC"]   = 4
+    doc.header["$LUPREC"]   = 4
+    doc.header["$LUNITS"]   = 2      # unidades decimais
 
-    # Estimativa de altura do texto proporcional à área do levantamento
+    # ── Estilo de texto (romans.shx disponível em fonts/) ─────────────────────
+    style = doc.styles.new("TOPO")
+    style.dxf.font = "romans.shx"
+    style.dxf.width = 0.8  # fator de largura condensada
+
+    # ── Layers (convenção CodeImportTemplate.csv + norma ABNT) ────────────────
+    doc.layers.add("Point1",    color=1)   # vermelho  — pontos topográficos
+    doc.layers.add("TEXTOS",    color=7)   # branco    — nomes dos pontos
+    doc.layers.add("PERIMETRO", color=1)   # vermelho  — linha de limite
+    doc.layers.add("COTAS",     color=4)   # ciano     — valores de altitude
+    doc.layers.add("INFO",      color=6)   # magenta   — legenda
+
+    # Espessura de linha no layer PERIMETRO (0.25 mm = LW_025)
+    doc.layers.get("PERIMETRO").dxf.lineweight = 25
+
+    # ── Estimativa de altura do texto proporcional ao levantamento ────────────
     if len(pontos) >= 2:
         northings = [p.norte for p in pontos]
-        eastings = [p.este for p in pontos]
+        eastings  = [p.este  for p in pontos]
         span = max(
             max(northings) - min(northings),
-            max(eastings) - min(eastings),
+            max(eastings)  - min(eastings),
             1.0,
         )
-        altura_texto = max(0.3, span * 0.003)
+        altura_texto = max(0.5, span * 0.003)
     else:
         altura_texto = 1.0
 
-    # Pontos e textos
+    offset_texto = altura_texto * 0.4  # deslocamento do rótulo em relação ao ponto
+
+    # ── Pontos, nomes e cotas ─────────────────────────────────────────────────
     for p in pontos:
-        # Marcador de ponto (símbolo +)
+        # Marcador de ponto (PDMODE=3 → cruz)
         msp.add_point(
             (p.este, p.norte, p.cota),
-            dxfattribs={"layer": "PONTOS"},
+            dxfattribs={"layer": "Point1"},
         )
 
-        # Nome do ponto
+        # Nome do ponto (acima-direita do marcador)
         msp.add_text(
             p.nome,
             dxfattribs={
-                "layer": "TEXTOS",
+                "layer":  "TEXTOS",
+                "style":  "TOPO",
                 "height": altura_texto,
-                "insert": (
-                    p.este + altura_texto * 0.5,
-                    p.norte + altura_texto * 0.5,
-                    p.cota,
-                ),
+                "insert": (p.este + offset_texto, p.norte + offset_texto, p.cota),
             },
         )
 
-    # Polilinha do perímetro (fecha o polígono)
+        # Cota ortométrica (abaixo-direita do marcador)
+        msp.add_text(
+            f"{p.cota:.4f}m",
+            dxfattribs={
+                "layer":  "COTAS",
+                "style":  "TOPO",
+                "height": altura_texto * 0.75,
+                "insert": (p.este + offset_texto, p.norte - altura_texto, p.cota),
+            },
+        )
+
+    # ── Polilinha do perímetro ────────────────────────────────────────────────
     if len(pontos) >= 3:
         coords_2d = [(p.este, p.norte) for p in pontos]
-        coords_2d.append(coords_2d[0])  # fechar
         msp.add_lwpolyline(
             coords_2d,
             dxfattribs={"layer": "PERIMETRO", "closed": True},
         )
 
-    # Bloco de legenda no canto inferior esquerdo
+    # ── Legenda do projeto (canto inferior esquerdo) ──────────────────────────
     if pontos:
-        min_e = min(p.este for p in pontos) - altura_texto * 5
-        min_n = min(p.norte for p in pontos) - altura_texto * 10
+        min_e = min(p.este  for p in pontos) - altura_texto * 5
+        min_n = min(p.norte for p in pontos) - altura_texto * 12
 
         info_linhas = [
-            f"Projeto: {projeto.get('projeto_nome', '')}",
-            f"Job:     {projeto.get('numero_job', '')}",
-            f"Cliente: {projeto.get('cliente_nome', '')}",
-            f"Zona:    {projeto.get('zona_utm', '23S')} | Pts: {len(pontos)}",
-            "Gerado por: GeoAdmin Pro",
+            f"PROJETO: {projeto.get('projeto_nome', '').upper()}",
+            f"JOB:     {projeto.get('numero_job', '')}",
+            f"CLIENTE: {projeto.get('cliente_nome', '')}",
+            f"ZONA:    {projeto.get('zona_utm', '23S')} | PONTOS: {len(pontos)}",
+            f"DATUM:   SIRGAS 2000 / UTM",
+            "GERADO POR: GeoAdmin Pro",
         ]
 
-        for i, texto in enumerate(info_linhas):
+        for i, linha in enumerate(info_linhas):
             msp.add_text(
-                texto,
+                linha,
                 dxfattribs={
-                    "layer": "INFO",
-                    "height": altura_texto * 0.8,
-                    "insert": (min_e, min_n - i * altura_texto * 1.5),
+                    "layer":  "INFO",
+                    "style":  "TOPO",
+                    "height": altura_texto * 0.7,
+                    "insert": (min_e, min_n - i * altura_texto * 1.4),
                 },
             )
 
-    buffer = io.BytesIO()
-    doc.write(buffer)
-    return buffer.getvalue()
+    # ezdxf >= 1.0 escreve em stream de TEXTO (StringIO), não binário
+    texto_buffer = io.StringIO()
+    doc.write(texto_buffer)
+    return texto_buffer.getvalue().encode("utf-8")
 
 
 def _xml(texto: str) -> str:

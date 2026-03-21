@@ -9,6 +9,8 @@ Endpoints:
   POST /geo/distancia-ponto-linha → distância ponto a segmento de reta
   POST /geo/rotacao               → rotação de pontos UTM
   POST /geo/subdivisao            → subdivisão de polígono por área alvo
+  POST /geo/altitude/corrigir     → altitude elipsoidal → ortométrica (IBGE geoide)
+  GET  /geo/altitude/modelos      → lista modelos de geoide disponíveis
 """
 
 import math
@@ -181,7 +183,7 @@ class SubdivisaoRequest(BaseModel):
     area_alvo_m2: float
 
 @router.post("/subdivisao")
-def subdividir(payload: SubdivisaoRequest):
+def subdividir(payload: SubdivisaoRequest):  # noqa: C901
     verts = payload.vertices
     n = len(verts)
     if n < 3:
@@ -238,3 +240,43 @@ def subdividir(payload: SubdivisaoRequest):
         }
 
     raise HTTPException(422, "Não foi possível encontrar a linha de divisão. Verifique a orientação dos vértices (anti-horário).")
+
+
+# ─── Correção de Altitude (Geoide IBGE) ────────────────────────────────────────
+
+class AltitudeCorrRequest(BaseModel):
+    lat: float            # latitude decimal (negativo = Sul)
+    lon: float            # longitude decimal (negativo = Oeste)
+    h_elipsoidal: float   # altitude elipsoidal GPS em metros
+    modelo: str = "hnor2020"  # "hnor2020" | "mapgeo2010"
+
+@router.post("/altitude/corrigir",
+             summary="Altitude elipsoidal → ortométrica",
+             description=(
+                 "Converte a altitude elipsoidal do receptor GPS/RTK para altitude "
+                 "ortométrica (referência ao geoide IBGE). Usa o modelo HGEO HNOR 2020 "
+                 "por padrão (recomendado pelo INCRA para georreferenciamento).\n\n"
+                 "**Fórmula:** H = h − N  onde N é a ondulação do geoide."
+             ))
+def corrigir_altitude_endpoint(payload: AltitudeCorrRequest):
+    try:
+        from integracoes.geoid import corrigir_altitude
+        return corrigir_altitude(
+            lat=payload.lat,
+            lon=payload.lon,
+            h_elipsoidal=payload.h_elipsoidal,
+            modelo=payload.modelo,  # type: ignore[arg-type]
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    except Exception as exc:
+        raise HTTPException(500, f"Erro ao aplicar geoide: {exc}")
+
+
+@router.get("/altitude/modelos",
+            summary="Lista modelos de geoide disponíveis")
+def listar_modelos_geoide():
+    from integracoes.geoid import listar_modelos
+    return {"modelos": listar_modelos()}

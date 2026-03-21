@@ -23,6 +23,11 @@ import { NmeaFix, labelQualidade, corQualidade } from '../lib/nmea'
 import { GpsIndicador } from '../components/GpsIndicador'
 import { salvarPonto, ultimoNomePonto } from '../lib/db'
 import { sincronizar } from '../lib/sync'
+import {
+  somConectado, somDesconectado, somPontoSalvo,
+  somRtkFixo, somRtkFloat, somPdopAlto, somPrecisaoBaixa,
+  somSatelitesInsuf, descarregarSons,
+} from '../lib/audio'
 
 // ID do projeto atual — em produção viria via params ou contexto
 // Por ora exibe lista de dispositivos sem vínculo fixo de projeto
@@ -40,8 +45,24 @@ export default function BluetoothScreen() {
   const [nomePonto, setNomePonto]         = useState('PT0001')
   const [salvando, setSalvando]           = useState(false)
 
-  const fixRef = useRef<NmeaFix | null>(null)
+  const fixRef        = useRef<NmeaFix | null>(null)
+  const qualidadeRef  = useRef<number>(0)   // rastreia mudanças de qualidade para alertas sonoros
   fixRef.current = fix
+
+  // ── Alertas sonoros quando a qualidade do fix muda ─────────────────────────
+  useEffect(() => {
+    if (!fix) return
+    const qAnterior = qualidadeRef.current
+    const qAtual    = fix.qualidade
+    if (qAtual === qAnterior) return
+    qualidadeRef.current = qAtual
+
+    if (qAtual === 4)                        somRtkFixo()
+    else if (qAtual === 5)                   somRtkFloat()
+    else if (qAtual > 0 && fix.hdop > 4)     somPdopAlto()
+    else if (qAtual > 0 && fix.satelites < 4) somSatelitesInsuf()
+    else if (qAtual === 0 && qAnterior > 0)  somDesconectado()
+  }, [fix?.qualidade])
 
   const carregarDispositivos = useCallback(async () => {
     const lista = await listarDispositivosPareados()
@@ -50,7 +71,7 @@ export default function BluetoothScreen() {
 
   useEffect(() => {
     carregarDispositivos()
-    return () => { pararLeitura(); desconectar() }
+    return () => { pararLeitura(); desconectar(); descarregarSons() }
   }, [])
 
   const handleConectar = async (address: string) => {
@@ -61,6 +82,7 @@ export default function BluetoothScreen() {
       setConectado(true)
       setEnderecoAtivo(address)
       iniciarLeitura((novoFix) => setFix(novoFix))
+      somConectado()
     } else {
       Alert.alert('Falha', 'Não foi possível conectar. Verifique se o CHC i73+ está ligado e pareado.')
     }
@@ -71,6 +93,7 @@ export default function BluetoothScreen() {
     setConectado(false)
     setEnderecoAtivo(null)
     setFix(null)
+    somDesconectado()
   }
 
   const abrirModalColetar = async () => {
@@ -93,9 +116,9 @@ export default function BluetoothScreen() {
           nome:        nomePonto,
           lat:         f.lat,
           lon:         f.lon,
-          norte:       0,   // conversão UTM feita no backend
+          norte:       0,            // conversão UTM feita no backend
           este:        0,
-          cota:        f.alt,
+          cota:        f.altElipsoidal, // altitude elipsoidal → backend aplica IBGE HNOR 2020
           codigo:      'TP',
           status_gnss: labelQualidade(f.qualidade),
           satelites:   f.satelites,
@@ -107,6 +130,7 @@ export default function BluetoothScreen() {
           coletado_em: new Date().toISOString(),
           sync_em:     undefined,
         })
+        somPontoSalvo()
         setHistorico(h => [{ nome: nomePonto, q: f.qualidade }, ...h].slice(0, 5))
         setModalVisivel(false)
         if (sincronizarDepois) {
@@ -118,6 +142,7 @@ export default function BluetoothScreen() {
     }
 
     if (f.qualidade < 4 || f.hdop > 2) {
+      somPrecisaoBaixa()
       Alert.alert(
         'Qualidade insuficiente',
         `Fix: ${labelQualidade(f.qualidade)}  HDOP: ${f.hdop.toFixed(1)}\n\nPara georreferenciamento INCRA é exigido RTK Fixo com HDOP ≤ 2. Salvar assim mesmo?`,
@@ -206,8 +231,10 @@ export default function BluetoothScreen() {
             <Text style={[s.coord, { color: C.primary }]}>{fix.lat.toFixed(8)}°</Text>
             <Text style={[s.coordLabel, { color: C.muted }]}>LON</Text>
             <Text style={[s.coord, { color: C.primary }]}>{fix.lon.toFixed(8)}°</Text>
-            <Text style={[s.coordLabel, { color: C.muted }]}>ALT</Text>
+            <Text style={[s.coordLabel, { color: C.muted }]}>ALT MSL (aprox. ortométrica)</Text>
             <Text style={[s.coord, { color: C.primary }]}>{fix.alt.toFixed(3)} m</Text>
+            <Text style={[s.coordLabel, { color: C.muted }]}>ALT ELIPSOIDAL (WGS84)</Text>
+            <Text style={[s.coord, { color: C.text }]}>{fix.altElipsoidal.toFixed(3)} m</Text>
           </View>
         )}
 

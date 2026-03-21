@@ -73,7 +73,34 @@ def _buscar_existente_por_local_id(sb, local_id: Optional[str]):
 def _normalizar_ponto(payload: PontoCreate) -> dict:
     dados = payload.model_dump(exclude_none=True)
     dados.setdefault("criado_em", datetime.now(timezone.utc).isoformat())
-    dados.setdefault("altitude_m", dados.get("cota"))
+
+    # ── Correção de altitude elipsoidal → ortométrica (IBGE HNOR 2020) ────────
+    # Pontos coletados via Bluetooth NMEA chegam com altitude elipsoidal (WGS84).
+    # O backend aplica a correção IBGE para garantir compatibilidade com INCRA.
+    # H_ortometrica = h_elipsoidal − N_HNOR2020
+    if (
+        dados.get("origem") == "bluetooth"
+        and dados.get("lat") and dados.get("lon")
+        and dados.get("cota") is not None
+    ):
+        try:
+            from integracoes.geoid import corrigir_altitude
+            resultado = corrigir_altitude(
+                lat=float(dados["lat"]),
+                lon=float(dados["lon"]),
+                h_elipsoidal=float(dados["cota"]),
+                modelo="hnor2020",
+            )
+            dados["cota"]      = resultado["h_ortometrica"]
+            dados["altitude_m"] = resultado["h_ortometrica"]
+            dados["_geoide_aplicado"] = True
+            dados["_ondulacao_N"]     = resultado["ondulacao_N"]
+        except Exception:
+            # Geoide não disponível ou ponto fora da cobertura — mantém altitude original
+            dados.setdefault("altitude_m", dados.get("cota"))
+    else:
+        dados.setdefault("altitude_m", dados.get("cota"))
+
     return dados
 
 

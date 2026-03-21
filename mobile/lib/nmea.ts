@@ -16,14 +16,16 @@
  */
 
 export interface NmeaFix {
-  lat: number        // decimal degrees, negativo = Sul
-  lon: number        // decimal degrees, negativo = Oeste
-  alt: number        // altitude em metros (elipsoidal)
-  qualidade: number  // 0..5
+  lat: number           // decimal degrees, negativo = Sul
+  lon: number           // decimal degrees, negativo = Oeste
+  alt: number           // altitude MSL em metros (aprox. ortométrica — GGA campo 9)
+  altElipsoidal: number // altitude elipsoidal WGS84 = alt + sepGeoide (GGA campos 9+11)
+  sepGeoide: number     // ondulação geoidal N do receptor (EGM96) — GGA campo 11
+  qualidade: number     // 0..5
   satelites: number
   hdop: number
-  valida: boolean    // do RMC: 'A'=válido, 'V'=void
-  timestamp: number  // Date.now()
+  valida: boolean       // do RMC: 'A'=válido, 'V'=void
+  timestamp: number     // Date.now()
 }
 
 /** Converte DDMM.MMMM + hemisferio para graus decimais */
@@ -60,11 +62,16 @@ export function parseGGA(linha: string): Partial<NmeaFix> | null {
   const qualidade = parseInt(partes[6] ?? '0', 10)
   const satelites = parseInt(partes[7] ?? '0', 10)
   const hdop      = parseFloat(partes[8] ?? '99')
-  const alt       = parseFloat(partes[9] ?? '0')
+  const alt       = parseFloat(partes[9] ?? '0')   // altitude MSL (aprox. ortométrica)
+
+  // Campo 11: ondulação do geoide N (altura do geoide EGM96 acima do elipsoide)
+  // h_elipsoidal = h_msl + N  (CHC i73+ e maioria dos receptores RTK fornecem este campo)
+  const sepGeoide    = parseFloat(partes[11] ?? '0') || 0
+  const altElipsoidal = alt + sepGeoide
 
   if (isNaN(lat) || isNaN(lon)) return null
 
-  return { lat, lon, alt, qualidade, satelites, hdop }
+  return { lat, lon, alt, altElipsoidal, sepGeoide, qualidade, satelites, hdop }
 }
 
 /** Parseia $GPRMC ou $GNRMC */
@@ -98,15 +105,19 @@ export function mergeNmea(
   gga: Partial<NmeaFix>,
   rmc: Partial<NmeaFix>
 ): NmeaFix {
+  const alt = gga.alt ?? 0
+  const sep = gga.sepGeoide ?? 0
   return {
-    lat:       gga.lat       ?? rmc.lat       ?? 0,
-    lon:       gga.lon       ?? rmc.lon       ?? 0,
-    alt:       gga.alt       ?? 0,
-    qualidade: gga.qualidade ?? 0,
-    satelites: gga.satelites ?? 0,
-    hdop:      gga.hdop      ?? 99,
-    valida:    rmc.valida    ?? (gga.qualidade !== undefined && gga.qualidade > 0),
-    timestamp: Date.now(),
+    lat:          gga.lat          ?? rmc.lat ?? 0,
+    lon:          gga.lon          ?? rmc.lon ?? 0,
+    alt,
+    altElipsoidal: gga.altElipsoidal ?? (alt + sep),
+    sepGeoide:    sep,
+    qualidade:    gga.qualidade ?? 0,
+    satelites:    gga.satelites ?? 0,
+    hdop:         gga.hdop      ?? 99,
+    valida:       rmc.valida    ?? (gga.qualidade !== undefined && gga.qualidade > 0),
+    timestamp:    Date.now(),
   }
 }
 

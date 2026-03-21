@@ -209,11 +209,17 @@ Projeto: {pacote.projeto_nome}
 Job:     {pacote.numero_job}
 Pontos:  {pacote.total_pontos}
 
-ARQUIVOS INCLUÍDOS
-------------------
-.txt  → Importar em: Métrica TOPO > Arquivo > Importar Pontos > Texto
-.csv  → Importar em: Métrica TOPO > Arquivo > Importar Pontos > CSV
-        (separador ponto-e-vírgula, decimais com vírgula)
+COMO IMPORTAR NO MÉTRICA TOPO
+-----------------------------
+.txt  → Arquivo > Importar Pontos > "Nome,código,n,e,elev(*.txt)"
+        (formato: Nome,Código,Norte,Este,Elevação — vírgula, ponto decimal)
+
+.csv  → Arquivo > Importar Pontos > "Nome,código,n,e,elev(*.csv)"
+        (mesmo formato, extensão .csv — use este se o .txt não aparecer)
+
+.csv (Excel) → Abrir no Excel BR (separador ;, vírgula decimal)
+        NÃO use este para importar no Métrica TOPO
+
 .dxf  → Abrir em: AutoCAD ou diretamente no Métrica TOPO
 .kml  → Abrir no Google Earth para conferir a posição do lote
 

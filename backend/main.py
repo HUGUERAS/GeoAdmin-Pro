@@ -1,6 +1,18 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# ── Banco de dados PROJ local (operação offline / sem internet) ────────────────
+# O proj.db em D:\coletoraprolanddd\outras biblioteecas\proj contém todas as
+# definições CRS (SIRGAS2000, SAD69, UTM, etc.) sem necessidade de rede.
+# Definir PROJ_DATA *antes* de importar pyproj para que ele use o banco local.
+_proj_data_dir = os.getenv(
+    "PROJ_DATA",
+    r"D:\coletoraprolanddd\outras biblioteecas\proj",
+)
+if os.path.isdir(_proj_data_dir) and "PROJ_DATA" not in os.environ:
+    os.environ["PROJ_DATA"] = _proj_data_dir
+# ──────────────────────────────────────────────────────────────────────────────
+
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +30,8 @@ from routes.pontos import router as pontos_router
 from routes.rag import router as rag_router
 from routes.perimetros import router as perimetros_router
 from routes.geo import router as geo_router
+from routes.importar import router as importar_router
+from routes.catalogo import router as catalogo_router
 
 app = FastAPI(title="GeoAdmin Pro - Backend MVP")
 
@@ -40,6 +54,8 @@ app.include_router(pontos_router)
 app.include_router(rag_router)
 app.include_router(perimetros_router)
 app.include_router(geo_router)
+app.include_router(importar_router)
+app.include_router(catalogo_router)
 
 
 class InversoRequest(BaseModel):
