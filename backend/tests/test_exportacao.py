@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import zipfile
 
 from integracoes import integracao_metrica as metrica_mod
@@ -24,6 +25,52 @@ def test_preparar_metrica_aceita_avisos_com_unicode(monkeypatch):
         )
 
     monkeypatch.setattr(metrica_mod, "gerar_pacote_metrica", fake_gerar_pacote_metrica)
+    monkeypatch.setattr(
+        exportacao_mod,
+        "_coletar_contexto_pacote",
+        lambda *_args, **_kwargs: {
+            "projeto": {
+                "id": "projeto-1",
+                "projeto_nome": "Projeto Teste",
+                "numero_job": "JOB-123",
+                "cliente_id": "cliente-1",
+                "cliente_nome": "Maria",
+                "zona_utm": "23S",
+                "status": "medicao",
+            },
+            "cliente": {"id": "cliente-1", "nome": "Maria"},
+            "pontos": [{"nome": "P01", "norte": 1.0, "este": 2.0, "cota": 3.0}],
+            "confrontantes": [{"id": "conf-1", "nome": "Vizinho"}],
+            "documentos": [{"id": "doc-1", "tipo": "memorial"}],
+            "perimetro_ativo": {
+                "id": "per-1",
+                "nome": "Oficial",
+                "tipo": "definitivo",
+                "vertices": [
+                    {"lon": -49.0, "lat": -14.0},
+                    {"lon": -49.0, "lat": -14.1},
+                    {"lon": -49.1, "lat": -14.1},
+                ],
+            },
+            "geometria_referencia": {
+                "nome": "Croqui",
+                "origem_tipo": "manual",
+                "vertices": [
+                    {"lon": -49.0, "lat": -14.0},
+                    {"lon": -49.0, "lat": -14.05},
+                    {"lon": -49.05, "lat": -14.05},
+                ],
+            },
+            "resumo": {
+                "pontos_total": 1,
+                "confrontantes_total": 1,
+                "documentos_total": 1,
+                "perimetro_tipo": "definitivo",
+                "referencia_cliente": True,
+                "avisos_total": 1,
+            },
+        },
+    )
 
     resposta = exportacao_mod.preparar_metrica("projeto-1", supabase=object())
 
@@ -40,3 +87,16 @@ def test_preparar_metrica_aceita_avisos_com_unicode(monkeypatch):
     assert "GeoAdmin_JOB-123_Projeto_Teste.kml" in pacote.namelist()
     assert "GeoAdmin_JOB-123_Projeto_Teste.dxf" in pacote.namelist()
     assert "COMO_USAR_NO_METRICA.txt" in pacote.namelist()
+    assert "manifesto.json" in pacote.namelist()
+    assert "dados/projeto.json" in pacote.namelist()
+    assert "dados/cliente.json" in pacote.namelist()
+    assert "dados/confrontantes.json" in pacote.namelist()
+    assert "dados/pontos.json" in pacote.namelist()
+    assert "dados/perimetro_ativo.geojson" in pacote.namelist()
+    assert "dados/referencia_cliente.geojson" in pacote.namelist()
+
+    manifesto = json.loads(pacote.read("manifesto.json").decode("utf-8"))
+    assert manifesto["schema"] == "geoadmin.metrica.bridge.v1"
+    assert manifesto["projeto"]["id"] == "projeto-1"
+    assert manifesto["cliente"]["nome"] == "Maria"
+    assert manifesto["arquivos"]["perimetro_dxf"] == "GeoAdmin_JOB-123_Projeto_Teste.dxf"

@@ -6,6 +6,7 @@ GeoAdmin Pro e um sistema de administracao geoespacial para topografia, georrefe
 
 - `mobile/`: React Native com Expo 54 e Expo Router
 - `backend/`: FastAPI em Python
+- `bridge/`: utilitario Windows para preparar e abrir workspaces do Métrica TOPO
 - banco: Supabase com PostGIS
 - integracoes: exportacao para MetriCA TOPO e fluxo documental por magic link
 
@@ -49,6 +50,7 @@ Importante:
 - `mobile/app/(tabs)/clientes`: hub de clientes e documentacao
 - `backend/routes`: rotas FastAPI
 - `backend/integracoes`: integracoes e utilitarios de dominio
+- `bridge/`: GeoAdmin Bridge para o fluxo GeoAdmin -> Métrica
 - `infra/supabase/migrations`: migrations SQL
 
 ## Requisitos
@@ -132,6 +134,26 @@ npm run build:web
 ### Backend
 
 O backend esta preparado para deploy no Railway usando `backend/Procfile` e `backend/railway.json`.
+
+### GeoAdmin Bridge
+
+O MVP inicial do bridge prepara um workspace local para o Métrica TOPO:
+
+```bash
+python bridge/geoadmin_bridge.py --projeto-id 36510522-3544-46fe-bbe1-e6348dd708df
+```
+
+O pacote `POST /projetos/{id}/metrica/preparar` agora inclui:
+
+- `manifesto.json`
+- `dados/projeto.json`
+- `dados/cliente.json`
+- `dados/confrontantes.json`
+- `dados/documentos.json`
+- `dados/pontos.json`
+- `dados/perimetro_ativo.geojson`
+- `dados/referencia_cliente.geojson`
+- arquivos `TXT`, `CSV`, `KML` e `DXF`
 
 ## Observacoes de persistencia
 
