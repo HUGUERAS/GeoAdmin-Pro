@@ -155,6 +155,12 @@ O pacote `POST /projetos/{id}/metrica/preparar` agora inclui:
 - `dados/referencia_cliente.geojson`
 - arquivos `TXT`, `CSV`, `KML` e `DXF`
 
+Tambem existe o manifesto puro para o bridge:
+
+```text
+GET /projetos/{id}/metrica/manifesto
+```
+
 ## Observacoes de persistencia
 
 A geometria de referencia do cliente tenta persistir primeiro em `geometrias_referencia_cliente` no Supabase. Enquanto a migration ainda nao estiver aplicada, o backend usa fallback local em `backend/data/geometrias_referencia_cliente.json`.

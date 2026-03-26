@@ -100,3 +100,56 @@ def test_preparar_metrica_aceita_avisos_com_unicode(monkeypatch):
     assert manifesto["projeto"]["id"] == "projeto-1"
     assert manifesto["cliente"]["nome"] == "Maria"
     assert manifesto["arquivos"]["perimetro_dxf"] == "GeoAdmin_JOB-123_Projeto_Teste.dxf"
+
+
+def test_obter_manifesto_metrica_retorna_json_para_bridge(monkeypatch):
+    monkeypatch.setattr(
+        metrica_mod,
+        "gerar_pacote_metrica",
+        lambda *_args, **_kwargs: PacoteMetrica(
+            projeto_nome="Projeto Teste",
+            numero_job="JOB-123",
+            total_pontos=3,
+            txt="P01,TP,1.000,2.000,3.000",
+            csv="Nome;Codigo;Norte;Este;Cota",
+            dxf=b"DXF",
+            kml="<kml></kml>",
+            avisos=[],
+        ),
+    )
+    monkeypatch.setattr(
+        exportacao_mod,
+        "_coletar_contexto_pacote",
+        lambda *_args, **_kwargs: {
+            "projeto": {
+                "id": "projeto-1",
+                "projeto_nome": "Projeto Teste",
+                "numero_job": "JOB-123",
+                "cliente_id": "cliente-1",
+                "cliente_nome": "Maria",
+                "zona_utm": "23S",
+                "status": "medicao",
+            },
+            "cliente": {"id": "cliente-1", "nome": "Maria"},
+            "pontos": [],
+            "confrontantes": [],
+            "documentos": [],
+            "perimetro_ativo": None,
+            "geometria_referencia": None,
+            "resumo": {
+                "pontos_total": 0,
+                "confrontantes_total": 0,
+                "documentos_total": 0,
+                "perimetro_tipo": None,
+                "referencia_cliente": False,
+                "avisos_total": 0,
+            },
+        },
+    )
+
+    manifesto = exportacao_mod.obter_manifesto_metrica("projeto-1", supabase=object())
+
+    assert manifesto["schema"] == "geoadmin.metrica.bridge.v1"
+    assert manifesto["projeto"]["id"] == "projeto-1"
+    assert manifesto["cliente"]["nome"] == "Maria"
+    assert manifesto["checklist"][0]["id"] == "importar_pontos"

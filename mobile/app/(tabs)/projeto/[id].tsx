@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Clipboard } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import * as Linking from 'expo-linking'
 import { Colors } from '../../../constants/Colors'
 import { API_URL } from '../../../constants/Api'
 import { StatusBadge } from '../../../components/StatusBadge'
@@ -96,6 +97,34 @@ export default function DetalheProjetoScreen() {
     }
   }
 
+  const abrirUrlOperacional = async (url: string, sucesso: string) => {
+    try {
+      const suportado = await Linking.canOpenURL(url)
+      if (!suportado) {
+        throw new Error('URL nao suportada')
+      }
+      await Linking.openURL(url)
+      Alert.alert('Fluxo iniciado', sucesso)
+    } catch {
+      Clipboard.setString(url)
+      Alert.alert('Link copiado', 'Nao foi possivel abrir automaticamente. O link foi copiado para uso no navegador do escritorio.')
+    }
+  }
+
+  const prepararParaMetrica = async () => {
+    await abrirUrlOperacional(
+      `${API_URL}/projetos/${id}/metrica/preparar`,
+      'O pacote do Métrica foi aberto para download no navegador.',
+    )
+  }
+
+  const abrirManifestoMetrica = async () => {
+    await abrirUrlOperacional(
+      `${API_URL}/projetos/${id}/metrica/manifesto`,
+      'O manifesto do bridge foi aberto para inspeção.',
+    )
+  }
+
   if (loading) return (
     <View style={[s.centro, { backgroundColor: C.background }]}>
       <ActivityIndicator color={C.primary} size="large" />
@@ -173,6 +202,24 @@ export default function DetalheProjetoScreen() {
           accessibilityLabel="Copiar link do cliente para WhatsApp"
         >
           <Text style={[s.btnTxt, { color: C.primary }]}>📱 Copiar Link do Cliente</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.btn, { backgroundColor: C.card, borderColor: C.primaryDark }]}
+          onPress={prepararParaMetrica}
+          accessibilityRole="button"
+          accessibilityLabel="Preparar pacote para o Métrica TOPO"
+        >
+          <Text style={[s.btnTxt, { color: C.primary }]}>📦 Preparar para Métrica</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.btn, { backgroundColor: C.card, borderColor: C.muted }]}
+          onPress={abrirManifestoMetrica}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir manifesto do bridge do Métrica"
+        >
+          <Text style={[s.btnTxt, { color: C.text }]}>🧭 Ver Manifesto Métrica</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

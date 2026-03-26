@@ -5,8 +5,10 @@ Utilitario Windows para preparar um projeto do GeoAdmin e entregar o workspace m
 ## O que faz no MVP
 
 - baixa `POST /projetos/{id}/metrica/preparar`
-- extrai o pacote em uma pasta local padrao
-- grava `bridge_status.json`
+- organiza o workspace em subpastas operacionais
+- grava `99_bridge/bridge_status.json`
+- grava log local em `99_bridge/logs/bridge.log`
+- gera `ABRIR_NO_METRICA.bat`
 - abre a pasta do projeto
 - opcionalmente abre o Métrica TOPO
 
@@ -34,6 +36,19 @@ python bridge/geoadmin_bridge.py ^
 %USERPROFILE%\GeoAdmin\Metrica
 ```
 
+## Estrutura do workspace
+
+```text
+{projeto}/
+  01_entrada/
+  02_cad/
+  03_documentos/
+  04_exportacoes/
+  99_bridge/
+  ABRIR_NO_METRICA.bat
+  COMO_USAR_NO_METRICA.txt
+```
+
 ## Conteudo esperado do pacote
 
 - `manifesto.json`
@@ -49,6 +64,14 @@ python bridge/geoadmin_bridge.py ^
 - `GeoAdmin_*.csv`
 - `GeoAdmin_*.kml`
 - `GeoAdmin_*.dxf`
+
+## Manifesto dedicado
+
+Para inspeção sem baixar o ZIP completo:
+
+```text
+GET /projetos/{id}/metrica/manifesto
+```
 
 ## Observacao
 

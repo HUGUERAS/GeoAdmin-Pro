@@ -7,10 +7,10 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
-import sys
+import tempfile
 import urllib.error
-import urllib.parse
 import urllib.request
 import winreg
 import zipfile
@@ -21,6 +21,13 @@ PASTA_TRABALHO_PADRAO = Path.home() / "GeoAdmin" / "Metrica"
 CONFIG_DIR = Path(os.getenv("APPDATA", Path.home() / "AppData" / "Roaming")) / "GeoAdminBridge"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 EXECUTAVEL_METRICA_PADRAO = Path(r"C:\Program Files (x86)\Métrica\Métrica TOPO\Metrica_TOPO_CAD.exe")
+SUBPASTAS_WORKSPACE = {
+    "entrada": "01_entrada",
+    "cad": "02_cad",
+    "documentos": "03_documentos",
+    "exportacoes": "04_exportacoes",
+    "bridge": "99_bridge",
+}
 
 
 @dataclass
@@ -91,13 +98,124 @@ def carregar_pacote_local(caminho_zip: Path) -> tuple[bytes, dict[str, str]]:
     return caminho_zip.read_bytes(), {}
 
 
+def _garantir_workspace(pasta_projeto: Path) -> dict[str, Path]:
+    pastas = {"raiz": pasta_projeto}
+    for chave, nome in SUBPASTAS_WORKSPACE.items():
+        destino = pasta_projeto / nome
+        destino.mkdir(parents=True, exist_ok=True)
+        pastas[chave] = destino
+    (pastas["bridge"] / "logs").mkdir(parents=True, exist_ok=True)
+    return pastas
+
+
+def _registrar_log(pasta_projeto: Path, mensagem: str) -> None:
+    logs_dir = pasta_projeto / SUBPASTAS_WORKSPACE["bridge"] / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    linha = f"[{agora_iso()}] {mensagem}\n"
+    (logs_dir / "bridge.log").write_text(
+        ((logs_dir / "bridge.log").read_text(encoding="utf-8") if (logs_dir / "bridge.log").exists() else "") + linha,
+        encoding="utf-8",
+    )
+
+
+def _mover_se_existir(origem: Path, destino: Path) -> None:
+    if not origem.exists():
+        return
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    if destino.exists():
+        if destino.is_dir():
+            shutil.rmtree(destino)
+        else:
+            destino.unlink()
+    shutil.move(str(origem), str(destino))
+
+
+def _criar_launcher_bat(pasta_projeto: Path, executavel: Path | None, manifesto: dict) -> Path:
+    nome_dxf = (manifesto.get("arquivos") or {}).get("perimetro_dxf") or ""
+    caminho_dxf = pasta_projeto / SUBPASTAS_WORKSPACE["cad"] / nome_dxf if nome_dxf else None
+    linhas = [
+        "@echo off",
+        "setlocal",
+        f"set METRICA_EXE={executavel}" if executavel else "set METRICA_EXE=",
+        f"set DXF_ALVO={caminho_dxf}" if caminho_dxf else "set DXF_ALVO=",
+        "if not \"%METRICA_EXE%\"==\"\" if exist \"%METRICA_EXE%\" (",
+        "  if not \"%DXF_ALVO%\"==\"\" if exist \"%DXF_ALVO%\" (",
+        "    start \"\" \"%METRICA_EXE%\" \"%DXF_ALVO%\"",
+        "    goto :eof",
+        "  )",
+        "  start \"\" \"%METRICA_EXE%\"",
+        "  goto :eof",
+        ")",
+        "echo Executavel do Metrica nao encontrado. Abra manualmente a pasta 02_cad.",
+        f"start \"\" \"{pasta_projeto / SUBPASTAS_WORKSPACE['cad']}\"",
+    ]
+    launcher = pasta_projeto / "ABRIR_NO_METRICA.bat"
+    launcher.write_text("\r\n".join(linhas) + "\r\n", encoding="utf-8")
+    return launcher
+
+
+def _organizar_workspace_extraido(pasta_temp: Path, pasta_projeto: Path, manifesto: dict, conteudo_zip: bytes) -> dict[str, Path]:
+    pastas = _garantir_workspace(pasta_projeto)
+    arquivos = manifesto.get("arquivos") or {}
+
+    entrada = {
+        arquivos.get("pontos_txt"),
+        arquivos.get("pontos_csv"),
+    }
+    cad = {
+        arquivos.get("perimetro_dxf"),
+        arquivos.get("perimetro_kml"),
+        Path(arquivos.get("perimetro_geojson") or "").name,
+        Path(arquivos.get("referencia_cliente_geojson") or "").name,
+    }
+
+    raiz_readme = pasta_temp / (arquivos.get("readme") or "COMO_USAR_NO_METRICA.txt")
+    if raiz_readme.exists():
+        _mover_se_existir(raiz_readme, pasta_projeto / raiz_readme.name)
+
+    raiz_manifesto = pasta_temp / (arquivos.get("manifesto") or "manifesto.json")
+    if raiz_manifesto.exists():
+        _mover_se_existir(raiz_manifesto, pastas["bridge"] / "manifesto.json")
+
+    dados_dir = pasta_temp / "dados"
+    if dados_dir.exists():
+        for arquivo in dados_dir.iterdir():
+            nome = arquivo.name
+            if nome in {"perimetro_ativo.geojson", "referencia_cliente.geojson"}:
+                _mover_se_existir(arquivo, pastas["cad"] / nome)
+            elif nome == "documentos.json":
+                _mover_se_existir(arquivo, pastas["documentos"] / nome)
+            else:
+                _mover_se_existir(arquivo, pastas["bridge"] / nome)
+        shutil.rmtree(dados_dir, ignore_errors=True)
+
+    for item in list(pasta_temp.iterdir()):
+        if item.is_dir():
+            continue
+        if item.name in entrada:
+            _mover_se_existir(item, pastas["entrada"] / item.name)
+        elif item.name in cad:
+            _mover_se_existir(item, pastas["cad"] / item.name)
+        elif item.name.lower().endswith(".zip"):
+            _mover_se_existir(item, pastas["exportacoes"] / item.name)
+        elif item.name not in {"COMO_USAR_NO_METRICA.txt", "manifesto.json"}:
+            _mover_se_existir(item, pastas["exportacoes"] / item.name)
+
+    pacote_path = pastas["exportacoes"] / "pacote_geoadmin_metrica.zip"
+    pacote_path.write_bytes(conteudo_zip)
+    return pastas
+
+
 def extrair_pacote(conteudo_zip: bytes, pasta_base: Path) -> tuple[Path, dict]:
     zip_memoria = zipfile.ZipFile(io.BytesIO(conteudo_zip))
     manifesto = json.loads(zip_memoria.read("manifesto.json").decode("utf-8"))
     pasta_sugerida = manifesto.get("pasta_trabalho_sugerida") or manifesto["projeto"].get("id") or "projeto"
     pasta_projeto = pasta_base / pasta_sugerida
     pasta_projeto.mkdir(parents=True, exist_ok=True)
-    zip_memoria.extractall(pasta_projeto)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        pasta_temp = Path(temp_dir)
+        zip_memoria.extractall(pasta_temp)
+        _organizar_workspace_extraido(pasta_temp, pasta_projeto, manifesto, conteudo_zip)
     return pasta_projeto, manifesto
 
 
@@ -108,6 +226,8 @@ def salvar_status_bridge(
     manifesto: dict,
     aviso_detalhes: str | None,
 ) -> None:
+    executavel = detectar_executavel_metrica()
+    launcher = _criar_launcher_bat(pasta_projeto, executavel, manifesto)
     status = {
         "schema": "geoadmin.bridge.status.v1",
         "atualizado_em": agora_iso(),
@@ -115,13 +235,22 @@ def salvar_status_bridge(
         "projeto_id": projeto_id,
         "projeto_nome": manifesto.get("projeto", {}).get("nome"),
         "pasta_projeto": str(pasta_projeto),
+        "launcher_bat": str(launcher),
+        "executavel_metrica": str(executavel) if executavel else None,
         "aviso_detalhes": aviso_detalhes,
         "arquivos": manifesto.get("arquivos", {}),
+        "workspace": {chave: str(pasta_projeto / nome) for chave, nome in SUBPASTAS_WORKSPACE.items()},
     }
-    (pasta_projeto / "bridge_status.json").write_text(
+    status_path = pasta_projeto / SUBPASTAS_WORKSPACE["bridge"] / "bridge_status.json"
+    status_path.write_text(
         json.dumps(status, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    _registrar_log(pasta_projeto, f"Workspace preparado para o projeto {projeto_id}.")
+    if executavel:
+        _registrar_log(pasta_projeto, f"Executavel do Metrica detectado em {executavel}.")
+    if aviso_detalhes:
+        _registrar_log(pasta_projeto, f"Avisos do pacote: {aviso_detalhes}")
 
 
 def abrir_pasta(pasta: Path) -> None:
@@ -133,15 +262,17 @@ def abrir_metrica(executavel: Path, pasta_projeto: Path, manifesto: dict, tentar
     if tentar_dxf:
         nome_dxf = (manifesto.get("arquivos") or {}).get("perimetro_dxf")
         if nome_dxf:
-            candidato = pasta_projeto / nome_dxf
+            candidato = pasta_projeto / SUBPASTAS_WORKSPACE["cad"] / nome_dxf
             if candidato.exists():
                 arquivo_alvo = candidato
 
     if arquivo_alvo:
         subprocess.Popen([str(executavel), str(arquivo_alvo)])
+        _registrar_log(pasta_projeto, f"Metrica aberto com DXF {arquivo_alvo.name}.")
         return
 
     subprocess.Popen([str(executavel)])
+    _registrar_log(pasta_projeto, "Metrica aberto sem arquivo alvo.")
 
 
 def preparar_para_metrica(
@@ -165,8 +296,11 @@ def preparar_para_metrica(
     executavel = detectar_executavel_metrica()
     if abrir_workspace:
         abrir_pasta(pasta_projeto)
+        _registrar_log(pasta_projeto, "Pasta do workspace aberta no Windows.")
     if abrir_cad and executavel:
         abrir_metrica(executavel, pasta_projeto, manifesto, tentar_dxf=tentar_dxf)
+    elif abrir_cad and not executavel:
+        _registrar_log(pasta_projeto, "Nao foi possivel abrir o Metrica: executavel nao encontrado.")
 
     return ResultadoPreparacao(
         projeto_id=projeto_id,
@@ -179,7 +313,9 @@ def preparar_para_metrica(
 def _print_resultado(resultado: ResultadoPreparacao) -> None:
     print(f"Projeto: {resultado.manifesto.get('projeto', {}).get('nome')}")
     print(f"Pasta:   {resultado.pasta_projeto}")
-    print(f"Bridge:  {resultado.pasta_projeto / 'bridge_status.json'}")
+    print(f"Entrada: {resultado.pasta_projeto / SUBPASTAS_WORKSPACE['entrada']}")
+    print(f"CAD:     {resultado.pasta_projeto / SUBPASTAS_WORKSPACE['cad']}")
+    print(f"Bridge:  {resultado.pasta_projeto / SUBPASTAS_WORKSPACE['bridge'] / 'bridge_status.json'}")
     if resultado.aviso_detalhes:
         print(f"Avisos:  {resultado.aviso_detalhes}")
 

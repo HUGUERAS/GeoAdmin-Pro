@@ -257,6 +257,48 @@ def _montar_manifesto_pacote(
     }
 
 
+def _gerar_manifesto_metrica(sb, projeto_id: str, pacote) -> tuple[dict[str, Any], dict[str, Any]]:
+    contexto = _coletar_contexto_pacote(sb, projeto_id, pacote)
+    base = _nome_arquivo(pacote.projeto_nome, pacote.numero_job, "")
+    pasta_trabalho = _slug_seguro(f"{pacote.numero_job or 'sem-job'}-{pacote.projeto_nome}")
+    arquivos = {
+        "pontos_txt": f"{base}txt",
+        "pontos_csv": f"{base}csv",
+        "perimetro_kml": f"{base}kml",
+        "perimetro_dxf": f"{base}dxf" if pacote.dxf else "",
+        "readme": "COMO_USAR_NO_METRICA.txt",
+        "manifesto": "manifesto.json",
+        "projeto_json": "dados/projeto.json",
+        "cliente_json": "dados/cliente.json",
+        "confrontantes_json": "dados/confrontantes.json",
+        "documentos_json": "dados/documentos.json",
+        "pontos_json": "dados/pontos.json",
+        "perimetro_geojson": "dados/perimetro_ativo.geojson",
+        "referencia_cliente_geojson": "dados/referencia_cliente.geojson",
+    }
+    manifesto = _montar_manifesto_pacote(contexto, pacote, pasta_trabalho, arquivos)
+    return manifesto, contexto
+
+
+@router.get("/{projeto_id}/metrica/manifesto", summary="Obter manifesto JSON para o bridge do Métrica")
+def obter_manifesto_metrica(projeto_id: str, supabase=None):
+    from main import get_supabase as _get
+    from integracoes.integracao_metrica import gerar_pacote_metrica
+
+    sb = supabase or _get()
+    try:
+        pacote = gerar_pacote_metrica(sb, projeto_id)
+    except ValueError as e:
+        codigo = str(e)[:9]
+        raise HTTPException(
+            status_code=404 if "401" in codigo or "404" in codigo else 500,
+            detail={"erro": str(e), "codigo": codigo},
+        )
+
+    manifesto, _ = _gerar_manifesto_metrica(sb, projeto_id, pacote)
+    return manifesto
+
+
 @router.post(
     "/{projeto_id}/metrica/preparar",
     summary="Gerar pacote completo para Métrica TOPO",
@@ -287,25 +329,8 @@ def preparar_metrica(projeto_id: str, supabase=None):
             detail={"erro": str(e), "codigo": codigo},
         )
 
-    contexto = _coletar_contexto_pacote(sb, projeto_id, pacote)
+    manifesto, contexto = _gerar_manifesto_metrica(sb, projeto_id, pacote)
     base = _nome_arquivo(pacote.projeto_nome, pacote.numero_job, "")
-    pasta_trabalho = _slug_seguro(f"{pacote.numero_job or 'sem-job'}-{pacote.projeto_nome}")
-    arquivos = {
-        "pontos_txt": f"{base}txt",
-        "pontos_csv": f"{base}csv",
-        "perimetro_kml": f"{base}kml",
-        "perimetro_dxf": f"{base}dxf" if pacote.dxf else "",
-        "readme": "COMO_USAR_NO_METRICA.txt",
-        "manifesto": "manifesto.json",
-        "projeto_json": "dados/projeto.json",
-        "cliente_json": "dados/cliente.json",
-        "confrontantes_json": "dados/confrontantes.json",
-        "documentos_json": "dados/documentos.json",
-        "pontos_json": "dados/pontos.json",
-        "perimetro_geojson": "dados/perimetro_ativo.geojson",
-        "referencia_cliente_geojson": "dados/referencia_cliente.geojson",
-    }
-    manifesto = _montar_manifesto_pacote(contexto, pacote, pasta_trabalho, arquivos)
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
