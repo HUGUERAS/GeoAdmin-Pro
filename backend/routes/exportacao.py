@@ -13,9 +13,10 @@ IMPORTANTE:
   que deve retornar um cliente válido do Supabase.
 """
 
-import io
-import zipfile
 import logging
+import io
+import unicodedata
+import zipfile
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
@@ -29,6 +30,18 @@ def _nome_arquivo(projeto_nome: str, numero_job: str, extensao: str) -> str:
     job = numero_job or "sem-job"
     nome = (projeto_nome or "Projeto").replace(" ", "_").replace("/", "-")[:30]
     return f"GeoAdmin_{job}_{nome}.{extensao}" if extensao else f"GeoAdmin_{job}_{nome}."
+
+
+def _valor_header_seguro(valor: str) -> str:
+    """
+    Normaliza valores de header para ASCII simples.
+
+    O Starlette serializa headers em latin-1. Alguns avisos do pacote usam
+    travessao unicode e acentos, o que pode derrubar a resposta ZIP inteira.
+    """
+    valor = valor.replace("—", "-").replace("–", "-")
+    normalizado = unicodedata.normalize("NFKD", valor).encode("ascii", "ignore").decode("ascii")
+    return " ".join(normalizado.split())
 
 
 @router.post(
@@ -90,7 +103,8 @@ def preparar_metrica(projeto_id: str, supabase=None):
         "X-Avisos": str(len(pacote.avisos)),
     }
     if pacote.avisos:
-        headers["X-Aviso-Detalhes"] = " | ".join(pacote.avisos[:3])
+        detalhes = " | ".join(pacote.avisos[:3])
+        headers["X-Aviso-Detalhes"] = _valor_header_seguro(detalhes)
 
     return Response(
         content=zip_buffer.getvalue(),
