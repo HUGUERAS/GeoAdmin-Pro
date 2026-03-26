@@ -4,6 +4,7 @@ import csv
 from datetime import datetime, timezone
 import io
 import json
+import logging
 from pathlib import Path
 import tempfile
 import zipfile
@@ -18,6 +19,7 @@ from shapely.ops import transform
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 STORE_PATH = DATA_DIR / "geometrias_referencia_cliente.json"
+logger = logging.getLogger("geoadmin.referencia_cliente")
 
 
 def _agora_iso() -> str:
@@ -40,7 +42,9 @@ def _carregar_store() -> dict[str, Any]:
 
 def _salvar_store(payload: dict[str, Any]) -> None:
     _garantir_store()
-    STORE_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp_path = STORE_PATH.with_suffix(f"{STORE_PATH.suffix}.tmp")
+    temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp_path.replace(STORE_PATH)
 
 
 def _selecionar_maior_poligono(geometrias: list[Polygon]) -> Polygon | None:
@@ -335,7 +339,7 @@ def importar_vertices_por_formato(formato: str, conteudo: str | bytes) -> list[d
         if isinstance(conteudo, str):
             raise ValueError("O SHP zip precisa ser enviado como arquivo binario.")
         return parse_shp_zip(conteudo)
-    raise ValueError(f"Formato {formato} nao suportado.")
+    raise ValueError("Formato nao suportado. Use geojson, json, kml, csv, txt, zip ou shpzip.")
 
 
 def _normalizar_registro(raw: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -354,6 +358,7 @@ def _normalizar_registro(raw: dict[str, Any] | None) -> dict[str, Any] | None:
         "resumo": raw.get("resumo") or raw.get("resumo_json") or {},
         "comparativo": raw.get("comparativo") or raw.get("comparativo_json"),
         "atualizado_em": raw.get("atualizado_em") or raw.get("updated_at"),
+        "deleted_at": raw.get("deleted_at"),
         "persistencia": raw.get("persistencia", "arquivo_local"),
     }
 
@@ -374,11 +379,14 @@ def obter_geometria_referencia(sb, cliente_id: str) -> dict[str, Any] | None:
             registro = _normalizar_registro({**res.data, "persistencia": "supabase"})
             if registro:
                 return registro
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Falha ao ler geometria de referencia no Supabase: %s", exc)
 
     store = _carregar_store()
-    return _normalizar_registro(store.get(cliente_id))
+    registro_local = _normalizar_registro(store.get(cliente_id))
+    if registro_local and registro_local.get("deleted_at"):
+        return None
+    return registro_local
 
 
 def salvar_geometria_referencia(
@@ -429,6 +437,26 @@ def salvar_geometria_referencia(
             res = sb.table("geometrias_referencia_cliente").insert(payload).execute()
 
         if res.data:
+            try:
+                local_payload = {
+                    "id": res.data[0].get("id"),
+                    "cliente_id": cliente_id,
+                    "projeto_id": res.data[0].get("projeto_id"),
+                    "nome": res.data[0].get("nome"),
+                    "origem_tipo": res.data[0].get("origem_tipo"),
+                    "arquivo_nome": res.data[0].get("arquivo_nome"),
+                    "formato": res.data[0].get("formato"),
+                    "vertices": vertices,
+                    "resumo": resumo,
+                    "comparativo": comparativo,
+                    "atualizado_em": agora,
+                    "persistencia": "arquivo_local",
+                }
+                store = _carregar_store()
+                store[cliente_id] = local_payload
+                _salvar_store(store)
+            except Exception as exc:
+                logger.warning("Falha ao sincronizar cache local de geometria: %s", exc)
             return _normalizar_registro({**res.data[0], "persistencia": "supabase"}) or {}
     except Exception:
         pass
@@ -481,8 +509,16 @@ def remover_geometria_referencia(sb, cliente_id: str) -> bool:
 
     store = _carregar_store()
     if cliente_id in store:
-        del store[cliente_id]
-        _salvar_store(store)
+        try:
+            store[cliente_id] = {
+                "id": store.get(cliente_id, {}).get("id") or f"{cliente_id}-referencia",
+                "cliente_id": cliente_id,
+                "deleted_at": agora,
+                "persistencia": "arquivo_local",
+            }
+            _salvar_store(store)
+        except Exception as exc:
+            logger.warning("Falha ao limpar cache local de geometria: %s", exc)
         removido = True
 
     return removido

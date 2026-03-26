@@ -254,6 +254,24 @@ function chipDocumentos(tipos?: string[]) {
   return tipos.join(' | ')
 }
 
+function resumirPendencias(pendencias: string[]) {
+  if (pendencias.length === 0) return 'Nenhuma pendencia no momento.'
+  if (pendencias.length <= 2) return `Pendencias: ${pendencias.join(' · ')}`
+  return `Pendencias: ${pendencias.slice(0, 2).join(' · ')} · +${pendencias.length - 2} itens`
+}
+
+function confirmarAcao(
+  titulo: string,
+  mensagem: string,
+  confirmarTexto: string,
+  aoConfirmar: () => void | Promise<void>,
+) {
+  Alert.alert(titulo, mensagem, [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: confirmarTexto, style: 'destructive', onPress: () => { void aoConfirmar() } },
+  ])
+}
+
 function parseVerticesTexto(texto: string) {
   return texto
     .split(/\r?\n/)
@@ -447,14 +465,22 @@ export default function ClienteDetalheScreen() {
     }
   }
 
-  const excluirConfrontante = async (confrontanteId: string) => {
-    try {
-      await apiDelete(`/clientes/${id}/confrontantes/${confrontanteId}`)
-      if (confrontanteEditandoId === confrontanteId) limparConfrontante()
-      await carregar()
-    } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Nao foi possivel excluir o confrontante.')
-    }
+  const excluirConfrontante = (confrontante: Confrontante) => {
+    confirmarAcao(
+      'Excluir confrontante?',
+      `Remover ${confrontante.nome || 'este confrontante'} do projeto ${confrontante.projeto_nome || 'selecionado'}?`,
+      'Excluir',
+      async () => {
+        try {
+          await apiDelete(`/clientes/${id}/confrontantes/${confrontante.id}`)
+          if (confrontanteEditandoId === confrontante.id) limparConfrontante()
+          await carregar()
+          Alert.alert('Confrontante removido', `${confrontante.nome || 'O confrontante'} foi excluido com sucesso.`)
+        } catch (e: any) {
+          Alert.alert('Erro', e?.message ?? 'Nao foi possivel excluir o confrontante.')
+        }
+      },
+    )
   }
 
   const salvarReferenciaManual = async () => {
@@ -465,13 +491,17 @@ export default function ClienteDetalheScreen() {
     }
     try {
       setSalvandoReferencia(true)
-      await apiPost(`/clientes/${id}/geometria-referencia/manual`, {
+      const salvo = await apiPost<GeometriaReferencia>(`/clientes/${id}/geometria-referencia/manual`, {
         projeto_id: projetoReferenciaId || null,
         nome: nomeReferencia,
         vertices,
       })
       setManualVerticesTexto('')
       await carregar()
+      Alert.alert(
+        'Referencia salva',
+        `${salvo.nome || nomeReferencia} com ${salvo.resumo?.vertices_total ?? vertices.length} vertices foi salva em ${salvo.persistencia === 'supabase' ? 'Supabase' : 'arquivo local'}.`,
+      )
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Nao foi possivel salvar a referencia manual.')
     } finally {
@@ -486,7 +516,7 @@ export default function ClienteDetalheScreen() {
     }
     try {
       setSalvandoReferencia(true)
-      await apiPost(`/clientes/${id}/geometria-referencia/importar-texto`, {
+      const salvo = await apiPost<GeometriaReferencia>(`/clientes/${id}/geometria-referencia/importar-texto`, {
         projeto_id: projetoReferenciaId || null,
         nome: nomeReferencia,
         formato: formatoImportacao,
@@ -494,6 +524,10 @@ export default function ClienteDetalheScreen() {
       })
       setImportacaoTexto('')
       await carregar()
+      Alert.alert(
+        'Importacao concluida',
+        `${salvo.nome || nomeReferencia} foi importada como ${salvo.formato?.toUpperCase() || formatoImportacao.toUpperCase()} e salva em ${salvo.persistencia === 'supabase' ? 'Supabase' : 'arquivo local'}.`,
+      )
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Nao foi possivel importar a geometria.')
     } finally {
@@ -520,8 +554,12 @@ export default function ClienteDetalheScreen() {
       if (nomeReferencia.trim()) formData.append('nome', nomeReferencia.trim())
 
       setSalvandoReferencia(true)
-      await apiPostFormData(`/clientes/${id}/geometria-referencia/importar`, formData)
+      const salvo = await apiPostFormData<GeometriaReferencia>(`/clientes/${id}/geometria-referencia/importar`, formData)
       await carregar()
+      Alert.alert(
+        'Arquivo importado',
+        `${salvo.nome || arquivo.name} foi importado com ${salvo.resumo?.vertices_total ?? 0} vertices em ${salvo.persistencia === 'supabase' ? 'Supabase' : 'arquivo local'}.`,
+      )
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Nao foi possivel importar o arquivo.')
     } finally {
@@ -535,18 +573,25 @@ export default function ClienteDetalheScreen() {
       return
     }
 
-    try {
-      setRemovendoReferencia(true)
-      await apiDelete(`/clientes/${id}/geometria-referencia`)
-      setManualVerticesTexto('')
-      setImportacaoTexto('')
-      await carregar()
-      Alert.alert('Referencia removida', 'A geometria de referencia do cliente foi removida.')
-    } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Nao foi possivel remover a referencia.')
-    } finally {
-      setRemovendoReferencia(false)
-    }
+    confirmarAcao(
+      'Excluir referencia?',
+      `Remover ${detalhe.geometria_referencia.nome || 'esta geometria'} do cliente e limpar o comparativo atual?`,
+      'Excluir',
+      async () => {
+        try {
+          setRemovendoReferencia(true)
+          await apiDelete(`/clientes/${id}/geometria-referencia`)
+          setManualVerticesTexto('')
+          setImportacaoTexto('')
+          await carregar()
+          Alert.alert('Referencia removida', 'A geometria de referencia do cliente foi removida.')
+        } catch (e: any) {
+          Alert.alert('Erro', e?.message ?? 'Nao foi possivel remover a referencia.')
+        } finally {
+          setRemovendoReferencia(false)
+        }
+      },
+    )
   }
 
   if (loading) {
@@ -611,6 +656,9 @@ export default function ClienteDetalheScreen() {
             <Text style={[s.projetoTitulo, { color: C.text }]}>{item.projeto_nome || 'Projeto sem nome'}</Text>
             <Text style={[s.metaInfo, { color: C.muted }]}>
               {item.concluidos}/{item.total} itens concluidos ({item.progresso_percentual}%)
+            </Text>
+            <Text style={[s.metaInfo, { color: item.pendencias.length ? C.muted : C.success }]}>
+              {resumirPendencias(item.pendencias)}
             </Text>
             <View style={s.checklistLista}>
               {item.itens.map((check) => (
@@ -707,7 +755,7 @@ export default function ClienteDetalheScreen() {
                     <TouchableOpacity style={[s.btnSecundario, { borderColor: C.info }]} onPress={() => iniciarEdicaoConfrontante(item)}>
                       <Text style={[s.btnSecundarioTxt, { color: C.info }]}>Editar</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[s.btnSecundario, { borderColor: C.danger }]} onPress={() => excluirConfrontante(item.id)}>
+                    <TouchableOpacity style={[s.btnSecundario, { borderColor: C.danger }]} onPress={() => excluirConfrontante(item)}>
                       <Text style={[s.btnSecundarioTxt, { color: C.danger }]}>Excluir</Text>
                     </TouchableOpacity>
                   </View>
@@ -740,11 +788,14 @@ export default function ClienteDetalheScreen() {
               </View>
             ) : null}
             <TouchableOpacity style={[s.btnSecundario, { borderColor: C.danger }]} onPress={removerReferencia} disabled={removendoReferencia}>
-              {removendoReferencia ? <ActivityIndicator color={C.danger} /> : <Text style={[s.btnSecundarioTxt, { color: C.danger }]}>Remover referencia salva</Text>}
+              {removendoReferencia ? <ActivityIndicator color={C.danger} /> : <Text style={[s.btnSecundarioTxt, { color: C.danger }]}>Excluir referencia salva</Text>}
             </TouchableOpacity>
           </>
         ) : (
-          <Text style={[s.metaInfo, { color: C.muted }]}>Nenhuma referencia salva ainda.</Text>
+          <View style={[s.vazioGeo, { borderColor: C.cardBorder, backgroundColor: C.background }]}>
+            <Text style={[s.metaInfo, { color: C.text }]}>Nenhuma referencia salva ainda.</Text>
+            <Text style={[s.metaInfo, { color: C.muted }]}>Use desenho manual, colagem de texto ou arquivo para iniciar o comparativo.</Text>
+          </View>
         )}
 
         <Text style={[s.subSectionTitulo, { color: C.text }]}>Salvar desenho manual</Text>
@@ -764,10 +815,10 @@ export default function ClienteDetalheScreen() {
         <TextInput style={[s.inputMulti, { backgroundColor: C.background, color: C.text, borderColor: C.cardBorder }]} multiline value={importacaoTexto} onChangeText={setImportacaoTexto} placeholder="Cole aqui o conteudo GeoJSON, KML, CSV ou TXT" placeholderTextColor={C.muted} />
         <View style={s.projetoAcoes}>
           <TouchableOpacity style={[s.btnPrimario, { flex: 1, backgroundColor: salvandoReferencia ? C.primaryDark : C.primary }]} onPress={importarReferenciaTexto} disabled={salvandoReferencia}>
-            <Text style={[s.btnPrimarioTxt, { color: C.primaryText }]}>Importar conteudo</Text>
+            <Text style={[s.btnPrimarioTxt, { color: C.primaryText }]}>Importar texto</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.btnSecundario, { flex: 1, borderColor: C.info }]} onPress={importarReferenciaArquivo} disabled={salvandoReferencia}>
-            <Text style={[s.btnSecundarioTxt, { color: C.info }]}>Importar arquivo</Text>
+            <Text style={[s.btnSecundarioTxt, { color: C.info }]}>Selecionar arquivo</Text>
           </TouchableOpacity>
         </View>
         <Text style={[s.metaInfo, { color: C.muted }]}>Arquivos aceitos: KML, GeoJSON/JSON, CSV, TXT e SHP em .zip.</Text>
@@ -870,6 +921,7 @@ const s = StyleSheet.create({
   btnPrimarioTxt: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
   projetoCard: { borderWidth: 0.5, borderRadius: 12, padding: 12, gap: 8 },
   confrontanteCard: { borderWidth: 0.5, borderRadius: 12, padding: 12, gap: 8 },
+  vazioGeo: { borderWidth: 0.5, borderRadius: 12, padding: 12, gap: 4 },
   projetoTopo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
   projetoTopoTexto: { flex: 1, gap: 4 },
   projetoTitulo: { fontSize: 15, fontWeight: '700' },

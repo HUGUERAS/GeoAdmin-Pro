@@ -1,3 +1,10 @@
 # Nunca versionar credenciais locais
 .env
 .env.*
+
+# Artefatos locais de Python
+__pycache__/
+*.py[cod]
+
+# Fallback local temporario da geometria de referencia
+data/geometrias_referencia_cliente.json

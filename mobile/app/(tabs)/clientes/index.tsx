@@ -67,13 +67,14 @@ export default function ClientesScreen() {
       .filter(Boolean)
       .some((valor) => String(valor).toLowerCase().includes(termo))
   })
+  const totalVisiveis = clientesFiltrados.length
 
   return (
     <View style={[s.container, { backgroundColor: C.background }]}>
       <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
         <Text style={[s.titulo, { color: C.text }]}>Clientes & Documentacao</Text>
         <Text style={[s.sub, { color: C.muted }]}>
-          {clientes.length} clientes acompanhados
+          {totalVisiveis} de {clientes.length} clientes visiveis
         </Text>
 
         <View style={[s.buscaBox, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
@@ -135,9 +136,19 @@ export default function ClientesScreen() {
               </Text>
               <Text style={[s.emptySub, { color: C.muted }]}>
                 {busca.trim()
-                  ? 'Tente ajustar a busca para localizar o cadastro.'
-                  : 'Assim que houver clientes vinculados aos projetos, eles aparecerao aqui.'}
+                  ? 'Tente ajustar a busca, limpar o filtro ou puxar para atualizar.'
+                  : 'Quando houver clientes vinculados aos projetos, eles aparecerao aqui com status documental.'}
               </Text>
+              {busca.trim() ? (
+                <TouchableOpacity
+                  onPress={() => setBusca('')}
+                  style={[s.btnRetry, { borderColor: C.info, marginTop: 6 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Limpar busca de clientes"
+                >
+                  <Text style={{ color: C.info, fontWeight: '600' }}>Limpar busca</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           }
         />

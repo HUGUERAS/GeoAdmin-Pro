@@ -26,6 +26,24 @@ CREATE INDEX IF NOT EXISTS idx_geometrias_referencia_cliente_cliente
 CREATE INDEX IF NOT EXISTS idx_geometrias_referencia_cliente_projeto
     ON geometrias_referencia_cliente (projeto_id, atualizado_em DESC);
 
+CREATE OR REPLACE FUNCTION public.set_geometrias_referencia_cliente_atualizado_em()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.atualizado_em = NOW();
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_geometrias_referencia_cliente_atualizado_em
+    ON geometrias_referencia_cliente;
+
+CREATE TRIGGER trg_geometrias_referencia_cliente_atualizado_em
+    BEFORE UPDATE ON geometrias_referencia_cliente
+    FOR EACH ROW
+    EXECUTE FUNCTION public.set_geometrias_referencia_cliente_atualizado_em();
+
 ALTER TABLE geometrias_referencia_cliente ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "topografo_acesso_total" ON geometrias_referencia_cliente

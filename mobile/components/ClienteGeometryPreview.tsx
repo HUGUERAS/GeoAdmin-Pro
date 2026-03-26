@@ -57,7 +57,8 @@ export function ClienteGeometryPreview({
   if (ref.length < 3 && tec.length < 3) {
     return (
       <View style={[s.vazio, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-        <Text style={[s.vazioTxt, { color: C.muted }]}>Sem geometria suficiente para preview.</Text>
+        <Text style={[s.vazioTxt, { color: C.muted }]}>Sem geometria suficiente para comparar.</Text>
+        <Text style={[s.vazioSub, { color: C.muted }]}>Importe um croqui ou desenhe ao menos 3 vertices para ver o comparativo.</Text>
       </View>
     )
   }
@@ -126,6 +127,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+    gap: 6,
   },
   vazioTxt: { fontSize: 12, textAlign: 'center' },
+  vazioSub: { fontSize: 11, textAlign: 'center', lineHeight: 16 },
 })

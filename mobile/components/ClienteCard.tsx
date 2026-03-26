@@ -90,6 +90,9 @@ export function ClienteCard({ cliente, onPress }: { cliente: ClienteResumo; onPr
         <Text style={[s.metaInfo, { color: C.muted }]}>
           Último doc: {formatarData(cliente.ultimo_documento_em)}
         </Text>
+        <Text style={[s.metaInfo, { color: C.muted }]}>
+          Toque para abrir o detalhe, editar cadastro e revisar documentação.
+        </Text>
       </View>
     </TouchableOpacity>
   )
