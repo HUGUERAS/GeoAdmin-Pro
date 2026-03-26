@@ -100,3 +100,32 @@ export async function apiPost<T>(path: string, body: JsonValue): Promise<T> {
 
   return parseResponse<T>(response);
 }
+
+export async function apiPostFormData<T>(path: string, body: FormData): Promise<T> {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    method: 'POST',
+    body,
+  });
+
+  return parseResponse<T>(response);
+}
+
+export async function apiPatch<T>(path: string, body: JsonValue): Promise<T> {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  return parseResponse<T>(response);
+}
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    method: 'DELETE',
+  });
+
+  return parseResponse<T>(response);
+}

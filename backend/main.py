@@ -25,6 +25,7 @@ from supabase import create_client, Client
 from routes.exportacao import router as exportacao_router
 from routes.metrica_simples import router as metrica_router
 from routes.projetos import router as projetos_router
+from routes.clientes import router as clientes_router
 from routes.documentos import router as docs_router
 from routes.pontos import router as pontos_router
 from routes.rag import router as rag_router
@@ -47,6 +48,7 @@ if os.path.isdir(_static_dir):
   app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 app.include_router(projetos_router)
+app.include_router(clientes_router)
 app.include_router(exportacao_router)
 app.include_router(metrica_router)
 app.include_router(docs_router)

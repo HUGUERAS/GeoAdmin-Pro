@@ -25,7 +25,7 @@ export default function TabLayout() {
         tabBarIcon: ({ color }) => <Feather name="folder" size={22} color={color} />,
         headerShown: false,
       }} />
-      <Tabs.Screen name="projeto/[id]" options={{ href: null }} />
+      <Tabs.Screen name="projeto/[id]" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="calculos/index" options={{
         title: 'Cálculos',
         tabBarIcon: ({ color }) => <Feather name="cpu" size={22} color={color} />,
@@ -41,16 +41,19 @@ export default function TabLayout() {
       <Tabs.Screen name="calculos/media"      options={{ href: null }} />
       <Tabs.Screen name="calculos/irradiacao" options={{ href: null }} />
       <Tabs.Screen name="calculos/subdivisao" options={{ href: null }} />
+      <Tabs.Screen name="calculos/rag"        options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="mapa/index" options={{
         title: 'Mapa',
         tabBarIcon: ({ color }) => <Feather name="map" size={22} color={color} />,
         headerShown: false,
       }} />
+      <Tabs.Screen name="mapa/[id]" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="clientes/index" options={{
         title: 'Clientes',
         tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
         headerShown: false,
       }} />
+      <Tabs.Screen name="clientes/[id]" options={{ href: null, headerShown: false }} />
     </Tabs>
   )
 }

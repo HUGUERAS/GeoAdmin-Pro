@@ -14,12 +14,16 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="light" backgroundColor={C.background} />
-      <Stack screenOptions={{
-        headerStyle:      { backgroundColor: C.card },
-        headerTintColor:  C.text,
-        headerTitleStyle: { fontWeight: '600' },
-        contentStyle:     { backgroundColor: C.background },
-      }} />
+      <Stack
+        screenOptions={{
+          headerStyle:      { backgroundColor: C.card },
+          headerTintColor:  C.text,
+          headerTitleStyle: { fontWeight: '600' },
+          contentStyle:     { backgroundColor: C.background },
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
     </>
   )
 }

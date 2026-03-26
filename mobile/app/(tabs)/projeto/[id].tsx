@@ -146,6 +146,17 @@ export default function DetalheProjetoScreen() {
           </View>
         ))}
 
+        {projeto.cliente_id ? (
+          <TouchableOpacity
+            style={[s.btn, { backgroundColor: C.card, borderColor: C.success }]}
+            onPress={() => router.push(`/(tabs)/clientes/${projeto.cliente_id}` as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir cliente e documentacao"
+          >
+            <Text style={[s.btnTxt, { color: C.success }]}>👤 Cliente & Documentacao</Text>
+          </TouchableOpacity>
+        ) : null}
+
         <TouchableOpacity
           style={[s.btn, { backgroundColor: C.card, borderColor: C.info }]}
           onPress={() => router.push(`/(tabs)/mapa/${id}` as any)}
