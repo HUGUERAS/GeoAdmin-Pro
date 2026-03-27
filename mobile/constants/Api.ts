@@ -1,3 +1,1 @@
-import { getApiBaseUrl } from '../lib/api'
-
-export const API_URL = getApiBaseUrl()
+export const API_URL = 'https://geoadmin-pro-production.up.railway.app'
