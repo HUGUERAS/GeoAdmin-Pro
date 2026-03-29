@@ -16,35 +16,11 @@ from shapely.geometry import MultiPolygon, Polygon, shape
 from shapely.ops import transform
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-STORE_PATH = DATA_DIR / "geometrias_referencia_cliente.json"
 logger = logging.getLogger("geoadmin.referencia_cliente")
 
 
 def _agora_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _garantir_store() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    if not STORE_PATH.exists():
-        STORE_PATH.write_text("{}", encoding="utf-8")
-
-
-def _carregar_store() -> dict[str, Any]:
-    _garantir_store()
-    try:
-        return json.loads(STORE_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def _salvar_store(payload: dict[str, Any]) -> None:
-    _garantir_store()
-    temp_path = STORE_PATH.with_suffix(f"{STORE_PATH.suffix}.tmp")
-    temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    temp_path.replace(STORE_PATH)
 
 
 def _selecionar_maior_poligono(geometrias: list[Polygon]) -> Polygon | None:
@@ -367,7 +343,7 @@ def obter_geometria_referencia(sb, cliente_id: str) -> dict[str, Any] | None:
     try:
         res = (
             sb.table("geometrias_referencia_cliente")
-            .select("id, cliente_id, projeto_id, nome, origem_tipo, arquivo_nome, formato, vertices_json, resumo_json, comparativo_json, atualizado_em")
+            .select("id, cliente_id, projeto_id, nome, origem_tipo, arquivo_nome, formato, vertices_json, resumo_json, comparativo_json, atualizado_em, deleted_at")
             .eq("cliente_id", cliente_id)
             .is_("deleted_at", "null")
             .order("atualizado_em", desc=True)
@@ -375,18 +351,12 @@ def obter_geometria_referencia(sb, cliente_id: str) -> dict[str, Any] | None:
             .maybe_single()
             .execute()
         )
-        if res.data:
-            registro = _normalizar_registro({**res.data, "persistencia": "supabase"})
-            if registro:
-                return registro
+        if not res.data:
+            return None
+        return _normalizar_registro({**res.data, "persistencia": "supabase"})
     except Exception as exc:
         logger.warning("Falha ao ler geometria de referencia no Supabase: %s", exc)
-
-    store = _carregar_store()
-    registro_local = _normalizar_registro(store.get(cliente_id))
-    if registro_local and registro_local.get("deleted_at"):
         return None
-    return registro_local
 
 
 def salvar_geometria_referencia(
@@ -401,7 +371,6 @@ def salvar_geometria_referencia(
     comparativo: dict[str, Any] | None,
 ) -> dict[str, Any]:
     resumo = resumir_vertices(vertices)
-    agora = _agora_iso()
     payload = {
         "cliente_id": cliente_id,
         "projeto_id": projeto_id,
@@ -412,7 +381,7 @@ def salvar_geometria_referencia(
         "vertices_json": vertices,
         "resumo_json": resumo,
         "comparativo_json": comparativo,
-        "atualizado_em": agora,
+        "deleted_at": None,
     }
 
     try:
@@ -436,55 +405,32 @@ def salvar_geometria_referencia(
         else:
             res = sb.table("geometrias_referencia_cliente").insert(payload).execute()
 
+        registro = None
         if res.data:
-            try:
-                local_payload = {
-                    "id": res.data[0].get("id"),
-                    "cliente_id": cliente_id,
-                    "projeto_id": res.data[0].get("projeto_id"),
-                    "nome": res.data[0].get("nome"),
-                    "origem_tipo": res.data[0].get("origem_tipo"),
-                    "arquivo_nome": res.data[0].get("arquivo_nome"),
-                    "formato": res.data[0].get("formato"),
-                    "vertices": vertices,
-                    "resumo": resumo,
-                    "comparativo": comparativo,
-                    "atualizado_em": agora,
-                    "persistencia": "arquivo_local",
-                }
-                store = _carregar_store()
-                store[cliente_id] = local_payload
-                _salvar_store(store)
-            except Exception as exc:
-                logger.warning("Falha ao sincronizar cache local de geometria: %s", exc)
-            return _normalizar_registro({**res.data[0], "persistencia": "supabase"}) or {}
-    except Exception:
-        pass
-
-    store = _carregar_store()
-    local_payload = {
-        "id": store.get(cliente_id, {}).get("id") or f"{cliente_id}-referencia",
-        "cliente_id": cliente_id,
-        "projeto_id": projeto_id,
-        "nome": nome or "Referencia do cliente",
-        "origem_tipo": origem_tipo,
-        "arquivo_nome": arquivo_nome,
-        "formato": formato,
-        "vertices": vertices,
-        "resumo": resumo,
-        "comparativo": comparativo,
-        "atualizado_em": agora,
-        "persistencia": "arquivo_local",
-    }
-    store[cliente_id] = local_payload
-    _salvar_store(store)
-    return _normalizar_registro(local_payload) or {}
+            registro = _normalizar_registro({**res.data[0], "persistencia": "supabase"})
+        if not registro:
+            selecionado = (
+                sb.table("geometrias_referencia_cliente")
+                .select("id, cliente_id, projeto_id, nome, origem_tipo, arquivo_nome, formato, vertices_json, resumo_json, comparativo_json, atualizado_em, deleted_at")
+                .eq("cliente_id", cliente_id)
+                .is_("deleted_at", "null")
+                .order("atualizado_em", desc=True)
+                .limit(1)
+                .maybe_single()
+                .execute()
+            )
+            if selecionado.data:
+                registro = _normalizar_registro({**selecionado.data, "persistencia": "supabase"})
+        if not registro:
+            raise RuntimeError("Falha ao persistir geometria de referencia no Supabase.")
+        return registro
+    except Exception as exc:
+        logger.warning("Falha ao salvar geometria de referencia no Supabase: %s", exc)
+        raise
 
 
 def remover_geometria_referencia(sb, cliente_id: str) -> bool:
-    removido = False
     agora = _agora_iso()
-
     try:
         existente = (
             sb.table("geometrias_referencia_cliente")
@@ -496,29 +442,15 @@ def remover_geometria_referencia(sb, cliente_id: str) -> bool:
             .maybe_single()
             .execute()
         )
-        if existente.data:
-            (
-                sb.table("geometrias_referencia_cliente")
-                .update({"deleted_at": agora, "atualizado_em": agora})
-                .eq("id", existente.data["id"])
-                .execute()
-            )
-            removido = True
-    except Exception:
-        pass
-
-    store = _carregar_store()
-    if cliente_id in store:
-        try:
-            store[cliente_id] = {
-                "id": store.get(cliente_id, {}).get("id") or f"{cliente_id}-referencia",
-                "cliente_id": cliente_id,
-                "deleted_at": agora,
-                "persistencia": "arquivo_local",
-            }
-            _salvar_store(store)
-        except Exception as exc:
-            logger.warning("Falha ao limpar cache local de geometria: %s", exc)
-        removido = True
-
-    return removido
+        if not existente.data:
+            return False
+        (
+            sb.table("geometrias_referencia_cliente")
+            .update({"deleted_at": agora, "atualizado_em": agora})
+            .eq("id", existente.data["id"])
+            .execute()
+        )
+        return True
+    except Exception as exc:
+        logger.warning("Falha ao remover geometria de referencia no Supabase: %s", exc)
+        return False
