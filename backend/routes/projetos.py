@@ -30,6 +30,17 @@ from routes.clientes.utils import query_segura, status_documentacao
 
 router = APIRouter(prefix="/projetos", tags=["Projetos"])
 
+TIPOS_PROCESSO_VALIDOS = {"INCRA_SIGEF", "SEAPA", "AMBOS"}
+
+
+def _validar_tipo_processo(tipo_processo: str | None) -> str | None:
+    if tipo_processo is None:
+        return None
+    valor = tipo_processo.strip().upper()
+    if valor not in TIPOS_PROCESSO_VALIDOS:
+        raise HTTPException(status_code=422, detail={"erro": "tipo_processo invalido", "codigo": 422})
+    return valor
+
 
 class ProjetoCreate(BaseModel):
     nome: str
@@ -43,6 +54,7 @@ class ProjetoCreate(BaseModel):
     cliente_cpf: Optional[str] = None
     cliente_telefone: Optional[str] = None
     gerar_magic_link: bool = False
+    tipo_processo: Optional[str] = None
 
 
 class ProjetoUpdate(BaseModel):
@@ -52,6 +64,7 @@ class ProjetoUpdate(BaseModel):
     estado: Optional[str] = None
     status: Optional[str] = None
     zona_utm: Optional[str] = None
+    tipo_processo: Optional[str] = None
 
 
 class VerticePayload(BaseModel):
@@ -293,6 +306,7 @@ def listar_projetos(limite: int = 50, deslocamento: int = 0):
 def criar_projeto(payload: ProjetoCreate):
     sb = _get_supabase()
     cliente_id = _resolver_cliente_para_criacao(sb, payload)
+    tipo_processo = _validar_tipo_processo(payload.tipo_processo)
     dados = {
         "nome": payload.nome,
         "zona_utm": payload.zona_utm,
@@ -301,6 +315,7 @@ def criar_projeto(payload: ProjetoCreate):
         "municipio": payload.municipio,
         "estado": payload.estado,
         "cliente_id": cliente_id,
+        "tipo_processo": tipo_processo,
     }
     dados = {chave: valor for chave, valor in dados.items() if valor is not None}
     res = sb.table("projetos").insert(dados).execute()
@@ -334,6 +349,8 @@ def atualizar_projeto(projeto_id: str, payload: ProjetoUpdate):
     sb = _get_supabase()
     _projeto_ou_404(sb, projeto_id)
 
+    if payload.tipo_processo is not None:
+        payload.tipo_processo = _validar_tipo_processo(payload.tipo_processo)
     dados = payload.model_dump(exclude_none=True)
     if not dados:
         raise HTTPException(status_code=400, detail={"erro": "Nenhum campo para atualizar", "codigo": 400})
@@ -397,6 +414,8 @@ def atualizar_area(projeto_id: str, area_id: str, payload: AreaProjetoUpdate):
     if not area_atual or str(area_id).endswith("-ref") or str(area_id).endswith("-tec"):
         raise HTTPException(status_code=404, detail={"erro": "Area editavel nao encontrada", "codigo": 404})
 
+    if payload.tipo_processo is not None:
+        payload.tipo_processo = _validar_tipo_processo(payload.tipo_processo)
     dados = payload.model_dump(exclude_none=True)
     return salvar_area_projeto(
         projeto_id=projeto_id,
