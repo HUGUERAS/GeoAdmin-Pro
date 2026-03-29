@@ -3,341 +3,855 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GeoAdmin Pro — Formulário do Proprietário</title>
+<title>GeoAdmin Pro — Formulário do Cliente</title>
 <style>
   :root {
-    --laranja: #EF9F27;
-    --laranja-dark: #BA7517;
-    --bg: #f5f4f0;
-    --card: #ffffff;
-    --text: #1a1a18;
-    --muted: #5f5e5a;
-    --border: #d3d1c7;
-    --radius: 10px;
+    --bg: #f2eee6;
+    --bg-soft: #fbf8f2;
+    --card: #fffdfa;
+    --text: #1f1b16;
+    --muted: #6d6559;
+    --border: #d9d0c1;
+    --line: #ebe2d3;
+    --accent: #c58b2b;
+    --accent-dark: #875915;
+    --success: #2f7d53;
+    --danger: #b24b42;
+    --shadow: 0 14px 34px rgba(44, 30, 10, 0.08);
+    --radius: 20px;
   }
-  @media(prefers-color-scheme:dark){
-    :root{--bg:#1a1a18;--card:#2c2c2a;--text:#e8e6de;--muted:#9c9a92;--border:#444441}
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(197,139,43,.15), transparent 24%),
+      linear-gradient(180deg, #f6f1e9 0%, #efe7db 100%);
+    color: var(--text);
+    min-height: 100vh;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0 0 40px}
-  .header{background:var(--laranja);color:#412402;padding:20px 24px;text-align:center}
-  .header h1{font-size:18px;font-weight:600}
-  .header p{font-size:13px;margin-top:4px;opacity:.85}
-  .container{max-width:520px;margin:20px auto;padding:0 16px}
-  .card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px}
-  .section-title{font-size:13px;font-weight:600;color:var(--laranja-dark);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-  .field{margin-bottom:14px}
-  label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px}
-  input,select,textarea{width:100%;padding:10px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);background:var(--card);outline:none;transition:border-color .2s}
-  input:focus,select:focus,textarea:focus{border-color:var(--laranja)}
-  .required::after{content:" *";color:#E24B4A}
-  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-  .btn{width:100%;padding:14px;background:var(--laranja);color:#412402;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .2s}
-  .btn:hover{background:var(--laranja-dark);color:#fff}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  .aviso{background:#FAEEDA;border:0.5px solid var(--laranja);border-radius:8px;padding:12px 14px;font-size:12px;color:#412402;margin-bottom:14px}
-  .sucesso{background:#E1F5EE;border:0.5px solid #1D9E75;border-radius:8px;padding:20px;text-align:center;display:none}
-  .sucesso h2{color:#085041;font-size:16px;margin-bottom:6px}
-  .sucesso p{color:#0F6E56;font-size:13px}
-  .add-btn{background:none;border:0.5px dashed var(--border);border-radius:8px;padding:8px;width:100%;color:var(--muted);font-size:13px;cursor:pointer;margin-top:6px}
-  .add-btn:hover{border-color:var(--laranja);color:var(--laranja)}
-  .conf-item{border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;position:relative}
-  .conf-remove{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px}
-  .progress{display:flex;gap:6px;margin-bottom:20px}
-  .step{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s}
-  .step.ativo{background:var(--laranja)}
+  .hero {
+    padding: 28px 20px 18px;
+    background: linear-gradient(135deg, #31261a 0%, #56412a 52%, #7e5b22 100%);
+    color: #fff7e9;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -40px -90px auto;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle, rgba(255,255,255,.15), transparent 62%);
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    opacity: .84;
+  }
+  .hero h1 {
+    margin: 14px 0 8px;
+    font-size: 28px;
+    line-height: 1.1;
+    font-family: "Georgia", "Times New Roman", serif;
+    font-weight: 700;
+  }
+  .hero p {
+    margin: 0;
+    color: rgba(255,247,233,.84);
+    line-height: 1.55;
+    max-width: 680px;
+  }
+  .shell {
+    width: min(880px, calc(100% - 28px));
+    margin: -26px auto 42px;
+    position: relative;
+  }
+  .context-card,
+  .step-card,
+  .success-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .context-card {
+    padding: 18px;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+  }
+  .meta-label {
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .meta-value {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .progress {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .progress-item {
+    background: rgba(255,255,255,.75);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 10px;
+    min-height: 74px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: center;
+  }
+  .progress-item.active {
+    border-color: rgba(197,139,43,.72);
+    background: linear-gradient(180deg, #fff6e6 0%, #fffdfa 100%);
+    box-shadow: 0 8px 20px rgba(197,139,43,.12);
+  }
+  .progress-item.done {
+    border-color: rgba(47,125,83,.42);
+    background: rgba(47,125,83,.08);
+  }
+  .step-index {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3e8d3;
+    color: var(--accent-dark);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .progress-item.done .step-index {
+    background: rgba(47,125,83,.14);
+    color: var(--success);
+  }
+  .progress-item span:last-child {
+    font-size: 13px;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+  .step-card {
+    padding: 22px;
+  }
+  .step-card[hidden] { display: none; }
+  .step-header {
+    margin-bottom: 18px;
+  }
+  .step-title {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-family: "Georgia", "Times New Roman", serif;
+  }
+  .step-subtitle {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .grid {
+    display: grid;
+    gap: 14px;
+  }
+  .grid.cols-2 {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  .grid.cols-3 {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  label.required::after { content: " *"; color: var(--danger); }
+  input, select, textarea {
+    width: 100%;
+    padding: 13px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    color: var(--text);
+    font: inherit;
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: rgba(197,139,43,.92);
+    box-shadow: 0 0 0 4px rgba(197,139,43,.12);
+  }
+  textarea { min-height: 110px; resize: vertical; }
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .note {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #f8edd7;
+    color: #654615;
+    border: 1px solid rgba(197,139,43,.35);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .sketch-shell {
+    border: 1px dashed rgba(133, 89, 21, .45);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #fffaf1 0%, #f7efe1 100%);
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+  }
+  .sketch-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .ghost-btn, .primary-btn, .secondary-btn {
+    border: none;
+    border-radius: 14px;
+    padding: 13px 18px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .12s ease, opacity .12s ease, background .2s ease;
+  }
+  .ghost-btn:hover, .primary-btn:hover, .secondary-btn:hover { transform: translateY(-1px); }
+  .ghost-btn { background: rgba(255,255,255,.8); border: 1px solid var(--border); color: var(--text); }
+  .primary-btn { background: var(--accent); color: #2f1d05; }
+  .secondary-btn { background: #2a2218; color: #fff8ef; }
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .nav-row .secondary-btn,
+  .nav-row .primary-btn { min-width: 140px; }
+  .nav-row .spacer { flex: 1; }
+  .sketch-board {
+    width: 100%;
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid rgba(133, 89, 21, .2);
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    position: relative;
+  }
+  svg { width: 100%; height: 100%; display: block; touch-action: none; }
+  .upload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .upload-box {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px;
+    background: #fff;
+  }
+  .upload-box input { padding: 10px; background: transparent; }
+  .confrontantes { display: grid; gap: 12px; }
+  .confrontante {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 14px;
+    background: #fffdfa;
+    position: relative;
+  }
+  .remove-conf {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+  }
+  .status-banner {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(47,125,83,.08);
+    color: var(--success);
+    border: 1px solid rgba(47,125,83,.18);
+    display: none;
+  }
+  .error-banner {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(178,75,66,.09);
+    color: var(--danger);
+    border: 1px solid rgba(178,75,66,.18);
+    display: none;
+  }
+  .success-card {
+    display: none;
+    padding: 26px;
+    margin-top: 16px;
+    text-align: center;
+  }
+  .success-card h2 {
+    margin: 0 0 8px;
+    font-size: 26px;
+    font-family: "Georgia", "Times New Roman", serif;
+  }
+  .success-card p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .footer-note {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.5;
+  }
+  @media (max-width: 680px) {
+    .hero { padding: 24px 16px 16px; }
+    .hero h1 { font-size: 24px; }
+    .shell { width: min(100% - 20px, 880px); }
+    .step-card { padding: 18px; }
+    .progress { grid-template-columns: repeat(2, 1fr); }
+    .nav-row { flex-direction: column-reverse; }
+    .nav-row .secondary-btn,
+    .nav-row .primary-btn,
+    .ghost-btn { width: 100%; }
+  }
 </style>
 </head>
 <body>
+  <section class="hero">
+    <div class="eyebrow">GeoAdmin Pro · Regularização Rural</div>
+    <h1 id="hero-title">Preencha seus dados e esboce sua área</h1>
+    <p id="hero-subtitle">Este formulário ajuda a montar as peças técnicas da regularização com mais rapidez e menos retrabalho.</p>
+  </section>
 
-<div class="header">
-  <h1>Formulário do Proprietário</h1>
-  <p>Preencha seus dados para o processo de regularização fundiária</p>
-</div>
-
-<div class="container">
-
-  <div class="aviso">
-    Seus dados serão usados para gerar automaticamente os documentos do processo.
-    Preencha com atenção — os dados devem ser iguais aos dos seus documentos pessoais.
-  </div>
-
-  <div class="progress" id="progress">
-    <div class="step ativo" id="s1"></div>
-    <div class="step" id="s2"></div>
-    <div class="step" id="s3"></div>
-    <div class="step" id="s4"></div>
-  </div>
-
-  <form id="form" onsubmit="enviar(event)">
-
-    <!-- SEÇÃO 1: Dados Pessoais -->
-    <div class="card" id="sec1">
-      <div class="section-title">1. Seus dados pessoais</div>
-
-      <div class="field">
-        <label class="required">Nome completo</label>
-        <input type="text" name="nome" placeholder="Nome completo como no RG" required>
+  <main class="shell">
+    <section class="context-card" id="context-card">
+      <div>
+        <div class="meta-label">Projeto</div>
+        <div class="meta-value" id="meta-projeto">Carregando...</div>
       </div>
-      <div class="row2">
-        <div class="field">
-          <label class="required">CPF</label>
-          <input type="text" name="cpf" placeholder="000.000.000-00" required oninput="mascaraCPF(this)">
+      <div>
+        <div class="meta-label">Cliente</div>
+        <div class="meta-value" id="meta-cliente">Carregando...</div>
+      </div>
+      <div>
+        <div class="meta-label">Validade do link</div>
+        <div class="meta-value" id="meta-validade">Carregando...</div>
+      </div>
+    </section>
+
+    <section class="progress" id="progress"></section>
+
+    <form id="formulario">
+      <div class="step-card" data-step="0">
+        <div class="step-header">
+          <h2 class="step-title">1. Seus dados pessoais</h2>
+          <p class="step-subtitle">Preencha como nos seus documentos. Isso evita retrabalho na hora de gerar as peças do processo.</p>
         </div>
-        <div class="field">
-          <label class="required">RG</label>
-          <input type="text" name="rg" placeholder="Número do RG" required>
+
+        <div class="note">Se você for casado(a) ou viver em união estável, preencha também os dados do cônjuge.</div>
+
+        <div class="grid cols-2">
+          <div class="field">
+            <label class="required" for="nome">Nome completo</label>
+            <input id="nome" name="nome" required placeholder="Nome completo como no RG" />
+          </div>
+          <div class="field">
+            <label class="required" for="telefone">Telefone</label>
+            <input id="telefone" name="telefone" required placeholder="(00) 00000-0000" />
+          </div>
+          <div class="field">
+            <label class="required" for="cpf">CPF</label>
+            <input id="cpf" name="cpf" required placeholder="000.000.000-00" />
+          </div>
+          <div class="field">
+            <label class="required" for="rg">RG</label>
+            <input id="rg" name="rg" required placeholder="Número do RG" />
+          </div>
+          <div class="field">
+            <label class="required" for="estado_civil">Estado civil</label>
+            <select id="estado_civil" name="estado_civil" required>
+              <option value="">Selecione</option>
+              <option value="solteiro">Solteiro(a)</option>
+              <option value="casado">Casado(a)</option>
+              <option value="divorciado">Divorciado(a)</option>
+              <option value="viuvo">Viúvo(a)</option>
+              <option value="uniao_estavel">União estável</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="profissao">Profissão</label>
+            <input id="profissao" name="profissao" placeholder="Ex.: Agricultor" />
+          </div>
+          <div class="field">
+            <label for="email">E-mail</label>
+            <input id="email" name="email" type="email" placeholder="seu@email.com" />
+          </div>
+        </div>
+
+        <div class="grid cols-2" id="conjuge-grid" style="display:none;margin-top:14px;">
+          <div class="field">
+            <label for="conjuge_nome">Nome do cônjuge</label>
+            <input id="conjuge_nome" name="conjuge_nome" />
+          </div>
+          <div class="field">
+            <label for="conjuge_cpf">CPF do cônjuge</label>
+            <input id="conjuge_cpf" name="conjuge_cpf" placeholder="000.000.000-00" />
+          </div>
+        </div>
+
+        <div class="nav-row">
+          <div class="spacer"></div>
+          <button type="button" class="primary-btn" data-next>Continuar</button>
         </div>
       </div>
-      <div class="row2">
+
+      <div class="step-card" data-step="1" hidden>
+        <div class="step-header">
+          <h2 class="step-title">2. Dados do imóvel</h2>
+          <p class="step-subtitle">Conte o essencial sobre a propriedade. Se algum número você não souber agora, pode deixar em branco.</p>
+        </div>
+
+        <div class="grid cols-2">
+          <div class="field">
+            <label class="required" for="nome_imovel">Nome da área ou imóvel</label>
+            <input id="nome_imovel" name="nome_imovel" required placeholder="Ex.: Fazenda Boa Esperança" />
+          </div>
+          <div class="field">
+            <label for="area_nome">Nome da área dentro do projeto</label>
+            <input id="area_nome" name="area_nome" placeholder="Ex.: Área do lote 01" />
+          </div>
+          <div class="field">
+            <label class="required" for="municipio_imovel">Município do imóvel</label>
+            <input id="municipio_imovel" name="municipio_imovel" required />
+          </div>
+          <div class="field">
+            <label for="comarca">Comarca</label>
+            <input id="comarca" name="comarca" />
+          </div>
+          <div class="field">
+            <label for="matricula">Matrícula ou transcrição</label>
+            <input id="matricula" name="matricula" />
+          </div>
+          <div class="field">
+            <label for="tempo_posse_anos">Tempo de posse (anos)</label>
+            <input id="tempo_posse_anos" name="tempo_posse_anos" type="number" min="0" max="120" />
+          </div>
+          <div class="field">
+            <label for="ccir">CCIR</label>
+            <input id="ccir" name="ccir" placeholder="Número do CCIR" />
+          </div>
+          <div class="field">
+            <label for="car">CAR</label>
+            <input id="car" name="car" placeholder="Código do CAR" />
+          </div>
+        </div>
+
+        <div class="grid cols-3" style="margin-top:14px;">
+          <div class="field">
+            <label class="required" for="endereco">Endereço</label>
+            <input id="endereco" name="endereco" required placeholder="Rua, fazenda ou comunidade" />
+          </div>
+          <div class="field">
+            <label for="endereco_numero">Número</label>
+            <input id="endereco_numero" name="endereco_numero" placeholder="s/n" />
+          </div>
+          <div class="field">
+            <label class="required" for="municipio">Município do endereço</label>
+            <input id="municipio" name="municipio" required />
+          </div>
+          <div class="field">
+            <label for="cep">CEP</label>
+            <input id="cep" name="cep" placeholder="00000-000" />
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:14px;">
+          <label for="observacoes">Observações</label>
+          <textarea id="observacoes" name="observacoes" placeholder="Conte algo que ajude a localizar a área, descrever acessos, vizinhos conhecidos ou alguma particularidade importante."></textarea>
+        </div>
+
+        <div class="nav-row">
+          <button type="button" class="secondary-btn" data-prev>Voltar</button>
+          <button type="button" class="primary-btn" data-next>Continuar</button>
+        </div>
+      </div>
+
+      <div class="step-card" data-step="2" hidden>
+        <div class="step-header">
+          <h2 class="step-title">3. Esboço aproximado da área</h2>
+          <p class="step-subtitle">Faça um croqui rápido só para nos orientar. Se você tiver coordenadas, KML, GeoJSON, CSV, TXT ou um croqui em foto/PDF, envie também.</p>
+        </div>
+
+        <div class="sketch-shell">
+          <div class="sketch-toolbar">
+            <button type="button" class="ghost-btn" id="btn-clear-sketch">Limpar desenho</button>
+            <span class="hint">Toque no quadro abaixo para marcar os vértices do croqui. Isso é só um esboço, não precisa ficar perfeito.</span>
+          </div>
+          <div class="sketch-board">
+            <svg id="sketch-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="hint" id="sketch-status">Nenhum vértice desenhado ainda.</div>
+        </div>
+
+        <div class="grid" style="margin-top:16px;">
+          <div class="field">
+            <label for="croqui_coords">Coordenadas aproximadas (opcional)</label>
+            <textarea id="croqui_coords" name="croqui_coords" placeholder="Cole aqui linhas como lat,lon ou lon,lat. Exemplo:\n-14.19108,-49.40610\n-14.19150,-49.40560\n-14.19210,-49.40590"></textarea>
+            <div class="hint">Se você não tiver coordenadas, pode pular esse campo e só desenhar o croqui ou enviar um arquivo.</div>
+          </div>
+        </div>
+
+        <div class="upload-grid" style="margin-top:16px;">
+          <div class="upload-box">
+            <label for="arquivo_geometria">Arquivo geoespacial opcional</label>
+            <input id="arquivo_geometria" name="arquivo_geometria" type="file" accept=".geojson,.json,.kml,.csv,.txt,.zip" />
+            <div class="hint">Aceita GeoJSON, KML, CSV, TXT ou ZIP com shapefile.</div>
+          </div>
+          <div class="upload-box">
+            <label for="anexos">Croqui, foto ou PDF</label>
+            <input id="anexos" name="anexos" type="file" accept="image/*,.pdf" multiple />
+            <div class="hint">Envie fotos do croqui, mapa escaneado ou qualquer documento que ajude na localização.</div>
+          </div>
+        </div>
+
+        <input type="hidden" id="croqui_svg" name="croqui_svg" />
+
+        <div class="nav-row">
+          <button type="button" class="secondary-btn" data-prev>Voltar</button>
+          <button type="button" class="primary-btn" data-next>Continuar</button>
+        </div>
+      </div>
+
+      <div class="step-card" data-step="3" hidden>
+        <div class="step-header">
+          <h2 class="step-title">4. Confrontantes e conferência final</h2>
+          <p class="step-subtitle">Se você souber quem são os vizinhos de cada lado, informe agora. Se não souber algum dado, deixe em branco.</p>
+        </div>
+
+        <div class="confrontantes" id="confrontantes"></div>
+        <button type="button" class="ghost-btn" id="btn-add-conf" style="margin-top:14px;">Adicionar confrontante</button>
+        <input type="hidden" id="confrontantes_json" name="confrontantes_json" />
+
+        <div class="status-banner" id="status-banner"></div>
+        <div class="error-banner" id="error-banner"></div>
+
+        <div class="nav-row">
+          <button type="button" class="secondary-btn" data-prev>Voltar</button>
+          <button type="submit" class="primary-btn" id="btn-submit">Enviar dados</button>
+        </div>
+      </div>
+    </form>
+
+    <section class="success-card" id="success-card">
+      <h2>Dados enviados com sucesso</h2>
+      <p>Recebemos suas informações. O responsável técnico agora vai revisar os dados, comparar seu esboço com o perímetro técnico e seguir com a regularização.</p>
+    </section>
+
+    <p class="footer-note">Este formulário foi preparado para ser simples no celular. O desenho é apenas um apoio visual e não substitui o levantamento técnico final.</p>
+  </main>
+
+<script>
+const passos = [
+  { titulo: 'Dados pessoais', descricao: 'Identificação do proprietário' },
+  { titulo: 'Imóvel', descricao: 'Dados da área e endereço' },
+  { titulo: 'Esboço', descricao: 'Croqui, coordenadas e arquivos' },
+  { titulo: 'Confrontantes', descricao: 'Vizinhos e envio final' },
+]
+const estado = {
+  passoAtual: 0,
+  sketchPoints: [],
+  confrontantes: [
+    { lado: 'Norte', nome: '', cpf: '', nome_imovel: '', matricula: '', tipo: 'particular' },
+    { lado: 'Sul', nome: '', cpf: '', nome_imovel: '', matricula: '', tipo: 'particular' },
+  ],
+}
+const token = new URLSearchParams(window.location.search).get('token')
+const form = document.getElementById('formulario')
+const statusBanner = document.getElementById('status-banner')
+const errorBanner = document.getElementById('error-banner')
+const successCard = document.getElementById('success-card')
+const progress = document.getElementById('progress')
+const steps = [...document.querySelectorAll('.step-card')]
+const sketchSvg = document.getElementById('sketch-svg')
+const sketchStatus = document.getElementById('sketch-status')
+const croquiSvgInput = document.getElementById('croqui_svg')
+
+function renderProgress() {
+  progress.innerHTML = passos.map((passo, index) => {
+    const classes = [ 'progress-item' ]
+    if (index === estado.passoAtual) classes.push('active')
+    if (index < estado.passoAtual) classes.push('done')
+    return `
+      <div class="${classes.join(' ')}">
+        <span class="step-index">${index + 1}</span>
+        <span>${passo.titulo}</span>
+      </div>
+    `
+  }).join('')
+}
+
+function mostrarPasso(index) {
+  estado.passoAtual = Math.max(0, Math.min(index, steps.length - 1))
+  steps.forEach((step, stepIndex) => {
+    step.hidden = stepIndex !== estado.passoAtual
+  })
+  renderProgress()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function nextStep() {
+  if (estado.passoAtual === 0 && !document.getElementById('nome').value.trim()) {
+    mostrarErro('Preencha ao menos seu nome antes de continuar.')
+    return
+  }
+  if (estado.passoAtual === 1 && !document.getElementById('nome_imovel').value.trim()) {
+    mostrarErro('Informe o nome da área ou do imóvel antes de seguir.')
+    return
+  }
+  limparMensagens()
+  mostrarPasso(estado.passoAtual + 1)
+}
+
+function prevStep() {
+  limparMensagens()
+  mostrarPasso(estado.passoAtual - 1)
+}
+
+function limparMensagens() {
+  statusBanner.style.display = 'none'
+  errorBanner.style.display = 'none'
+}
+
+function mostrarStatus(texto) {
+  statusBanner.textContent = texto
+  statusBanner.style.display = 'block'
+}
+
+function mostrarErro(texto) {
+  errorBanner.textContent = texto
+  errorBanner.style.display = 'block'
+}
+
+function mascaraCPF(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 11)
+  v = v.replace(/(\d{3})(\d)/, '$1.$2')
+  v = v.replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+  v = v.replace(/\.(\d{3})(\d)/, '.$1-$2')
+  input.value = v
+}
+
+function renderConfrontantes() {
+  const container = document.getElementById('confrontantes')
+  container.innerHTML = estado.confrontantes.map((conf, index) => `
+    <div class="confrontante">
+      <button type="button" class="remove-conf" data-remove-conf="${index}">×</button>
+      <div class="grid cols-2">
         <div class="field">
-          <label class="required">Estado civil</label>
-          <select name="estado_civil" required>
-            <option value="">Selecione</option>
-            <option value="solteiro">Solteiro(a)</option>
-            <option value="casado">Casado(a)</option>
-            <option value="divorciado">Divorciado(a)</option>
-            <option value="viuvo">Viúvo(a)</option>
-            <option value="uniao_estavel">União estável</option>
+          <label>Lado</label>
+          <select data-conf="lado" data-index="${index}">
+            ${['Norte','Sul','Leste','Oeste','Outros'].map(l => `<option value="${l}" ${conf.lado === l ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
         </div>
         <div class="field">
-          <label>Profissão</label>
-          <input type="text" name="profissao" placeholder="Ex: Agricultor">
-        </div>
-      </div>
-      <div id="conjuge-fields" style="display:none">
-        <div class="row2">
-          <div class="field">
-            <label>Nome do cônjuge</label>
-            <input type="text" name="conjuge_nome">
-          </div>
-          <div class="field">
-            <label>CPF do cônjuge</label>
-            <input type="text" name="conjuge_cpf" oninput="mascaraCPF(this)">
-          </div>
-        </div>
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label class="required">Telefone</label>
-          <input type="tel" name="telefone" placeholder="(00) 00000-0000" required>
+          <label>Nome</label>
+          <input data-conf="nome" data-index="${index}" value="${conf.nome || ''}" placeholder="Nome do confrontante" />
         </div>
         <div class="field">
-          <label>E-mail</label>
-          <input type="email" name="email" placeholder="seu@email.com">
+          <label>CPF</label>
+          <input data-conf="cpf" data-index="${index}" value="${conf.cpf || ''}" placeholder="000.000.000-00" />
+        </div>
+        <div class="field">
+          <label>Imóvel confrontante</label>
+          <input data-conf="nome_imovel" data-index="${index}" value="${conf.nome_imovel || ''}" />
+        </div>
+        <div class="field">
+          <label>Matrícula</label>
+          <input data-conf="matricula" data-index="${index}" value="${conf.matricula || ''}" />
+        </div>
+        <div class="field">
+          <label>Tipo</label>
+          <select data-conf="tipo" data-index="${index}">
+            ${['particular','estrada','rio','servidao','outros'].map(tipo => `<option value="${tipo}" ${conf.tipo === tipo ? 'selected' : ''}>${tipo}</option>`).join('')}
+          </select>
         </div>
       </div>
     </div>
-
-    <!-- SEÇÃO 2: Endereço -->
-    <div class="card" id="sec2">
-      <div class="section-title">2. Seu endereço</div>
-      <div class="field">
-        <label class="required">Endereço (rua, fazenda, comunidade)</label>
-        <input type="text" name="endereco" required>
-      </div>
-      <div class="row3">
-        <div class="field">
-          <label>Número</label>
-          <input type="text" name="endereco_numero" placeholder="s/n">
-        </div>
-        <div class="field">
-          <label>CEP</label>
-          <input type="text" name="cep" placeholder="00000-000">
-        </div>
-        <div class="field">
-          <label class="required">Município</label>
-          <input type="text" name="municipio" required>
-        </div>
-      </div>
-    </div>
-
-    <!-- SEÇÃO 3: Dados do Imóvel -->
-    <div class="card" id="sec3">
-      <div class="section-title">3. Dados do imóvel</div>
-      <div class="field">
-        <label class="required">Nome da propriedade</label>
-        <input type="text" name="nome_imovel" placeholder="Ex: Sítio São João" required>
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label class="required">Município do imóvel</label>
-          <input type="text" name="municipio_imovel" required>
-        </div>
-        <div class="field">
-          <label>Comarca</label>
-          <input type="text" name="comarca">
-        </div>
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label>Matrícula / transcrição</label>
-          <input type="text" name="matricula" placeholder="Número da matrícula">
-        </div>
-        <div class="field">
-          <label>Tempo de posse (anos)</label>
-          <input type="number" name="tempo_posse_anos" min="0" max="99" placeholder="Ex: 10">
-        </div>
-      </div>
-    </div>
-
-    <!-- SEÇÃO 4: Confrontantes -->
-    <div class="card" id="sec4">
-      <div class="section-title">4. Confrontantes (vizinhos de cada lado)</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
-        Informe os dados de quem faz divisa com o seu imóvel em cada lado.
-        Se não souber o CPF, deixe em branco.
-      </p>
-
-      <div id="confrontantes-lista"></div>
-      <button type="button" class="add-btn" onclick="addConf()">+ Adicionar confrontante</button>
-    </div>
-
-    <div class="sucesso" id="sucesso">
-      <h2>Dados enviados com sucesso!</h2>
-      <p>O técnico responsável receberá uma notificação e gerará os documentos em breve.</p>
-    </div>
-
-    <button type="submit" class="btn" id="btn-enviar">Enviar dados</button>
-
-  </form>
-</div>
-
-<script>
-const LADOS = ['Norte','Sul','Leste','Oeste','Outros'];
-let confCount = 0;
-
-// Adicionar confrontante
-function addConf(lado) {
-  confCount++;
-  const div = document.createElement('div');
-  div.className = 'conf-item';
-  div.id = `conf-${confCount}`;
-  div.innerHTML = `
-    <button type="button" class="conf-remove" onclick="rmConf(${confCount})">✕</button>
-    <div class="row2">
-      <div class="field">
-        <label>Lado</label>
-        <select name="conf_lado_${confCount}">
-          ${LADOS.map(l=>`<option value="${l}">${l}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field">
-        <label class="required">Nome</label>
-        <input type="text" name="conf_nome_${confCount}" required>
-      </div>
-    </div>
-    <div class="row2">
-      <div class="field">
-        <label>CPF</label>
-        <input type="text" name="conf_cpf_${confCount}" placeholder="000.000.000-00" oninput="mascaraCPF(this)">
-      </div>
-      <div class="field">
-        <label>Nome do imóvel</label>
-        <input type="text" name="conf_imovel_${confCount}">
-      </div>
-    </div>
-    <div class="field">
-      <label>Matrícula do imóvel confrontante</label>
-      <input type="text" name="conf_matricula_${confCount}">
-    </div>
-  `;
-  document.getElementById('confrontantes-lista').appendChild(div);
-  if (lado) div.querySelector('select').value = lado;
+  `).join('')
 }
 
-function rmConf(id) {
-  document.getElementById(`conf-${id}`)?.remove();
+function serializarConfrontantes() {
+  document.getElementById('confrontantes_json').value = JSON.stringify(
+    estado.confrontantes.filter(conf => (conf.nome || '').trim())
+  )
 }
 
-// Adicionar os 4 lados automaticamente
-['Norte','Sul','Leste','Oeste'].forEach(addConf);
-
-// Mostrar campos cônjuge
-document.querySelector('[name=estado_civil]').addEventListener('change', function() {
-  const show = ['casado','uniao_estavel'].includes(this.value);
-  document.getElementById('conjuge-fields').style.display = show ? 'block' : 'none';
-});
-
-// Máscara CPF
-function mascaraCPF(el) {
-  let v = el.value.replace(/\D/g,'');
-  if(v.length>11) v=v.slice(0,11);
-  v = v.replace(/(\d{3})(\d)/,'$1.$2');
-  v = v.replace(/(\d{3})\.(\d{3})(\d)/,'$1.$2.$3');
-  v = v.replace(/\.(\d{3})(\d)/,'.$1-$2');
-  el.value = v;
+function addConfrontante() {
+  estado.confrontantes.push({ lado: 'Outros', nome: '', cpf: '', nome_imovel: '', matricula: '', tipo: 'particular' })
+  renderConfrontantes()
 }
 
-// Progresso visual
-function atualizarProgress() {
-  const secs = ['sec1','sec2','sec3','sec4'];
-  secs.forEach((id, i) => {
-    const card = document.getElementById(id);
-    const inputs = card.querySelectorAll('input[required],select[required]');
-    const ok = [...inputs].every(el => el.value.trim());
-    document.getElementById(`s${i+1}`).classList.toggle('ativo', ok);
-  });
-}
-document.getElementById('form').addEventListener('input', atualizarProgress);
-
-// Coletar confrontantes do form
-function coletarConfs() {
-  const confs = [];
-  document.querySelectorAll('.conf-item').forEach(el => {
-    const id = el.id.replace('conf-','');
-    const nome = el.querySelector(`[name=conf_nome_${id}]`)?.value;
-    if(!nome) return;
-    confs.push({
-      lado:      el.querySelector(`[name=conf_lado_${id}]`)?.value,
-      nome:      nome,
-      cpf:       el.querySelector(`[name=conf_cpf_${id}]`)?.value,
-      nome_imovel: el.querySelector(`[name=conf_imovel_${id}]`)?.value,
-      matricula: el.querySelector(`[name=conf_matricula_${id}]`)?.value,
-    });
-  });
-  return confs;
+function removeConfrontante(index) {
+  estado.confrontantes.splice(index, 1)
+  renderConfrontantes()
 }
 
-// Enviar
-async function enviar(e) {
-  e.preventDefault();
-  const btn = document.getElementById('btn-enviar');
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
+function desenharSketch() {
+  const gridLines = []
+  for (let i = 10; i < 100; i += 10) {
+    gridLines.push(`<line x1="${i}" y1="0" x2="${i}" y2="100" stroke="#f0e3ca" stroke-width="0.4" />`)
+    gridLines.push(`<line x1="0" y1="${i}" x2="100" y2="${i}" stroke="#f0e3ca" stroke-width="0.4" />`)
+  }
+  const points = estado.sketchPoints
+  const polyline = points.length
+    ? `<polyline fill="${points.length >= 3 ? 'rgba(197,139,43,.20)' : 'none'}" stroke="#b27014" stroke-width="1.5" points="${points.map(p => `${p.x},${p.y}`).join(' ')}${points.length >= 3 ? ' ' + points[0].x + ',' + points[0].y : ''}" />`
+    : ''
+  const circles = points.map((point, index) => `
+    <g>
+      <circle cx="${point.x}" cy="${point.y}" r="2.1" fill="#7d4f0b" />
+      <text x="${point.x + 2.8}" y="${point.y - 2.8}" font-size="4" fill="#5b4630">${index + 1}</text>
+    </g>
+  `).join('')
+  sketchSvg.innerHTML = `
+    <rect x="0" y="0" width="100" height="100" fill="#fffdf8" />
+    ${gridLines.join('')}
+    ${polyline}
+    ${circles}
+  `
+  sketchStatus.textContent = points.length
+    ? `${points.length} vértice(s) marcados. Este desenho é apenas um croqui de referência.`
+    : 'Nenhum vértice desenhado ainda.'
+  croquiSvgInput.value = points.length ? sketchSvg.outerHTML : ''
+}
 
-  const fd = new FormData(e.target);
-  const payload = Object.fromEntries(fd.entries());
-  payload.confrontantes = coletarConfs();
+function registrarPonto(event) {
+  const box = sketchSvg.getBoundingClientRect()
+  const clientX = event.touches ? event.touches[0].clientX : event.clientX
+  const clientY = event.touches ? event.touches[0].clientY : event.clientY
+  const x = ((clientX - box.left) / box.width) * 100
+  const y = ((clientY - box.top) / box.height) * 100
+  estado.sketchPoints.push({ x: Math.max(2, Math.min(98, Number(x.toFixed(2)))), y: Math.max(2, Math.min(98, Number(y.toFixed(2)))) })
+  desenharSketch()
+}
 
-  // Pegar token da URL
-  const token = new URLSearchParams(window.location.search).get('token');
-
+async function carregarContexto() {
   try {
-    const res = await fetch(`/formulario/cliente?token=${token}`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload),
-    });
-
-    if(res.ok) {
-      document.getElementById('sucesso').style.display = 'block';
-      document.getElementById('btn-enviar').style.display = 'none';
-      window.scrollTo({top: 0, behavior: 'smooth'});
-    } else {
-      const err = await res.json();
-      alert('Erro ao enviar: ' + (err.erro || res.status));
-      btn.disabled = false;
-      btn.textContent = 'Enviar dados';
+    const res = await fetch(`/formulario/cliente/contexto?token=${token}`)
+    if (!res.ok) throw new Error('Falha ao carregar contexto')
+    const data = await res.json()
+    document.getElementById('meta-projeto').textContent = data.projeto?.projeto_nome || 'Projeto em preparação'
+    document.getElementById('meta-cliente').textContent = data.cliente?.nome || 'Cliente'
+    document.getElementById('meta-validade').textContent = data.cliente?.magic_link_expira
+      ? new Date(data.cliente.magic_link_expira).toLocaleString('pt-BR')
+      : 'Sem validade'
+    if (data.projeto?.projeto_nome) {
+      document.getElementById('hero-title').textContent = `Projeto ${data.projeto.projeto_nome}`
     }
-  } catch(ex) {
-    alert('Falha de conexão. Verifique sua internet e tente novamente.');
-    btn.disabled = false;
-    btn.textContent = 'Enviar dados';
+    if (data.mensagem) {
+      document.getElementById('hero-subtitle').textContent = data.mensagem
+    }
+  } catch {
+    document.getElementById('meta-projeto').textContent = 'Projeto indisponível'
+    document.getElementById('meta-cliente').textContent = 'Cliente indisponível'
+    document.getElementById('meta-validade').textContent = 'Verifique o link'
   }
 }
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  limparMensagens()
+  serializarConfrontantes()
+
+  const submitBtn = document.getElementById('btn-submit')
+  submitBtn.disabled = true
+  submitBtn.textContent = 'Enviando...'
+
+  try {
+    const payload = new FormData(form)
+    const res = await fetch(`/formulario/cliente?token=${token}`, {
+      method: 'POST',
+      body: payload,
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(data.detail?.erro || data.erro || 'Não foi possível enviar os dados agora.')
+    }
+    form.style.display = 'none'
+    successCard.style.display = 'block'
+    mostrarStatus(`Recebemos ${data.vertices_recebidos || 0} vértice(s) e ${data.area?.anexos_total || 0} anexo(s).`)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } catch (error) {
+    mostrarErro(error.message || 'Falha ao enviar. Confira sua conexão e tente novamente.')
+  } finally {
+    submitBtn.disabled = false
+    submitBtn.textContent = 'Enviar dados'
+  }
+})
+
+document.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', nextStep))
+document.querySelectorAll('[data-prev]').forEach(button => button.addEventListener('click', prevStep))
+document.getElementById('btn-add-conf').addEventListener('click', addConfrontante)
+document.getElementById('btn-clear-sketch').addEventListener('click', () => {
+  estado.sketchPoints = []
+  desenharSketch()
+})
+
+sketchSvg.addEventListener('click', registrarPonto)
+sketchSvg.addEventListener('touchstart', (event) => {
+  event.preventDefault()
+  registrarPonto(event)
+}, { passive: false })
+
+document.addEventListener('input', (event) => {
+  const target = event.target
+  if (target.id === 'estado_civil') {
+    document.getElementById('conjuge-grid').style.display = ['casado', 'uniao_estavel'].includes(target.value) ? 'grid' : 'none'
+  }
+  if (target.id === 'cpf' || target.id === 'conjuge_cpf') {
+    mascaraCPF(target)
+  }
+  if (target.dataset && target.dataset.conf) {
+    const index = Number(target.dataset.index)
+    estado.confrontantes[index][target.dataset.conf] = target.value
+    serializarConfrontantes()
+  }
+})
+
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-remove-conf]')
+  if (!button) return
+  removeConfrontante(Number(button.dataset.removeConf))
+})
+
+renderProgress()
+renderConfrontantes()
+desenharSketch()
+carregarContexto()
 </script>
 </body>
 </html>

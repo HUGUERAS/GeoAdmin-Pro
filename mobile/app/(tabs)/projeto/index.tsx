@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
@@ -26,6 +26,22 @@ const CHIPS: { label: string; value: string | null }[] = [
   { label: 'Aprovado',    value: 'aprovado'    },
   { label: 'Finalizado',  value: 'finalizado'  },
 ]
+
+function metaDashboard(projetos: any[]) {
+  const aguardandoCliente = projetos.filter((item) => !item.cliente_nome).length
+  const emCampo = projetos.filter((item) => !item.total_pontos || item.status === 'medicao').length
+  const prontosDocumental = projetos.filter((item) => (item.total_pontos ?? 0) > 0 && Boolean(item.cliente_nome)).length
+  const concluidos = projetos.filter((item) => {
+    const status = String(item.status || '').toLowerCase()
+    return status.includes('aprovado') || status.includes('final') || status.includes('certificado')
+  }).length
+  return [
+    { label: 'Em campo', valor: emCampo, cor: Colors.dark.info, icone: 'map-pin' },
+    { label: 'Sem cliente', valor: aguardandoCliente, cor: Colors.dark.danger, icone: 'alert-circle' },
+    { label: 'Prontos p/ docs', valor: prontosDocumental, cor: Colors.dark.success, icone: 'file-text' },
+    { label: 'Concluídos', valor: concluidos, cor: Colors.dark.primary, icone: 'check-circle' },
+  ]
+}
 
 export default function ProjetosScreen() {
   const C = Colors.dark
@@ -70,110 +86,138 @@ export default function ProjetosScreen() {
   useFocusEffect(useCallback(() => { carregar() }, []))
 
   const termo = busca.trim().toLowerCase()
-  const projetosFiltrados = projetos.filter((item) => {
+  const projetosFiltrados = useMemo(() => projetos.filter((item) => {
     if (filtroStatus && item.status !== filtroStatus) return false
     if (termo) {
-      const nome    = String(item.nome          ?? '').toLowerCase()
-      const cliente = String(item.cliente_nome  ?? '').toLowerCase()
+      const nome    = String(item.nome ?? item.projeto_nome ?? '').toLowerCase()
+      const cliente = String(item.cliente_nome ?? '').toLowerCase()
       if (!nome.includes(termo) && !cliente.includes(termo)) return false
     }
     return true
-  })
+  }), [busca, filtroStatus, projetos, termo])
+
+  const cardsMeta = useMemo(() => metaDashboard(projetos), [projetos])
 
   return (
     <View style={[s.container, { backgroundColor: C.background }]}>
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
-        <Text style={[s.titulo, { color: C.text }]}>Projetos</Text>
-        <Text style={[s.sub, { color: C.muted }]}>
-          {projetosFiltrados.length} de {projetos.length} projetos
-        </Text>
+      <FlatList
+        data={projetosFiltrados}
+        keyExtractor={p => p.id}
+        contentContainerStyle={s.lista}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); carregar() }} tintColor={C.primary} />}
+        renderItem={({ item }) => (
+          <ProjetoCard projeto={item} onPress={() => router.push(`/projeto/${item.id}` as any)} />
+        )}
+        ListHeaderComponent={
+          <>
+            <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}> 
+              <View style={s.topRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.titulo, { color: C.text }]}>Projetos</Text>
+                  <Text style={[s.sub, { color: C.muted }]}>Painel de campo, documentação e regularização</Text>
+                </View>
+                <TouchableOpacity style={[s.novoBtn, { borderColor: C.primary }]} onPress={() => router.push('/projeto/novo' as any)} accessibilityRole="button" accessibilityLabel="Criar novo projeto">
+                  <Feather name="plus" size={16} color={C.primary} />
+                  <Text style={[s.novoBtnTxt, { color: C.primary }]}>Novo</Text>
+                </TouchableOpacity>
+              </View>
 
-        {/* Filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.chipsRow}
-        >
-          {CHIPS.map((chip) => {
-            const selected = filtroStatus === chip.value
-            return (
-              <TouchableOpacity
-                key={String(chip.value)}
-                onPress={() => setFiltroStatus(chip.value)}
-                style={[
-                  s.chip,
-                  selected
-                    ? { backgroundColor: C.primary }
-                    : { backgroundColor: 'transparent', borderColor: C.cardBorder, borderWidth: 1 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Filtrar por ${chip.label}`}
-              >
-                <Text style={[s.chipTxt, { color: selected ? '#fff' : C.muted }]}>
-                  {chip.label}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.metricasRow}>
+                {cardsMeta.map((item) => (
+                  <View key={item.label} style={[s.metaCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}> 
+                    <View style={s.metaIconRow}>
+                      <View style={[s.metaIcon, { backgroundColor: `${item.cor}18` }]}>
+                        <Feather name={item.icone as any} size={16} color={item.cor} />
+                      </View>
+                      <Text style={[s.metaValor, { color: C.text }]}>{item.valor}</Text>
+                    </View>
+                    <Text style={[s.metaLabel, { color: C.muted }]}>{item.label}</Text>
+                  </View>
+                ))}
+              </ScrollView>
 
-        {/* Search bar */}
-        <View style={[s.buscaBox, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-          <Feather name="search" size={16} color={C.muted} />
-          <TextInput
-            style={[s.buscaInput, { color: C.text }]}
-            placeholder="Buscar por nome ou cliente"
-            placeholderTextColor={C.muted}
-            value={busca}
-            onChangeText={setBusca}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-      </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
+                {CHIPS.map((chip) => {
+                  const selected = filtroStatus === chip.value
+                  return (
+                    <TouchableOpacity
+                      key={String(chip.value)}
+                      onPress={() => setFiltroStatus(chip.value)}
+                      style={[
+                        s.chip,
+                        selected
+                          ? { backgroundColor: C.primary }
+                          : { backgroundColor: 'transparent', borderColor: C.cardBorder, borderWidth: 1 },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Filtrar por ${chip.label}`}
+                    >
+                      <Text style={[s.chipTxt, { color: selected ? '#fff' : C.muted }]}>{chip.label}</Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </ScrollView>
 
-      {offline && (
-        <View style={s.bannerOffline}>
-          <Text style={s.bannerTxt}>📡 Offline — exibindo dados em cache</Text>
-        </View>
-      )}
+              <View style={[s.buscaBox, { backgroundColor: C.background, borderColor: C.cardBorder }]}> 
+                <Feather name="search" size={16} color={C.muted} />
+                <TextInput
+                  style={[s.buscaInput, { color: C.text }]}
+                  placeholder="Buscar por nome ou cliente"
+                  placeholderTextColor={C.muted}
+                  value={busca}
+                  onChangeText={setBusca}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
 
-      {loading && !refreshing ? (
-        <View style={s.centro}>
-          <ActivityIndicator color={C.primary} size="large" />
-          <Text style={[s.msg, { color: C.muted }]}>Carregando...</Text>
-        </View>
-      ) : erro ? (
-        <View style={s.centro}>
-          <Text style={[s.msg, { color: C.danger }]}>{erro}</Text>
-          <TouchableOpacity onPress={carregar} style={[s.btnRetry, { borderColor: C.primary }]} accessibilityRole="button" accessibilityLabel="Tentar novamente">
-            <Text style={{ color: C.primary, fontWeight: '600' }}>Tentar novamente</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={projetosFiltrados}
-          keyExtractor={p => p.id}
-          contentContainerStyle={s.lista}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); carregar() }} tintColor={C.primary} />}
-          renderItem={({ item }) => (
-            <ProjetoCard projeto={item} onPress={() => router.push(`/projeto/${item.id}` as any)} />
-          )}
-          ListEmptyComponent={<Text style={[s.msg, { color: C.muted }]}>Nenhum projeto encontrado.</Text>}
-        />
-      )}
+            {offline && (
+              <View style={s.bannerOffline}>
+                <Text style={s.bannerTxt}>Offline — exibindo dados em cache</Text>
+              </View>
+            )}
+
+            {loading && !refreshing ? (
+              <View style={s.centro}>
+                <ActivityIndicator color={C.primary} size="large" />
+                <Text style={[s.msg, { color: C.muted }]}>Carregando...</Text>
+              </View>
+            ) : null}
+
+            {!loading && erro ? (
+              <View style={s.centro}>
+                <Text style={[s.msg, { color: C.danger }]}>{erro}</Text>
+                <TouchableOpacity onPress={carregar} style={[s.btnRetry, { borderColor: C.primary }]} accessibilityRole="button" accessibilityLabel="Tentar novamente">
+                  <Text style={{ color: C.primary, fontWeight: '600' }}>Tentar novamente</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </>
+        }
+        ListEmptyComponent={!loading && !erro ? <Text style={[s.msg, { color: C.muted }]}>Nenhum projeto encontrado.</Text> : null}
+      />
     </View>
   )
 }
 
 const s = StyleSheet.create({
-  container:     { flex: 1 },
-  header:        { padding: 20, paddingTop: 56, borderBottomWidth: 0.5, gap: 12 },
-  titulo:        { fontSize: 24, fontWeight: '700' },
-  sub:           { fontSize: 13 },
-  chipsRow:      { flexDirection: 'row', gap: 8, paddingVertical: 2 },
-  chip:          { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
-  chipTxt:       { fontSize: 13, fontWeight: '500' },
+  container: { flex: 1 },
+  header: { padding: 20, paddingTop: 56, borderBottomWidth: 0.5, gap: 14, marginBottom: 8 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  titulo: { fontSize: 28, fontWeight: '700' },
+  sub: { fontSize: 13, lineHeight: 20 },
+  novoBtn: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  novoBtnTxt: { fontSize: 13, fontWeight: '700' },
+  metricasRow: { flexDirection: 'row', gap: 10 },
+  metaCard: { minWidth: 148, borderWidth: 1, borderRadius: 14, padding: 12, gap: 8 },
+  metaIconRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  metaIcon: { width: 30, height: 30, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  metaValor: { fontSize: 22, fontWeight: '700' },
+  metaLabel: { fontSize: 12, fontWeight: '500' },
+  chipsRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
+  chipTxt: { fontSize: 13, fontWeight: '500' },
   buscaBox: {
     minHeight: 48,
     borderRadius: 12,
@@ -183,11 +227,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  buscaInput:    { flex: 1, fontSize: 14, paddingVertical: 12 },
-  lista:         { padding: 14 },
-  centro:        { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  msg:           { fontSize: 14, textAlign: 'center', marginTop: 12, lineHeight: 22 },
-  btnRetry:      { marginTop: 16, borderWidth: 1, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 14 },
-  bannerOffline: { backgroundColor: '#B8860B', paddingVertical: 6, paddingHorizontal: 14 },
-  bannerTxt:     { color: '#FFF8DC', fontSize: 12, fontWeight: '500', textAlign: 'center' },
+  buscaInput: { flex: 1, fontSize: 14, paddingVertical: 12 },
+  lista: { paddingBottom: 28 },
+  centro: { alignItems: 'center', justifyContent: 'center', padding: 24 },
+  msg: { fontSize: 14, textAlign: 'center', marginTop: 12, lineHeight: 22, paddingHorizontal: 18 },
+  btnRetry: { marginTop: 16, borderWidth: 1, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 14 },
+  bannerOffline: { backgroundColor: '#B8860B', paddingVertical: 6, paddingHorizontal: 14, marginBottom: 8 },
+  bannerTxt: { color: '#FFF8DC', fontSize: 12, fontWeight: '500', textAlign: 'center' },
 })

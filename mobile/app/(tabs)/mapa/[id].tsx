@@ -487,7 +487,7 @@ function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVert
 
 export default function MapaProjetoScreen() {
   const C = Colors.dark
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, tool } = useLocalSearchParams<{ id: string; tool?: NomeFerramenta }>()
   const router  = useRouter()
 
   const [projeto,     setProjeto]  = useState<any>(null)
@@ -528,6 +528,7 @@ export default function MapaProjetoScreen() {
 
   // resultados
   const [resultado,    setResultado]    = useState<any>(null)
+  const autoToolKeyRef = useRef<string | null>(null)
 
   const visiblePoints = useMemo(
     () => pontosVisiveis(pontos, polygonVerts),
@@ -728,6 +729,35 @@ export default function MapaProjetoScreen() {
     }
     // com seleção: aguarda vertex taps
   }, [])
+
+  useEffect(() => {
+    if (!tool || loading || !polygonVerts.length) return
+    if (autoToolKeyRef.current === `${id}:${tool}`) return
+
+    const ferramentasSuportadas = new Set<NomeFerramenta>([
+      'area',
+      'irradiacao',
+      'intersecao',
+      'distpl',
+      'deflexao',
+      'mediaPts',
+      'conversao',
+      'rotacao',
+      'subdivisao',
+    ])
+
+    if (!ferramentasSuportadas.has(tool)) return
+    autoToolKeyRef.current = `${id}:${tool}`
+
+    const abrir = async () => {
+      if (!editMode) {
+        await entrarEdit()
+      }
+      setTimeout(() => abrirFerramenta(tool), 80)
+    }
+
+    void abrir()
+  }, [tool, id, loading, polygonVerts.length, editMode, entrarEdit, abrirFerramenta])
 
   const handleVertexTap = useCallback((i: number) => {
     if (!ferrAtiva) return

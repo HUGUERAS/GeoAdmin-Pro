@@ -25,6 +25,7 @@ export default function TabLayout() {
         tabBarIcon: ({ color }) => <Feather name="folder" size={22} color={color} />,
         headerShown: false,
       }} />
+      <Tabs.Screen name="projeto/novo" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="projeto/[id]" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="calculos/index" options={{
         title: 'Cálculos',
