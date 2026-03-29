@@ -2,14 +2,100 @@ from __future__ import annotations
 
 import io
 import zipfile
+from typing import Any
 
 from integracoes import areas_projeto as areas_mod
 
 
-def test_salvar_area_e_listar_com_resumo(monkeypatch):
-    store: dict[str, dict[str, object]] = {}
-    monkeypatch.setattr(areas_mod, '_carregar_store', lambda: store)
-    monkeypatch.setattr(areas_mod, '_salvar_store', lambda payload: store.update(payload))
+class FakeResponse:
+    def __init__(self, data):
+        self.data = data
+
+
+class FakeQuery:
+    def __init__(self, supabase: 'FakeSupabase', table: str):
+        self.supabase = supabase
+        self.table = table
+        self.action = 'select'
+        self.payload = None
+        self.filters: list[tuple[str, Any, Any]] = []
+
+    def select(self, *_args, **_kwargs):
+        self.action = 'select'
+        return self
+
+    def eq(self, campo, valor):
+        self.filters.append(('eq', campo, valor))
+        return self
+
+    def is_(self, campo, valor):
+        self.filters.append(('is', campo, valor))
+        return self
+
+    def order(self, *_args, **_kwargs):
+        self.filters.append(('order', _args, _kwargs))
+        return self
+
+    def maybe_single(self):
+        self.filters.append(('maybe_single', None, None))
+        return self
+
+    def update(self, payload):
+        self.action = 'update'
+        self.payload = payload
+        return self
+
+    def insert(self, payload):
+        self.action = 'insert'
+        self.payload = payload
+        return self
+
+    def execute(self):
+        self.supabase.calls.append(self)
+        return FakeResponse(self.supabase.resolver(self))
+
+
+class FakeSupabase:
+    def __init__(self, resolver):
+        self.resolver = resolver
+        self.calls: list[FakeQuery] = []
+
+    def table(self, nome: str):
+        return FakeQuery(self, nome)
+
+
+def test_salvar_area_e_listar_com_resumo():
+    tabela: dict[str, dict[str, object]] = {}
+
+    def resolver(query: FakeQuery):
+        if query.table != 'areas_projeto':
+            raise AssertionError(f'Tabela inesperada: {query.table}')
+
+        if query.action == 'insert':
+            payload = dict(query.payload)
+            tabela[payload['id']] = payload
+            return [payload]
+
+        if query.action == 'update':
+            area_id = next((f[2] for f in query.filters if f[0] == 'eq' and f[1] == 'id'), None)
+            atual = tabela[area_id]
+            atual.update(query.payload)
+            tabela[area_id] = atual
+            return [atual]
+
+        if query.action == 'select':
+            if any(f[0] == 'eq' and f[1] == 'id' for f in query.filters):
+                area_id = next(f[2] for f in query.filters if f[0] == 'eq' and f[1] == 'id')
+                item = tabela.get(area_id)
+                if item and not item.get('deleted_at'):
+                    return item
+                return None
+            projeto_id = next((f[2] for f in query.filters if f[0] == 'eq' and f[1] == 'projeto_id'), None)
+            return [item for item in tabela.values() if item.get('projeto_id') == projeto_id and not item.get('deleted_at')]
+
+        raise AssertionError(f'Acao inesperada: {query.action}')
+
+    sb = FakeSupabase(resolver)
 
     area = areas_mod.salvar_area_projeto(
         projeto_id='projeto-1',
@@ -23,14 +109,15 @@ def test_salvar_area_e_listar_com_resumo(monkeypatch):
             {'lon': -48.999, 'lat': -14.001},
             {'lon': -48.999, 'lat': -14.0},
         ],
+        sb=sb,
     )
 
     assert area['status_geometria'] == 'apenas_esboco'
     assert area['resumo_ativo']['vertices_total'] == 4
-    assert areas_mod.listar_areas_projeto('projeto-1')[0]['nome'] == 'Área A'
+    assert areas_mod.listar_areas_projeto('projeto-1', sb=sb)[0]['nome'] == 'Área A'
 
 
-def test_detectar_confrontacoes_identifica_sobreposicao(monkeypatch):
+def test_detectar_confrontacoes_identifica_sobreposicao():
     area_a = {
         'id': 'a',
         'nome': 'Área A',

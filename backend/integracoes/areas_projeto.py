@@ -17,33 +17,16 @@ from integracoes.referencia_cliente import resumir_vertices
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-STORE_PATH = DATA_DIR / "areas_projeto.json"
 UPLOADS_DIR = DATA_DIR / "formulario_uploads"
+
+
+def _get_supabase():
+    from main import get_supabase
+    return get_supabase()
 
 
 def _agora_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _garantir_store() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    if not STORE_PATH.exists():
-        STORE_PATH.write_text("{}", encoding="utf-8")
-
-
-def _carregar_store() -> dict[str, Any]:
-    _garantir_store()
-    try:
-        return json.loads(STORE_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-
-
-def _salvar_store(payload: dict[str, Any]) -> None:
-    _garantir_store()
-    tmp = STORE_PATH.with_suffix(f"{STORE_PATH.suffix}.tmp")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(STORE_PATH)
 
 
 def _vertices_validos(vertices: list[dict[str, Any]] | None) -> list[dict[str, float]]:
@@ -103,6 +86,34 @@ def _status_geometria(area: dict[str, Any]) -> str:
     return "sem_geometria"
 
 
+def _row_para_area(raw: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not raw:
+        return None
+    return {
+        "id": raw.get("id"),
+        "projeto_id": raw.get("projeto_id"),
+        "cliente_id": raw.get("cliente_id"),
+        "nome": raw.get("nome"),
+        "proprietario_nome": raw.get("proprietario_nome"),
+        "municipio": raw.get("municipio"),
+        "estado": raw.get("estado"),
+        "comarca": raw.get("comarca"),
+        "matricula": raw.get("matricula"),
+        "ccir": raw.get("ccir"),
+        "car": raw.get("car"),
+        "observacoes": raw.get("observacoes"),
+        "origem_tipo": raw.get("origem_tipo") or "manual",
+        "geometria_esboco": raw.get("geometria_esboco") or [],
+        "geometria_final": raw.get("geometria_final") or [],
+        "resumo_esboco": raw.get("resumo_esboco"),
+        "resumo_final": raw.get("resumo_final"),
+        "anexos": raw.get("anexos") or [],
+        "criado_em": raw.get("criado_em") or raw.get("created_at"),
+        "atualizado_em": raw.get("atualizado_em") or raw.get("updated_at"),
+        "deleted_at": raw.get("deleted_at"),
+    }
+
+
 def _normalizar_area(area: dict[str, Any]) -> dict[str, Any]:
     tipo_geometria, geometria_ativa = _geometria_preferencial(area)
     resumo_esboco = area.get("resumo_esboco") or _resumo_vertices(area.get("geometria_esboco"))
@@ -121,21 +132,32 @@ def _normalizar_area(area: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def listar_areas_projeto(projeto_id: str) -> list[dict[str, Any]]:
-    store = _carregar_store()
-    areas = [
-        _normalizar_area(area)
-        for area in store.values()
-        if area.get("projeto_id") == projeto_id and not area.get("deleted_at")
-    ]
-    areas.sort(key=lambda item: item.get("atualizado_em") or item.get("criado_em") or "", reverse=True)
+def listar_areas_projeto(projeto_id: str, sb=None) -> list[dict[str, Any]]:
+    cliente = sb or _get_supabase()
+    res = (
+        cliente.table("areas_projeto")
+        .select("*")
+        .eq("projeto_id", projeto_id)
+        .is_("deleted_at", "null")
+        .order("atualizado_em", desc=True)
+        .execute()
+    )
+    areas = [_normalizar_area(_row_para_area(area) or {}) for area in (res.data or [])]
     return areas
 
 
-def obter_area(area_id: str) -> dict[str, Any] | None:
-    store = _carregar_store()
-    area = store.get(area_id)
-    if not area or area.get("deleted_at"):
+def obter_area(area_id: str, sb=None) -> dict[str, Any] | None:
+    cliente = sb or _get_supabase()
+    res = (
+        cliente.table("areas_projeto")
+        .select("*")
+        .eq("id", area_id)
+        .is_("deleted_at", "null")
+        .maybe_single()
+        .execute()
+    )
+    area = _row_para_area(res.data)
+    if not area:
         return None
     return _normalizar_area(area)
 
@@ -158,16 +180,27 @@ def salvar_area_projeto(
     geometria_final: list[dict[str, Any]] | None = None,
     anexos: list[dict[str, Any]] | None = None,
     area_id: str | None = None,
+    sb=None,
 ) -> dict[str, Any]:
-    store = _carregar_store()
-    agora = _agora_iso()
-    registro = store.get(area_id) if area_id else None
+    cliente = sb or _get_supabase()
+    existente = obter_area(area_id, sb=cliente) if area_id else None
 
-    area = {
-        "id": area_id or str(uuid4()),
+    vertices_esboco = (
+        _vertices_validos(geometria_esboco)
+        if geometria_esboco is not None
+        else _vertices_validos((existente or {}).get("geometria_esboco"))
+    )
+    vertices_final = (
+        _vertices_validos(geometria_final)
+        if geometria_final is not None
+        else _vertices_validos((existente or {}).get("geometria_final"))
+    )
+
+    payload = {
+        "id": area_id or (existente or {}).get("id") or str(uuid4()),
         "projeto_id": projeto_id,
         "cliente_id": cliente_id,
-        "nome": nome.strip() or "Area sem nome",
+        "nome": (nome or "").strip() or "Area sem nome",
         "proprietario_nome": proprietario_nome,
         "municipio": municipio,
         "estado": estado,
@@ -177,18 +210,29 @@ def salvar_area_projeto(
         "car": car,
         "observacoes": observacoes,
         "origem_tipo": origem_tipo,
-        "geometria_esboco": _vertices_validos(geometria_esboco) or (registro.get("geometria_esboco") if registro else []),
-        "geometria_final": _vertices_validos(geometria_final) or (registro.get("geometria_final") if registro else []),
-        "anexos": anexos if anexos is not None else (registro.get("anexos") if registro else []),
-        "criado_em": registro.get("criado_em") if registro else agora,
-        "atualizado_em": agora,
+        "geometria_esboco": vertices_esboco,
+        "geometria_final": vertices_final,
+        "resumo_esboco": _resumo_vertices(vertices_esboco),
+        "resumo_final": _resumo_vertices(vertices_final),
+        "anexos": anexos if anexos is not None else ((existente or {}).get("anexos") or []),
+        "deleted_at": None,
     }
-    area["resumo_esboco"] = _resumo_vertices(area["geometria_esboco"])
-    area["resumo_final"] = _resumo_vertices(area["geometria_final"])
 
-    store[area["id"]] = area
-    _salvar_store(store)
-    return _normalizar_area(area)
+    if existente:
+        res = cliente.table("areas_projeto").update(payload).eq("id", payload["id"]).execute()
+    else:
+        res = cliente.table("areas_projeto").insert(payload).execute()
+
+    registro = None
+    if res.data:
+        registro = _row_para_area(res.data[0])
+    if not registro:
+        registro = _row_para_area(
+            cliente.table("areas_projeto").select("*").eq("id", payload["id"]).maybe_single().execute().data
+        )
+    if not registro:
+        raise RuntimeError("Falha ao persistir area do projeto no Supabase.")
+    return _normalizar_area(registro)
 
 
 def anexar_arquivos_area(
@@ -196,12 +240,13 @@ def anexar_arquivos_area(
     area_id: str,
     cliente_id: str | None,
     arquivos: list[tuple[str, bytes, str | None]],
+    sb=None,
 ) -> list[dict[str, Any]]:
     if not arquivos:
         return []
 
-    store = _carregar_store()
-    area = store.get(area_id)
+    cliente = sb or _get_supabase()
+    area = obter_area(area_id, sb=cliente)
     if not area:
         return []
 
@@ -226,10 +271,7 @@ def anexar_arquivos_area(
             }
         )
 
-    area["anexos"] = anexos
-    area["atualizado_em"] = _agora_iso()
-    store[area_id] = area
-    _salvar_store(store)
+    cliente.table("areas_projeto").update({"anexos": anexos}).eq("id", area_id).execute()
     return anexos
 
 
@@ -239,8 +281,9 @@ def sintetizar_areas_do_projeto(
     cliente: dict[str, Any] | None,
     perimetro_ativo: dict[str, Any] | None,
     geometria_referencia: dict[str, Any] | None,
+    sb=None,
 ) -> list[dict[str, Any]]:
-    areas = listar_areas_projeto(projeto.get("id"))
+    areas = listar_areas_projeto(projeto.get("id"), sb=sb)
     if areas:
         return areas
 
