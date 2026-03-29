@@ -14,10 +14,17 @@ from shapely.ops import transform
 
 from integracoes.referencia_cliente import resumir_vertices
 
+try:
+    from docx import Document
+except Exception:  # pragma: no cover - fallback defensivo
+    Document = None
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 UPLOADS_DIR = DATA_DIR / "formulario_uploads"
+TEMPLATES_DIR = BASE_DIR / "static" / "templates"
+TEMPLATE_CARTA_CONFRONTACAO = TEMPLATES_DIR / "carta_confrontacao.docx"
 
 
 def _get_supabase():
@@ -27,6 +34,25 @@ def _get_supabase():
 
 def _agora_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _data_extenso_ptbr(data: datetime | None = None) -> str:
+    meses = [
+        "janeiro",
+        "fevereiro",
+        "março",
+        "abril",
+        "maio",
+        "junho",
+        "julho",
+        "agosto",
+        "setembro",
+        "outubro",
+        "novembro",
+        "dezembro",
+    ]
+    valor = data or datetime.now()
+    return f"{valor.day} de {meses[valor.month - 1]} de {valor.year}"
 
 
 def _vertices_validos(vertices: list[dict[str, Any]] | None) -> list[dict[str, float]]:
@@ -130,6 +156,72 @@ def _normalizar_area(area: dict[str, Any]) -> dict[str, Any]:
         "resumo_ativo": resumo_ativo,
         "anexos": area.get("anexos") or [],
     }
+
+
+def _substituir_placeholders_texto(texto: str, campos: dict[str, Any]) -> str:
+    resultado = texto
+    for chave, valor in campos.items():
+        resultado = resultado.replace(f"{{{{ {chave} }}}}", str(valor))
+        resultado = resultado.replace(f"{{{{{chave}}}}}", str(valor))
+    return resultado
+
+
+def _substituir_placeholders_docx(documento, campos: dict[str, Any]) -> None:
+    def atualizar_paragrafo(paragrafo) -> None:
+        texto = _substituir_placeholders_texto(paragrafo.text, campos)
+        if texto == paragrafo.text:
+            return
+        if paragrafo.runs:
+            paragrafo.runs[0].text = texto
+            for run in paragrafo.runs[1:]:
+                run.text = ""
+        else:
+            paragrafo.add_run(texto)
+
+    for paragrafo in documento.paragraphs:
+        atualizar_paragrafo(paragrafo)
+
+    for tabela in documento.tables:
+        for linha in tabela.rows:
+            for celula in linha.cells:
+                for paragrafo in celula.paragraphs:
+                    atualizar_paragrafo(paragrafo)
+
+
+def _gerar_carta_confrontacao_docx(
+    *,
+    projeto: dict[str, Any],
+    area_a: dict[str, Any],
+    area_b: dict[str, Any],
+    confronto: dict[str, Any],
+) -> bytes | None:
+    if Document is None or not TEMPLATE_CARTA_CONFRONTACAO.exists():
+        return None
+
+    documento = Document(str(TEMPLATE_CARTA_CONFRONTACAO))
+    campos = {
+        "projeto_nome": projeto.get("projeto_nome") or projeto.get("nome") or "Projeto",
+        "municipio": projeto.get("municipio") or area_a.get("municipio") or area_b.get("municipio") or "",
+        "comarca": projeto.get("comarca") or area_a.get("comarca") or area_b.get("comarca") or "",
+        "data_extenso": _data_extenso_ptbr(),
+        "proprietario_a": area_a.get("proprietario_nome") or "Nao informado",
+        "cpf_a": area_a.get("cpf") or area_a.get("proprietario_cpf") or "",
+        "imovel_a": area_a.get("nome") or "Area sem nome",
+        "matricula_a": area_a.get("matricula") or "",
+        "proprietario_b": area_b.get("proprietario_nome") or "Nao informado",
+        "cpf_b": area_b.get("cpf") or area_b.get("proprietario_cpf") or "",
+        "imovel_b": area_b.get("nome") or "Area sem nome",
+        "matricula_b": area_b.get("matricula") or "",
+        "tipo_relacao": confronto.get("tipo") or "divisa",
+        "comprimento_contato": f"{confronto.get('contato_m', 0)} m",
+        "area_sobreposicao": f"{confronto.get('area_intersecao_ha', 0)} ha",
+    }
+    _substituir_placeholders_docx(documento, campos)
+
+    buffer = io.BytesIO()
+    documento.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 def listar_areas_projeto(projeto_id: str, sb=None) -> list[dict[str, Any]]:
@@ -415,6 +507,17 @@ def gerar_cartas_confrontacao_zip(
         for indice, confronto in enumerate(confrontacoes, start=1):
             area_a = mapa_areas.get(confronto["area_a"]["id"], confronto["area_a"])
             area_b = mapa_areas.get(confronto["area_b"]["id"], confronto["area_b"])
+            docx_bytes = _gerar_carta_confrontacao_docx(
+                projeto=projeto,
+                area_a=area_a,
+                area_b=area_b,
+                confronto=confronto,
+            )
+            if docx_bytes:
+                nome_docx = f"CARTA_CONFRONTACAO_{indice:02d}.docx"
+                zf.writestr(nome_docx, docx_bytes)
+                continue
+
             texto = f"""
 CARTA DE CONFRONTACAO
 =====================

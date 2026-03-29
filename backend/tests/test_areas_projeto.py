@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 import zipfile
-from typing import Any
 
 from integracoes import areas_projeto as areas_mod
 
@@ -18,7 +18,7 @@ class FakeQuery:
         self.table = table
         self.action = 'select'
         self.payload = None
-        self.filters: list[tuple[str, Any, Any]] = []
+        self.filters: list[tuple[str, object, object]] = []
 
     def select(self, *_args, **_kwargs):
         self.action = 'select'
@@ -150,7 +150,7 @@ def test_detectar_confrontacoes_identifica_sobreposicao():
     assert confrontacoes[0]['area_a']['nome'] == 'Área A'
 
 
-def test_gerar_cartas_confrontacao_zip():
+def test_gerar_cartas_confrontacao_zip_com_template_docx():
     areas = [
         {'id': 'a', 'nome': 'Área A', 'proprietario_nome': 'João', 'matricula': 'MAT-1'},
         {'id': 'b', 'nome': 'Área B', 'proprietario_nome': 'Maria', 'matricula': 'MAT-2'},
@@ -167,6 +167,34 @@ def test_gerar_cartas_confrontacao_zip():
     ]
 
     zip_bytes = areas_mod.gerar_cartas_confrontacao_zip(
+        projeto={'id': 'projeto-1', 'projeto_nome': 'Projeto Teste', 'municipio': 'Jaraguá', 'comarca': 'Jaraguá'},
+        areas=areas,
+        confrontacoes=confrontacoes,
+    )
+
+    pacote = zipfile.ZipFile(io.BytesIO(zip_bytes))
+    assert 'CARTA_CONFRONTACAO_01.docx' in pacote.namelist()
+    assert 'manifesto_cartas.json' in pacote.namelist()
+
+
+def test_gerar_cartas_confrontacao_zip_fallback_txt(monkeypatch):
+    areas = [
+        {'id': 'a', 'nome': 'Área A', 'proprietario_nome': 'João', 'matricula': 'MAT-1'},
+        {'id': 'b', 'nome': 'Área B', 'proprietario_nome': 'Maria', 'matricula': 'MAT-2'},
+    ]
+    confrontacoes = [
+        {
+            'id': 'a::b',
+            'tipo': 'divisa',
+            'contato_m': 128.4,
+            'area_intersecao_ha': 0.0,
+            'area_a': {'id': 'a', 'nome': 'Área A'},
+            'area_b': {'id': 'b', 'nome': 'Área B'},
+        }
+    ]
+    monkeypatch.setattr(areas_mod, 'TEMPLATE_CARTA_CONFRONTACAO', Path('C:/arquivo/inexistente/carta.docx'))
+
+    zip_bytes = areas_mod.gerar_cartas_confrontacao_zip(
         projeto={'id': 'projeto-1', 'projeto_nome': 'Projeto Teste'},
         areas=areas,
         confrontacoes=confrontacoes,
@@ -174,5 +202,4 @@ def test_gerar_cartas_confrontacao_zip():
 
     pacote = zipfile.ZipFile(io.BytesIO(zip_bytes))
     assert 'CARTA_CONFRONTACAO_01.txt' in pacote.namelist()
-    assert 'manifesto_cartas.json' in pacote.namelist()
     assert 'Projeto Teste' in pacote.read('CARTA_CONFRONTACAO_01.txt').decode('utf-8')
