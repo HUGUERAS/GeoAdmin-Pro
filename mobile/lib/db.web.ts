@@ -22,6 +22,10 @@ export async function contarPendentes(_projeto_id?: string): Promise<number> { r
 export async function ultimoNomePonto(_projeto_id: string): Promise<string> { return 'PT0001' }
 export async function initAppConfig(): Promise<void> {}
 
+export async function marcarResultadosBatch(_sincronizados: string[], _erros: string[]): Promise<void> {}
+export async function contarErros(_projeto_id?: string): Promise<number> { return 0 }
+export async function resetarErros(_projeto_id?: string): Promise<void> {}
+
 export async function salvarUltimoProjetoMapa(projeto_id: string): Promise<void> {
   try { localStorage.setItem('ultimo_projeto_mapa', projeto_id) } catch {}
 }

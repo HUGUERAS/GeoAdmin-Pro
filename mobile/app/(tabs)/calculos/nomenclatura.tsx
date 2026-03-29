@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Clipboard } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
 
@@ -33,7 +34,7 @@ export default function NomenclaturaScreen() {
 
   const copiar = () => {
     if (nomes.length === 0) return
-    Clipboard.setString(nomes.join('\n'))
+    Clipboard.setStringAsync(nomes.join('\n'))
     setCopiado(true)
     setTimeout(() => setCopiado(false), 2000)
   }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Clipboard, Platform } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform } from 'react-native'
+import * as Clipboard from 'expo-clipboard'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
 
@@ -44,7 +45,7 @@ export default function PontosScreen() {
       return
     }
     const cabecalho = 'Nome\tNorte\tEste\tCota'
-    Clipboard.setString([cabecalho, ...linhas].join('\n'))
+    Clipboard.setStringAsync([cabecalho, ...linhas].join('\n'))
     setCopiado(true)
     setTimeout(() => setCopiado(false), 2000)
   }

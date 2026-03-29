@@ -62,3 +62,6 @@ data/geometrias_referencia_cliente.json
 # Cache local
 .pytest_cache/
 .coverage
+
+# Configurações locais de ferramentas de desenvolvimento
+.claude/settings.local.json

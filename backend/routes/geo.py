@@ -204,9 +204,9 @@ def subdividir(payload: SubdivisaoRequest):  # noqa: C901
     vd = [to_dict(v) for v in verts]
     area_total = shoelace(vd)
 
-    # Validação: área não pode ser zero
+    # Validação: área não pode ser zero (polígono degenerado: vértices colineares ou duplicados)
     if area_total <= 0:
-        raise HTTPException(422, "Polígono com área zero. Verifique a orientação dos vértices.")
+        raise HTTPException(422, "Polígono degenerado (área zero). Verifique se há vértices duplicados ou colineares.")
 
     # Validação: verificar auto-interseção usando shapely
     try:
@@ -214,6 +214,8 @@ def subdividir(payload: SubdivisaoRequest):  # noqa: C901
         poly = Polygon(coords)
         if not poly.is_valid:
             raise HTTPException(422, "Polígono com auto-interseção. Verifique a ordem dos vértices.")
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(422, f"Erro ao validar polígono: {exc}")
 
