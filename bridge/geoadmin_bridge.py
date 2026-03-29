@@ -112,10 +112,8 @@ def _registrar_log(pasta_projeto: Path, mensagem: str) -> None:
     logs_dir = pasta_projeto / SUBPASTAS_WORKSPACE["bridge"] / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     linha = f"[{agora_iso()}] {mensagem}\n"
-    (logs_dir / "bridge.log").write_text(
-        ((logs_dir / "bridge.log").read_text(encoding="utf-8") if (logs_dir / "bridge.log").exists() else "") + linha,
-        encoding="utf-8",
-    )
+    with open(logs_dir / "bridge.log", "a", encoding="utf-8") as f:
+        f.write(linha)
 
 
 def _mover_se_existir(origem: Path, destino: Path) -> None:
@@ -208,6 +206,12 @@ def _organizar_workspace_extraido(pasta_temp: Path, pasta_projeto: Path, manifes
 
 def extrair_pacote(conteudo_zip: bytes, pasta_base: Path) -> tuple[Path, dict]:
     zip_memoria = zipfile.ZipFile(io.BytesIO(conteudo_zip))
+
+    # Validar membros do ZIP contra path traversal
+    for membro in zip_memoria.namelist():
+        if '..' in membro or membro.startswith('/') or membro.startswith('\\'):
+            raise RuntimeError(f"Caminho inseguro no pacote ZIP: {membro}")
+
     manifesto = json.loads(zip_memoria.read("manifesto.json").decode("utf-8"))
     pasta_sugerida = manifesto.get("pasta_trabalho_sugerida") or manifesto["projeto"].get("id") or "projeto"
     pasta_projeto = pasta_base / pasta_sugerida

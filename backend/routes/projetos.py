@@ -52,9 +52,9 @@ def _projeto_ou_404(sb, projeto_id: str) -> dict:
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.get("", summary="Listar todos os projetos")
-def listar_projetos():
+def listar_projetos(limite: int = 50, deslocamento: int = 0):
     sb = _get_supabase()
-    res = sb.table("vw_projetos_completo").select("*").order("criado_em", desc=True).execute()
+    res = sb.table("vw_projetos_completo").select("*").order("criado_em", desc=True).range(deslocamento, deslocamento + limite - 1).execute()
     projetos = res.data or []
     return {"total": len(projetos), "projetos": projetos}
 

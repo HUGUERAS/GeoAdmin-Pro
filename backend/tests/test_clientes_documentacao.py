@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from fastapi import HTTPException
 
-import routes.clientes as clientes_mod
+import routes.clientes.routes as clientes_mod
 
 
 class FakeResponse:
@@ -120,8 +120,8 @@ def test_montar_resumos_clientes_e_checklist():
         {"projeto_id": "projeto-1", "nome": "Vizinho 1", "criado_em": "2026-03-25T11:00:00+00:00"}
     ]
 
-    resumos = clientes_mod._montar_resumos_clientes(clientes, projetos, formularios, documentos, confrontantes)
-    checklist = clientes_mod._montar_checklist_projeto(
+    resumos = clientes_mod.montar_resumos_clientes(clientes, projetos, formularios, documentos, confrontantes)
+    checklist = clientes_mod.montar_checklist_projeto(
         clientes[0],
         {
             **projetos[0],
@@ -133,8 +133,8 @@ def test_montar_resumos_clientes_e_checklist():
         },
         {"vertices": [{"lon": -48.0, "lat": -14.0}, {"lon": -48.0, "lat": -14.001}, {"lon": -47.999, "lat": -14.001}]},
     )
-    alertas = clientes_mod._montar_alertas(clientes[0], projetos, [checklist])
-    timeline = clientes_mod._montar_timeline(clientes[0], projetos, documentos, confrontantes)
+    alertas = clientes_mod.montar_alertas(clientes[0], projetos, [checklist])
+    timeline = clientes_mod.montar_timeline(clientes[0], projetos, documentos, confrontantes)
 
     assert resumos[0]["status_documentacao"] == "pronto_para_documentar"
     assert resumos[0]["projetos_total"] == 1
@@ -205,12 +205,12 @@ def test_detalhar_cliente_agrega_dados_documentais(monkeypatch):
         "persistencia": "arquivo_local",
     }
 
-    monkeypatch.setattr(clientes_mod, "_cliente_ou_404", lambda _sb, _cliente_id: cliente)
-    monkeypatch.setattr(clientes_mod, "_carregar_projetos", lambda _sb, _cliente_ids: projetos)
-    monkeypatch.setattr(clientes_mod, "_carregar_formularios", lambda _sb, _cliente_ids: formularios)
-    monkeypatch.setattr(clientes_mod, "_carregar_documentos", lambda _sb, _projeto_ids: documentos)
-    monkeypatch.setattr(clientes_mod, "_carregar_confrontantes", lambda _sb, _projeto_ids: confrontantes)
-    monkeypatch.setattr(clientes_mod, "_perimetros_ativos_por_projeto", lambda _projetos: {"projeto-1": {"tipo": "editado", "vertices": [{"lon": -48.0, "lat": -14.0}, {"lon": -48.0, "lat": -14.001}, {"lon": -47.999, "lat": -14.001}]}})
+    monkeypatch.setattr(clientes_mod, "cliente_ou_404", lambda _sb, _cliente_id: cliente)
+    monkeypatch.setattr(clientes_mod, "carregar_projetos", lambda _sb, _cliente_ids: projetos)
+    monkeypatch.setattr(clientes_mod, "carregar_formularios", lambda _sb, _cliente_ids: formularios)
+    monkeypatch.setattr(clientes_mod, "carregar_documentos", lambda _sb, _projeto_ids: documentos)
+    monkeypatch.setattr(clientes_mod, "carregar_confrontantes", lambda _sb, _projeto_ids: confrontantes)
+    monkeypatch.setattr(clientes_mod, "carregar_perimetros_ativos_por_projeto", lambda _projetos: {"projeto-1": {"tipo": "editado", "vertices": [{"lon": -48.0, "lat": -14.0}, {"lon": -48.0, "lat": -14.001}, {"lon": -47.999, "lat": -14.001}]}})
     monkeypatch.setattr(clientes_mod, "obter_geometria_referencia", lambda _sb, _cliente_id: geometria)
 
     resultado = clientes_mod.detalhar_cliente("cliente-1")
@@ -234,7 +234,7 @@ def test_criar_confrontante_valida_vinculo_e_insere():
 
     sb = FakeSupabase(resolver)
     monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(clientes_mod, "_get_supabase", lambda: sb)
+    monkeypatch.setattr(clientes_mod, "get_supabase", lambda: sb)
 
     try:
         payload = clientes_mod.ConfrontanteCreate(
@@ -275,7 +275,7 @@ def test_atualizar_confrontante_rejeita_projeto_de_outro_cliente():
 
     sb = FakeSupabase(resolver)
     monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(clientes_mod, "_get_supabase", lambda: sb)
+    monkeypatch.setattr(clientes_mod, "get_supabase", lambda: sb)
 
     try:
         payload = clientes_mod.ConfrontanteUpdate(projeto_id="projeto-2", nome="Vizinho 1")
@@ -310,7 +310,7 @@ def test_remover_confrontante_soft_delete():
 
     sb = FakeSupabase(resolver)
     monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(clientes_mod, "_get_supabase", lambda: sb)
+    monkeypatch.setattr(clientes_mod, "get_supabase", lambda: sb)
 
     try:
         resultado = clientes_mod.remover_confrontante("cliente-1", "conf-1")
@@ -332,7 +332,7 @@ def test_atualizar_cliente_persiste_campos():
 
     sb = FakeSupabase(resolver)
     monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(clientes_mod, "_get_supabase", lambda: sb)
+    monkeypatch.setattr(clientes_mod, "get_supabase", lambda: sb)
 
     try:
         resultado = clientes_mod.atualizar_cliente(
@@ -423,9 +423,11 @@ def test_excluir_geometria_referencia_encaminha_remocao(monkeypatch):
             "criado_em": "2026-03-24T10:00:00+00:00",
         }
     )
-    monkeypatch.setattr(clientes_mod, "_get_supabase", lambda: sb)
+    monkeypatch.setattr(clientes_mod, "get_supabase", lambda: sb)
     monkeypatch.setattr(clientes_mod, "remover_geometria_referencia", lambda _sb, _cliente_id: True)
 
     resultado = clientes_mod.excluir_geometria_referencia("cliente-1")
 
     assert resultado == {"status": "ok", "cliente_id": "cliente-1"}
+
+

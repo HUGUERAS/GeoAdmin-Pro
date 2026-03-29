@@ -1,0 +1,64 @@
+# Variáveis de ambiente
+*.env
+.env
+.env.*
+backend/.env
+
+# Credenciais
+mobile/credentials.json
+credentials.json
+
+# Artefatos de Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Ambientes virtuais
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node / Expo
+node_modules/
+.expo/
+.expo-shared/
+dist/
+npm-debug.*
+
+# Sistema operacional
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Dados locais
+data/geometrias_referencia_cliente.json
+
+# Cache local
+.pytest_cache/
+.coverage

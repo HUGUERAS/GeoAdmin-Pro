@@ -6,8 +6,15 @@ import { Colors } from '../../../constants/Colors'
 import { API_URL } from '../../../constants/Api'
 import { StatusBadge } from '../../../components/StatusBadge'
 import { SyncBadge } from '../../../components/SyncBadge'
-import { contarPendentes, initDB, cacheProjetoDetalhe, getCachedProjetoDetalhe } from '../../../lib/db'
+import { contarPendentes, initDB, cacheProjetoDetalhe, getCachedProjetoDetalhe, contarErros, resetarErros, salvarUltimoProjetoMapa } from '../../../lib/db'
 import { sincronizar } from '../../../lib/sync'
+
+type ProximaEtapa = {
+  titulo: string
+  descricao: string
+  atalho: string
+  cor: string
+}
 
 export default function DetalheProjetoScreen() {
   const C = Colors.dark
@@ -17,6 +24,7 @@ export default function DetalheProjetoScreen() {
   const [loading, setLoading]       = useState(true)
   const [gerando, setGerando]       = useState(false)
   const [pendentes, setPendentes]   = useState(0)
+  const [erros, setErros]           = useState(0)
   const [sincronizando, setSinc]    = useState(false)
   const [offline, setOffline]       = useState(false)
   const [semCache, setSemCache]     = useState(false)
@@ -24,6 +32,8 @@ export default function DetalheProjetoScreen() {
   const atualizarPendentes = useCallback(async () => {
     const n = await contarPendentes(id)
     setPendentes(n)
+    const e = await contarErros(id)
+    setErros(e)
   }, [id])
 
   const handleSync = async () => {
@@ -31,8 +41,19 @@ export default function DetalheProjetoScreen() {
     const r = await sincronizar(id)
     await atualizarPendentes()
     setSinc(false)
-    if (r.sincronizados > 0)
+    if (r.semConexao) {
+      Alert.alert('Sem conexão', 'Sem conexão — pontos mantidos para sincronização posterior.')
+    } else if (r.sincronizados > 0) {
       Alert.alert('Sincronizado', `${r.sincronizados} ponto(s) enviado(s).`)
+    }
+  }
+
+  const handleSyncBadgePress = async () => {
+    if (erros > 0) {
+      await resetarErros(id)
+      await atualizarPendentes()
+    }
+    await handleSync()
   }
 
   useEffect(() => {
@@ -63,7 +84,7 @@ export default function DetalheProjetoScreen() {
     }
     iniciar()
     atualizarPendentes()
-  }, [id])
+  }, [id, atualizarPendentes])
 
   const gerarMagicLink = async () => {
     try {
@@ -125,23 +146,91 @@ export default function DetalheProjetoScreen() {
     )
   }
 
+  const abrirMapaProjeto = async () => {
+    try {
+      await salvarUltimoProjetoMapa(id)
+    } catch {
+      // segue a navegacao mesmo sem persistir o contexto
+    }
+    router.push(`/(tabs)/mapa/${id}` as any)
+  }
+
   if (loading) return (
-    <View style={[s.centro, { backgroundColor: C.background }]}>
+    <View style={[s.centro, { backgroundColor: C.background }]}> 
       <ActivityIndicator color={C.primary} size="large" />
     </View>
   )
 
   if (semCache) return (
-    <View style={[s.centro, { backgroundColor: C.background }]}>
+    <View style={[s.centro, { backgroundColor: C.background }]}> 
       <Text style={[s.semCacheTxt, { color: C.muted }]}>Sem conexão e sem cache para este projeto.</Text>
     </View>
   )
 
   if (!projeto) return (
-    <View style={[s.centro, { backgroundColor: C.background }]}>
+    <View style={[s.centro, { backgroundColor: C.background }]}> 
       <Text style={{ color: C.muted }}>Projeto não encontrado.</Text>
     </View>
   )
+
+  const clienteVinculado = Boolean(projeto.cliente_id || projeto.cliente_nome)
+  const statusProjeto = String(projeto.status || '').toLowerCase()
+  const proximaEtapa: ProximaEtapa = (() => {
+    if (erros > 0) {
+      return {
+        titulo: 'Revisar pontos com falha de sincronização',
+        descricao: 'Há medições com erro pendente. Limpe o erro pela nuvem e tente sincronizar antes de seguir.',
+        atalho: 'Atalho sugerido: badge de sincronização',
+        cor: C.danger,
+      }
+    }
+    if (pendentes > 0) {
+      return {
+        titulo: 'Sincronizar coleta de campo',
+        descricao: 'Ainda existem pontos locais aguardando envio. Feche isso antes de gerar peças e documentos.',
+        atalho: 'Atalho sugerido: badge de sincronização',
+        cor: C.primary,
+      }
+    }
+    if (!projeto.total_pontos || projeto.total_pontos === 0) {
+      return {
+        titulo: 'Começar pelo mapa / CAD',
+        descricao: 'O projeto ainda não tem pontos suficientes. Abra o mapa, lance os vértices e salve o perímetro com confiança.',
+        atalho: 'Atalho sugerido: Ver no Mapa',
+        cor: C.info,
+      }
+    }
+    if (!clienteVinculado) {
+      return {
+        titulo: 'Vincular cliente e destravar documentação',
+        descricao: 'Sem cliente vinculado a parte documental fica travada. Cadastre ou vincule o cliente antes de avançar.',
+        atalho: 'Atalho sugerido: Cliente & Documentação',
+        cor: C.success,
+      }
+    }
+    if (statusProjeto.includes('formulario') || statusProjeto.includes('pendente')) {
+      return {
+        titulo: 'Cobrar preenchimento do cliente',
+        descricao: 'O perímetro já existe, agora a etapa crítica é garantir que o cliente conclua o formulário e os dados pessoais.',
+        atalho: 'Atalho sugerido: Copiar Link do Cliente',
+        cor: C.primary,
+      }
+    }
+    if (statusProjeto.includes('documentacao') || statusProjeto.includes('andamento')) {
+      return {
+        titulo: 'Fechar a parte documental',
+        descricao: 'A documentação está em andamento. Revise o cadastro, confronte pendências e gere as peças finais com calma.',
+        atalho: 'Atalho sugerido: Gerar Documentos GPRF',
+        cor: C.success,
+      }
+    }
+    return {
+      titulo: 'Preparar entrega para o escritório',
+      descricao: 'Projeto, cliente e documentos parecem encaminhados. O próximo passo é baixar o pacote mastigado para o Métrica.',
+      atalho: 'Atalho sugerido: Preparar para Métrica',
+      cor: C.primary,
+    }
+  })()
 
   return (
     <ScrollView style={[s.container, { backgroundColor: C.background }]}>
@@ -151,15 +240,22 @@ export default function DetalheProjetoScreen() {
         </View>
       )}
 
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}> 
         <View style={s.headerRow}>
           <Text style={[s.titulo, { color: C.text, flex: 1 }]} numberOfLines={2}>{projeto.projeto_nome}</Text>
-          <SyncBadge pendentes={pendentes} onPress={handleSync} sincronizando={sincronizando} />
+          <SyncBadge pendentes={pendentes} erros={erros} onPress={handleSyncBadgePress} sincronizando={sincronizando} />
         </View>
         <View style={{ marginTop: 8 }}><StatusBadge status={projeto.status} /></View>
       </View>
 
       <View style={s.body}>
+        <View style={[s.proximaEtapaCard, { backgroundColor: `${proximaEtapa.cor}14`, borderColor: proximaEtapa.cor }]}> 
+          <Text style={[s.proximaEtapaLabel, { color: proximaEtapa.cor }]}>Próxima etapa</Text>
+          <Text style={[s.proximaEtapaTitulo, { color: C.text }]}>{proximaEtapa.titulo}</Text>
+          <Text style={[s.proximaEtapaDescricao, { color: C.muted }]}>{proximaEtapa.descricao}</Text>
+          <Text style={[s.proximaEtapaAtalho, { color: proximaEtapa.cor }]}>{proximaEtapa.atalho}</Text>
+        </View>
+
         {[
           ['Cliente',   projeto.cliente_nome],
           ['Município', projeto.municipio],
@@ -169,7 +265,7 @@ export default function DetalheProjetoScreen() {
           ['Área',      projeto.area_ha ? `${projeto.area_ha} ha` : null],
           ['Pontos',    projeto.total_pontos?.toString()],
         ].filter(([,v]) => v).map(([label, valor]) => (
-          <View key={label as string} style={[s.campo, { borderBottomColor: C.cardBorder }]}>
+          <View key={label as string} style={[s.campo, { borderBottomColor: C.cardBorder }]}> 
             <Text style={[s.campoLabel, { color: C.muted }]}>{label}</Text>
             <Text style={[s.campoValor, { color: C.text }]}>{valor}</Text>
           </View>
@@ -182,13 +278,13 @@ export default function DetalheProjetoScreen() {
             accessibilityRole="button"
             accessibilityLabel="Abrir cliente e documentacao"
           >
-            <Text style={[s.btnTxt, { color: C.success }]}>👤 Cliente & Documentacao</Text>
+            <Text style={[s.btnTxt, { color: C.success }]}>👤 Cliente & Documentação</Text>
           </TouchableOpacity>
         ) : null}
 
         <TouchableOpacity
           style={[s.btn, { backgroundColor: C.card, borderColor: C.info }]}
-          onPress={() => router.push(`/(tabs)/mapa/${id}` as any)}
+          onPress={abrirMapaProjeto}
           accessibilityRole="button"
           accessibilityLabel="Ver projeto no mapa"
         >
@@ -247,6 +343,11 @@ const s = StyleSheet.create({
   headerRow:     { flexDirection: 'row', alignItems: 'flex-start' },
   titulo:        { fontSize: 22, fontWeight: '700' },
   body:          { padding: 16 },
+  proximaEtapaCard: { borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 12, gap: 6 },
+  proximaEtapaLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: '700' },
+  proximaEtapaTitulo: { fontSize: 17, fontWeight: '700' },
+  proximaEtapaDescricao: { fontSize: 13, lineHeight: 20 },
+  proximaEtapaAtalho: { fontSize: 12, fontWeight: '700' },
   campo:         { paddingVertical: 12, borderBottomWidth: 0.5 },
   campoLabel:    { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
   campoValor:    { fontSize: 15, fontWeight: '500' },

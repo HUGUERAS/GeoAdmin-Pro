@@ -19,10 +19,10 @@ logger = logging.getLogger("geoadmin.catalogo")
 
 # Caminhos locais (configuráveis via .env)
 _BASE = os.getenv(
-    "LANDSTAR_DIR",
-    r"D:\coletoraprolanddd\outras biblioteecas",
+    "CATALOGO_DIR",
+    os.path.join(os.path.expanduser("~"), ".geoadmin", "catalogo"),
 )
-_CODIGOS_CSV  = os.path.join(r"D:\coletoraprolanddd\outras biblioteecas", "CodeImportTemplate.csv")
+_CODIGOS_CSV  = os.path.join(_BASE, "CodeImportTemplate.csv")
 _DEVICES_XML  = os.path.join(_BASE, "DeviceConnectConfig", "DeviceConnectionConfig.xml")
 
 

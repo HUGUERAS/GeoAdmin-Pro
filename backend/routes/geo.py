@@ -17,6 +17,7 @@ import math
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from shapely.geometry import Polygon
 
 router = APIRouter(prefix="/geo", tags=["geo"])
 
@@ -202,6 +203,19 @@ def subdividir(payload: SubdivisaoRequest):  # noqa: C901
 
     vd = [to_dict(v) for v in verts]
     area_total = shoelace(vd)
+
+    # Validação: área não pode ser zero
+    if area_total <= 0:
+        raise HTTPException(422, "Polígono com área zero. Verifique a orientação dos vértices.")
+
+    # Validação: verificar auto-interseção usando shapely
+    try:
+        coords = [(v["este"], v["norte"]) for v in vd]
+        poly = Polygon(coords)
+        if not poly.is_valid:
+            raise HTTPException(422, "Polígono com auto-interseção. Verifique a ordem dos vértices.")
+    except Exception as exc:
+        raise HTTPException(422, f"Erro ao validar polígono: {exc}")
 
     if payload.area_alvo_m2 <= 0 or payload.area_alvo_m2 >= area_total:
         raise HTTPException(

@@ -41,6 +41,15 @@ def _serialize_perimetro(row: Optional[dict]) -> Optional[dict]:
 
 
 def buscar_perimetro_ativo(projeto_id: str, supabase=None) -> Optional[dict]:
+    """
+    Busca o perímetro ativo de um projeto em ordem de prioridade:
+    definitivo > editado > original.
+
+    Nota: Mantém 3 queries sequenciais porque a Supabase não permite
+    filtros de prioridade complexos (ex: OR com ordenação por tipo).
+    Uma consolidação com IN("definitivo","editado","original") não respeitaria
+    a ordem de prioridade esperada (busca primeiro definitivo, se não há, editado, etc).
+    """
     c = supabase or _get_supabase()
 
     for tipo in ("definitivo", "editado", "original"):

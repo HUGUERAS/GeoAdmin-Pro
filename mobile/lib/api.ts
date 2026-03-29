@@ -9,6 +9,13 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
+// Token de autenticação do Supabase — defina via definirToken()
+let _authToken: string | null = null;
+
+export function definirToken(token: string | null): void {
+  _authToken = token;
+}
+
 function extractHostFromExpoConfig(): string | null {
   const expoConfigHost =
     (Constants.expoConfig as { hostUri?: string } | null)?.hostUri ??
@@ -67,6 +74,23 @@ function formatErrorDetail(detail: JsonValue | undefined): string {
   return String(detail);
 }
 
+/**
+ * Envoltório para fetch com timeout automático.
+ * Aborta a requisição se ultrapassar timeoutMs.
+ */
+function fetchComTimeout(
+  url: string,
+  opcoes?: RequestInit,
+  timeoutMs = 15000
+): Promise<Response> {
+  const controlador = new AbortController();
+  const timer = setTimeout(() => controlador.abort(), timeoutMs);
+
+  return fetch(url, { ...opcoes, signal: controlador.signal }).finally(() =>
+    clearTimeout(timer)
+  );
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') ?? '';
   const payload = contentType.includes('application/json')
@@ -84,48 +108,105 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
+/**
+ * Mapeia erros de timeout e abort para mensagens amigáveis.
+ */
+function tratarErroFetch(erro: unknown): Error {
+  if (erro instanceof DOMException && erro.name === 'AbortError') {
+    return new Error('Requisição expirou — o servidor levou muito tempo para responder.');
+  }
+  if (erro instanceof Error) {
+    return erro;
+  }
+  return new Error(String(erro));
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`);
-  return parseResponse<T>(response);
+  try {
+    const headers: Record<string, string> = {};
+    if (_authToken) {
+      headers['Authorization'] = `Bearer ${_authToken}`;
+    }
+    const response = await fetchComTimeout(`${getApiBaseUrl()}${path}`, {
+      headers,
+    });
+    return parseResponse<T>(response);
+  } catch (erro) {
+    throw tratarErroFetch(erro);
+  }
 }
 
 export async function apiPost<T>(path: string, body: JsonValue): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    method: 'POST',
-    headers: {
+  try {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+    };
+    if (_authToken) {
+      headers['Authorization'] = `Bearer ${_authToken}`;
+    }
+    const response = await fetchComTimeout(`${getApiBaseUrl()}${path}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
 
-  return parseResponse<T>(response);
+    return parseResponse<T>(response);
+  } catch (erro) {
+    throw tratarErroFetch(erro);
+  }
 }
 
 export async function apiPostFormData<T>(path: string, body: FormData): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    method: 'POST',
-    body,
-  });
+  try {
+    const headers: Record<string, string> = {};
+    if (_authToken) {
+      headers['Authorization'] = `Bearer ${_authToken}`;
+    }
+    const response = await fetchComTimeout(`${getApiBaseUrl()}${path}`, {
+      method: 'POST',
+      headers,
+      body,
+    });
 
-  return parseResponse<T>(response);
+    return parseResponse<T>(response);
+  } catch (erro) {
+    throw tratarErroFetch(erro);
+  }
 }
 
 export async function apiPatch<T>(path: string, body: JsonValue): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    method: 'PATCH',
-    headers: {
+  try {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+    };
+    if (_authToken) {
+      headers['Authorization'] = `Bearer ${_authToken}`;
+    }
+    const response = await fetchComTimeout(`${getApiBaseUrl()}${path}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(body),
+    });
 
-  return parseResponse<T>(response);
+    return parseResponse<T>(response);
+  } catch (erro) {
+    throw tratarErroFetch(erro);
+  }
 }
 
 export async function apiDelete<T>(path: string): Promise<T> {
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    method: 'DELETE',
-  });
+  try {
+    const headers: Record<string, string> = {};
+    if (_authToken) {
+      headers['Authorization'] = `Bearer ${_authToken}`;
+    }
+    const response = await fetchComTimeout(`${getApiBaseUrl()}${path}`, {
+      method: 'DELETE',
+      headers,
+    });
 
-  return parseResponse<T>(response);
+    return parseResponse<T>(response);
+  } catch (erro) {
+    throw tratarErroFetch(erro);
+  }
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   TextInput,
+  ScrollView,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
@@ -15,6 +16,13 @@ import { useFocusEffect } from '@react-navigation/native'
 import { Colors } from '../../../constants/Colors'
 import { apiGet } from '../../../lib/api'
 import { ClienteCard } from '../../../components/ClienteCard'
+
+const FILTROS = [
+  { label: 'Todos', valor: null },
+  { label: 'Formulario', valor: 'pendente_formulario' },
+  { label: 'Pronto p/ docs', valor: 'pronto_para_documentar' },
+  { label: 'Em andamento', valor: 'documentacao_em_andamento' },
+] as const
 
 type ClienteResumo = {
   id: string
@@ -43,6 +51,7 @@ export default function ClientesScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [erro, setErro] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState<string | null>(null)
 
   const carregar = async () => {
     try {
@@ -60,14 +69,26 @@ export default function ClientesScreen() {
   useFocusEffect(useCallback(() => { carregar() }, []))
 
   const termo = busca.trim().toLowerCase()
-  const clientesFiltrados = clientes.filter((cliente) => {
+  const clientesFiltrados = useMemo(() => clientes.filter((cliente) => {
+    if (filtroStatus && cliente.status_documentacao !== filtroStatus) return false
     if (!termo) return true
 
     return [cliente.nome, cliente.telefone, cliente.email, cliente.cpf]
       .filter(Boolean)
       .some((valor) => String(valor).toLowerCase().includes(termo))
-  })
+  }), [clientes, filtroStatus, termo])
+
   const totalVisiveis = clientesFiltrados.length
+  const pendentesFormulario = clientes.filter((item) => item.status_documentacao === 'pendente_formulario').length
+  const prontosDocs = clientes.filter((item) => item.status_documentacao === 'pronto_para_documentar').length
+  const emAndamento = clientes.filter((item) => item.status_documentacao === 'documentacao_em_andamento').length
+  const resumoOperacional = pendentesFormulario > 0
+    ? `${pendentesFormulario} cliente(s) ainda aguardam formulário.`
+    : prontosDocs > 0
+      ? `${prontosDocs} cliente(s) já podem avançar para documentos.`
+      : emAndamento > 0
+        ? `${emAndamento} cliente(s) estão com documentação em andamento.`
+        : 'Use esta aba para saber quem precisa de formulário, confrontantes ou documentação.'
 
   return (
     <View style={[s.container, { backgroundColor: C.background }]}>
@@ -89,6 +110,32 @@ export default function ClientesScreen() {
             autoCorrect={false}
           />
         </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filtrosRow}>
+          {FILTROS.map((filtro) => {
+            const ativo = filtroStatus === filtro.valor
+            return (
+              <TouchableOpacity
+                key={String(filtro.valor)}
+                onPress={() => setFiltroStatus(filtro.valor)}
+                style={[
+                  s.filtroChip,
+                  ativo
+                    ? { backgroundColor: C.primary, borderColor: C.primary }
+                    : { backgroundColor: 'transparent', borderColor: C.cardBorder },
+                ]}
+              >
+                <Text style={{ color: ativo ? C.primaryText : C.muted, fontWeight: '700', fontSize: 12 }}>{filtro.label}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </ScrollView>
+      </View>
+
+      <View style={[s.resumoDia, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
+        <Text style={[s.resumoDiaTitulo, { color: C.text }]}>Painel de hoje</Text>
+        <Text style={[s.resumoDiaTexto, { color: C.text }]}>{resumoOperacional}</Text>
+        <Text style={[s.resumoDiaSub, { color: C.muted }]}>Pendentes: {pendentesFormulario} · Prontos: {prontosDocs} · Em andamento: {emAndamento}</Text>
       </View>
 
       {loading && !refreshing ? (
@@ -131,22 +178,25 @@ export default function ClientesScreen() {
           )}
           ListEmptyComponent={
             <View style={s.emptyBox}>
-              <Text style={[s.emptyTitulo, { color: C.text }]}>
-                {busca.trim() ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+              <Text style={[s.emptyTitulo, { color: C.text }]}> 
+                {busca.trim() || filtroStatus ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
               </Text>
-              <Text style={[s.emptySub, { color: C.muted }]}>
-                {busca.trim()
+              <Text style={[s.emptySub, { color: C.muted }]}> 
+                {busca.trim() || filtroStatus
                   ? 'Tente ajustar a busca, limpar o filtro ou puxar para atualizar.'
                   : 'Quando houver clientes vinculados aos projetos, eles aparecerao aqui com status documental.'}
               </Text>
-              {busca.trim() ? (
+              {busca.trim() || filtroStatus ? (
                 <TouchableOpacity
-                  onPress={() => setBusca('')}
+                  onPress={() => {
+                    setBusca('')
+                    setFiltroStatus(null)
+                  }}
                   style={[s.btnRetry, { borderColor: C.info, marginTop: 6 }]}
                   accessibilityRole="button"
-                  accessibilityLabel="Limpar busca de clientes"
+                  accessibilityLabel="Limpar filtros de clientes"
                 >
-                  <Text style={{ color: C.info, fontWeight: '600' }}>Limpar busca</Text>
+                  <Text style={{ color: C.info, fontWeight: '600' }}>Limpar filtros</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -162,6 +212,17 @@ const s = StyleSheet.create({
   header: { padding: 20, paddingTop: 56, borderBottomWidth: 0.5, gap: 12 },
   titulo: { fontSize: 24, fontWeight: '700' },
   sub: { fontSize: 13 },
+  filtrosRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
+  filtroChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  resumoDia: { marginHorizontal: 14, marginTop: 14, borderWidth: 0.5, borderRadius: 12, padding: 14, gap: 4 },
+  resumoDiaTitulo: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
+  resumoDiaTexto: { fontSize: 15, fontWeight: '700', lineHeight: 22 },
+  resumoDiaSub: { fontSize: 12, lineHeight: 18 },
   buscaBox: {
     minHeight: 48,
     borderRadius: 12,

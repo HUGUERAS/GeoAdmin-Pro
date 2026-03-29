@@ -14,15 +14,8 @@ type ClienteResumo = {
   status_documentacao?: string | null
   formulario_em?: string | null
   ultimo_documento_em?: string | null
-}
-
-function formatarData(valor?: string | null) {
-  if (!valor) return 'Sem registro'
-
-  const data = new Date(valor)
-  if (Number.isNaN(data.getTime())) return 'Sem registro'
-
-  return data.toLocaleDateString('pt-BR')
+  magic_link_token?: string | null
+  magic_link_expira?: string | null
 }
 
 function obterMetaStatus(status?: string | null) {
@@ -40,9 +33,38 @@ function obterMetaStatus(status?: string | null) {
   }
 }
 
+function obterProximaAcao(
+  status?: string | null,
+  magic_link_expira?: string | null,
+) {
+  const C = Colors.dark
+
+  if (status === 'pendente_formulario') {
+    if (!magic_link_expira) {
+      return { texto: 'Enviar formulário', icone: 'send', cor: C.danger }
+    }
+    const expira = new Date(magic_link_expira)
+    if (expira < new Date()) {
+      return { texto: 'Link expirado — renovar', icone: 'alert-circle', cor: C.danger }
+    }
+    return { texto: 'Aguardando preenchimento', icone: 'clock', cor: C.primary }
+  }
+
+  if (status === 'pronto_para_documentar') {
+    return { texto: 'Gerar documentos', icone: 'file-text', cor: C.info }
+  }
+
+  if (status === 'documentacao_em_andamento') {
+    return { texto: 'Documentação em andamento', icone: 'check-circle', cor: C.success }
+  }
+
+  return { texto: 'Sem projetos', icone: 'user', cor: C.muted }
+}
+
 export function ClienteCard({ cliente, onPress }: { cliente: ClienteResumo; onPress: () => void }) {
   const C = Colors.dark
   const status = obterMetaStatus(cliente.status_documentacao)
+  const proximaAcao = obterProximaAcao(cliente.status_documentacao, cliente.magic_link_expira)
 
   return (
     <TouchableOpacity
@@ -83,16 +105,9 @@ export function ClienteCard({ cliente, onPress }: { cliente: ClienteResumo; onPr
         </View>
       </View>
 
-      <View style={s.rodape}>
-        <Text style={[s.metaInfo, { color: C.muted }]}>
-          Formulário: {formatarData(cliente.formulario_em)}
-        </Text>
-        <Text style={[s.metaInfo, { color: C.muted }]}>
-          Último doc: {formatarData(cliente.ultimo_documento_em)}
-        </Text>
-        <Text style={[s.metaInfo, { color: C.muted }]}>
-          Toque para abrir o detalhe, editar cadastro e revisar documentação.
-        </Text>
+      <View style={s.proximaAcaoRow}>
+        <Feather name={proximaAcao.icone as any} size={12} color={proximaAcao.cor} />
+        <Text style={[s.proximaAcaoTexto, { color: proximaAcao.cor }]}>{proximaAcao.texto}</Text>
       </View>
     </TouchableOpacity>
   )
@@ -122,6 +137,6 @@ const s = StyleSheet.create({
   },
   metricaValor: { fontSize: 18, fontWeight: '700' },
   metricaLabel: { fontSize: 11, marginTop: 2 },
-  rodape: { gap: 4 },
-  metaInfo: { fontSize: 12 },
+  proximaAcaoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  proximaAcaoTexto: { fontSize: 11, fontWeight: '600' },
 })

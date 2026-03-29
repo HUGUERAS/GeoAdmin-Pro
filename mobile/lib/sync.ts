@@ -4,7 +4,7 @@
  * Idempotente: usa local_id como chave de dedup no servidor.
  */
 
-import { listarPendentes, marcarSincronizado, marcarErro } from './db'
+import { listarPendentes, marcarResultadosBatch } from './db'
 import { apiPost } from './api'
 
 export interface SyncResult {
@@ -12,6 +12,7 @@ export interface SyncResult {
   duplicados: number
   erros: number
   total: number
+  semConexao?: boolean
 }
 
 interface SyncApiResult {
@@ -74,25 +75,27 @@ export async function sincronizar(projeto_id?: string): Promise<SyncResult> {
       || Array.isArray(result.erro_local_ids)
     )
 
+    let idsParaSincronizar: string[] = []
+    let idsParaErro: string[] = []
+
     if (possuiResultadoPorItem) {
       for (const p of pendentes) {
         if (sincronizadosIds.has(p.id)) {
-          await marcarSincronizado(p.id)
-          continue
-        }
-
-        if (erroIds.has(p.id) || !sincronizadosIds.has(p.id)) {
-          await marcarErro(p.id)
+          idsParaSincronizar.push(p.id)
+        } else {
+          idsParaErro.push(p.id)
         }
       }
     } else if ((result.erros?.length ?? 0) === 0 && (result.sincronizados + result.duplicados) === pendentes.length) {
-      for (const p of pendentes) {
-        await marcarSincronizado(p.id)
-      }
+      idsParaSincronizar = pendentes.map(p => p.id)
     } else {
-      for (const p of pendentes) {
-        await marcarErro(p.id)
-      }
+      idsParaErro = pendentes.map(p => p.id)
+    }
+
+    try {
+      await marcarResultadosBatch(idsParaSincronizar, idsParaErro)
+    } catch (erro) {
+      console.warn('Erro ao persistir resultados da sincronização:', erro)
     }
 
     return {
@@ -101,16 +104,14 @@ export async function sincronizar(projeto_id?: string): Promise<SyncResult> {
       erros:         (result.erro_local_ids?.length ?? result.erros?.length ?? 0),
       total:         pendentes.length,
     }
-  } catch {
-    // Sem conexão — incrementa tentativas mas mantém pending
-    for (const p of pendentes) {
-      await marcarErro(p.id)
-    }
+  } catch (err) {
+    // Sem conexão — mantém como pending para retentar depois
     return {
       sincronizados: 0,
       duplicados:    0,
-      erros:         pendentes.length,
+      erros:         0,
       total:         pendentes.length,
+      semConexao:    true,
     }
   }
 }

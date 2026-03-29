@@ -503,6 +503,7 @@ export default function MapaProjetoScreen() {
   const [editVerts,   setEditVerts] = useState<Vertice[]>([])
   const [origVerts,   setOrigVerts] = useState<Vertice[]>([])
   const [editHistory, setEditHist] = useState<Vertice[][]>([])
+  const undoStack = useRef<Vertice[][]>([])
 
   // ferramentas integradas
   const [ferrAtiva,          setFerrAtiva]          = useState<NomeFerramenta | null>(null)
@@ -572,6 +573,7 @@ export default function MapaProjetoScreen() {
     setOrigVerts(verts.map(v => ({ ...v })))
     setEditVerts(verts.map(v => ({ ...v })))
     setEditHist([])
+    undoStack.current = []
     setEditTool('mover')
     setEditMode(true)
     try {
@@ -585,16 +587,20 @@ export default function MapaProjetoScreen() {
           vertices: verts,
         }),
       })
-    } catch {}
+    } catch (err: any) {
+      Alert.alert('Aviso', 'Não foi possível registrar o perímetro original: ' + (err?.message || 'erro desconhecido'))
+    }
   }, [polygonVerts, projeto, id])
 
   const pushHist = useCallback((verts: Vertice[]) => {
     setEditHist(prev => [...prev.slice(-49), verts.map(v => ({ ...v }))])
+    undoStack.current = [...undoStack.current.slice(-14), verts.map(v => ({ ...v }))]
   }, [])
 
   const handleDragStart = useCallback(() => {
     setEditVerts(prev => {
       setEditHist(h => [...h.slice(-49), prev.map(v => ({ ...v }))])
+      undoStack.current = [...undoStack.current.slice(-14), prev.map(v => ({ ...v }))]
       return prev
     })
   }, [])
@@ -627,45 +633,55 @@ export default function MapaProjetoScreen() {
   }, [pushHist])
 
   const desfazer = useCallback(() => {
-    setEditHist(prev => {
-      if (!prev.length) return prev
-      const last = prev[prev.length - 1]
-      setEditVerts(last)
-      return prev.slice(0, -1)
-    })
+    if (!undoStack.current.length) return
+    const last = undoStack.current[undoStack.current.length - 1]
+    undoStack.current = undoStack.current.slice(0, -1)
+    setEditVerts(last)
+    setEditHist(prev => prev.slice(0, -1))
   }, [])
 
-  const salvarEdit = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/perimetros/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projeto_id: id,
-          nome: (projeto?.projeto_nome || id) + ' — editado',
-          tipo: 'editado',
-          vertices: editVerts,
-        }),
-      })
-      if (!res.ok) throw new Error()
-      const salvo = await res.json().catch(() => null)
-      const proximosVertices = (salvo?.vertices || editVerts).map((v: Vertice) => ({ ...v }))
+  const salvarEdit = useCallback(() => {
+    const doSave = async () => {
+      try {
+        const res = await fetch(`${API_URL}/perimetros/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projeto_id: id,
+            nome: (projeto?.projeto_nome || id) + ' — editado',
+            tipo: 'editado',
+            vertices: editVerts,
+          }),
+        })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const salvo = await res.json().catch(() => null)
+        const proximosVertices = (salvo?.vertices || editVerts).map((v: Vertice) => ({ ...v }))
 
-      setPolygonVerts(proximosVertices)
-      setProjeto((atual: any) => atual ? {
-        ...atual,
-        perimetro_ativo: salvo
-          ? { ...salvo, vertices: proximosVertices }
-          : atual.perimetro_ativo,
-      } : atual)
-      setOrigVerts(proximosVertices.map((v: Vertice) => ({ ...v })))
-      setEditVerts(proximosVertices.map((v: Vertice) => ({ ...v })))
-      setEditHist([])
-      Alert.alert('Salvo!', `Perímetro editado salvo — ${editVerts.length} vértices.`)
-      setEditMode(false)
-    } catch {
-      Alert.alert('Erro', 'Falha ao salvar o perímetro.')
+        setPolygonVerts(proximosVertices)
+        setProjeto((atual: any) => atual ? {
+          ...atual,
+          perimetro_ativo: salvo
+            ? { ...salvo, vertices: proximosVertices }
+            : atual.perimetro_ativo,
+        } : atual)
+        setOrigVerts(proximosVertices.map((v: Vertice) => ({ ...v })))
+        setEditVerts(proximosVertices.map((v: Vertice) => ({ ...v })))
+        setEditHist([])
+        undoStack.current = []
+        setEditMode(false)
+        Alert.alert('Salvo!', `Perímetro salvo com sucesso — ${editVerts.length} vértices.`)
+      } catch (err: any) {
+        Alert.alert('Erro', 'Falha ao salvar o perímetro: ' + (err?.message || 'erro desconhecido'))
+      }
     }
+    Alert.alert(
+      'Salvar perímetro',
+      'Deseja salvar as alterações no perímetro deste projeto?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Salvar', onPress: () => doSave() },
+      ]
+    )
   }, [id, projeto, editVerts])
 
   const cancelarEdit = useCallback(() => {
@@ -678,6 +694,7 @@ export default function MapaProjetoScreen() {
           setOrigVerts(atuais.map(v => ({ ...v })))
           setEditVerts(atuais)
           setEditHist([])
+          undoStack.current = []
           setEditMode(false)
         },
       },
@@ -1013,8 +1030,11 @@ export default function MapaProjetoScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={s.etool} onPress={desfazer}>
-            <Text style={{ color: C.muted, fontSize: 12 }}>↩</Text>
+          <TouchableOpacity
+            style={[s.etool, { opacity: undoStack.current.length === 0 ? 0.3 : 1 }]}
+            onPress={desfazer}
+            disabled={undoStack.current.length === 0}>
+            <Feather name="corner-up-left" size={18} color={C.muted} />
           </TouchableOpacity>
           {/* Botão ferramentas ⚙ */}
           <TouchableOpacity style={[s.etool, { borderColor: C.primary }]}

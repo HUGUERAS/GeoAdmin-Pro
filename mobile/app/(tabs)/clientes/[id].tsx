@@ -18,6 +18,7 @@ import { Colors } from '../../../constants/Colors'
 import { StatusBadge } from '../../../components/StatusBadge'
 import { ClienteGeometryPreview } from '../../../components/ClienteGeometryPreview'
 import { apiDelete, apiGet, apiPatch, apiPost, apiPostFormData } from '../../../lib/api'
+import { initDB, salvarUltimoProjetoMapa } from '../../../lib/db'
 
 type Cliente = {
   id: string
@@ -260,6 +261,60 @@ function resumirPendencias(pendencias: string[]) {
   return `Pendencias: ${pendencias.slice(0, 2).join(' · ')} · +${pendencias.length - 2} itens`
 }
 
+function diasRestantesPara(valor?: string | null) {
+  if (!valor) return null
+  const data = new Date(valor)
+  if (Number.isNaN(data.getTime())) return null
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  data.setHours(0, 0, 0, 0)
+  return Math.round((data.getTime() - hoje.getTime()) / 86400000)
+}
+
+function obterProximaAcaoProjeto(projeto: ProjetoCliente) {
+  const C = Colors.dark
+  const diasRestantes = diasRestantesPara(projeto.magic_link_expira)
+  const expirado = diasRestantes !== null && diasRestantes < 0
+
+  if (!projeto.formulario_ok && expirado) {
+    return {
+      cor: C.danger,
+      titulo: 'Renovar o link do cliente',
+      descricao: 'O magic link expirou e o formulário ainda não foi concluído.',
+    }
+  }
+
+  if (!projeto.formulario_ok) {
+    return {
+      cor: C.primary,
+      titulo: 'Cobrar o preenchimento do formulário',
+      descricao: 'A parte documental depende do cliente concluir o cadastro pelo link.',
+    }
+  }
+
+  if (!projeto.perimetro_tecnico_ok) {
+    return {
+      cor: C.info,
+      titulo: 'Fechar o perímetro técnico no mapa',
+      descricao: 'Os dados do cliente já ajudam, mas o desenho técnico ainda precisa ser revisado no CAD.',
+    }
+  }
+
+  if ((projeto.documentos_total ?? 0) === 0) {
+    return {
+      cor: C.success,
+      titulo: 'Gerar as peças técnicas',
+      descricao: 'Cadastro e perímetro parecem encaminhados. O próximo passo é emitir a documentação do projeto.',
+    }
+  }
+
+  return {
+    cor: C.success,
+    titulo: 'Revisar documentos e preparar para o escritório',
+    descricao: 'A documentação já começou. Revise os arquivos e depois siga para o pacote do Métrica.',
+  }
+}
+
 function confirmarAcao(
   titulo: string,
   mensagem: string,
@@ -362,6 +417,16 @@ export default function ClienteDetalheScreen() {
     carregar()
   }, [id])
 
+  const abrirMapaProjeto = async (projetoId: string) => {
+    try {
+      await initDB()
+      await salvarUltimoProjetoMapa(projetoId)
+    } catch {
+      // segue a navegacao mesmo sem persistir o ultimo contexto
+    }
+    router.push(`/(tabs)/mapa/${projetoId}` as any)
+  }
+
   const confrontantesPorProjeto = useMemo(() => {
     const grupos: Record<string, Confrontante[]> = {}
     for (const item of detalhe?.confrontantes || []) {
@@ -384,10 +449,10 @@ export default function ClienteDetalheScreen() {
     try {
       setSalvando(true)
       await apiPatch(`/clientes/${id}`, form)
-      Alert.alert('Cadastro atualizado', 'Os dados do cliente foram salvos.')
+      Alert.alert('Cadastro atualizado', 'Os dados do cliente foram salvos com sucesso.')
       await carregar()
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Nao foi possivel salvar o cadastro.')
+      Alert.alert('Falha ao salvar', e?.message ?? 'Não foi possível salvar o cadastro. Verifique sua conexão e tente novamente.')
     } finally {
       setSalvando(false)
     }
@@ -413,7 +478,7 @@ export default function ClienteDetalheScreen() {
       }
       await carregar()
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Nao foi possivel reenviar o magic link.')
+      Alert.alert('Falha ao gerar link', e?.message ?? 'Não foi possível gerar o magic link. Verifique sua conexão e tente novamente.')
     } finally {
       setReenviandoProjetoId(null)
     }
@@ -459,7 +524,7 @@ export default function ClienteDetalheScreen() {
       limparConfrontante()
       await carregar()
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Nao foi possivel salvar o confrontante.')
+      Alert.alert('Falha ao salvar confrontante', e?.message ?? 'Não foi possível salvar o confrontante. Verifique sua conexão e tente novamente.')
     } finally {
       setSalvandoConfrontante(false)
     }
@@ -477,7 +542,7 @@ export default function ClienteDetalheScreen() {
           await carregar()
           Alert.alert('Confrontante removido', `${confrontante.nome || 'O confrontante'} foi excluido com sucesso.`)
         } catch (e: any) {
-          Alert.alert('Erro', e?.message ?? 'Nao foi possivel excluir o confrontante.')
+          Alert.alert('Falha ao excluir confrontante', e?.message ?? 'Não foi possível excluir o confrontante. Verifique sua conexão e tente novamente.')
         }
       },
     )
@@ -503,7 +568,7 @@ export default function ClienteDetalheScreen() {
         `${salvo.nome || nomeReferencia} com ${salvo.resumo?.vertices_total ?? vertices.length} vertices foi salva em ${salvo.persistencia === 'supabase' ? 'Supabase' : 'arquivo local'}.`,
       )
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Nao foi possivel salvar a referencia manual.')
+      Alert.alert('Falha ao salvar referência', e?.message ?? 'Não foi possível salvar a referência manual. Verifique sua conexão e tente novamente.')
     } finally {
       setSalvandoReferencia(false)
     }
@@ -529,7 +594,7 @@ export default function ClienteDetalheScreen() {
         `${salvo.nome || nomeReferencia} foi importada como ${salvo.formato?.toUpperCase() || formatoImportacao.toUpperCase()} e salva em ${salvo.persistencia === 'supabase' ? 'Supabase' : 'arquivo local'}.`,
       )
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Nao foi possivel importar a geometria.')
+      Alert.alert('Falha na importação', e?.message ?? 'Não foi possível importar a geometria. Verifique o formato do conteúdo e sua conexão.')
     } finally {
       setSalvandoReferencia(false)
     }
@@ -561,7 +626,7 @@ export default function ClienteDetalheScreen() {
         `${salvo.nome || arquivo.name} foi importado com ${salvo.resumo?.vertices_total ?? 0} vertices em ${salvo.persistencia === 'supabase' ? 'Supabase' : 'arquivo local'}.`,
       )
     } catch (e: any) {
-      Alert.alert('Erro', e?.message ?? 'Nao foi possivel importar o arquivo.')
+      Alert.alert('Falha na importação', e?.message ?? 'Não foi possível importar o arquivo. Verifique se o formato é suportado e sua conexão.')
     } finally {
       setSalvandoReferencia(false)
     }
@@ -586,7 +651,7 @@ export default function ClienteDetalheScreen() {
           await carregar()
           Alert.alert('Referencia removida', 'A geometria de referencia do cliente foi removida.')
         } catch (e: any) {
-          Alert.alert('Erro', e?.message ?? 'Nao foi possivel remover a referencia.')
+          Alert.alert('Falha ao remover referência', e?.message ?? 'Não foi possível remover a referência. Verifique sua conexão e tente novamente.')
         } finally {
           setRemovendoReferencia(false)
         }
@@ -695,32 +760,68 @@ export default function ClienteDetalheScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
+      <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}> 
         <Text style={[s.sectionTitulo, { color: C.text }]}>Projetos vinculados</Text>
-        {detalhe.projetos.map((projeto) => (
-          <View key={projeto.id} style={[s.projetoCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-            <View style={s.projetoTopo}>
-              <View style={s.projetoTopoTexto}>
-                <Text style={[s.projetoTitulo, { color: C.text }]}>{projeto.projeto_nome || 'Projeto sem nome'}</Text>
-                <Text style={[s.metaInfo, { color: C.muted }]}>{[projeto.municipio, projeto.estado].filter(Boolean).join(' / ') || 'Localizacao nao informada'}</Text>
+        {detalhe.projetos.map((projeto) => {
+          const proximaAcao = obterProximaAcaoProjeto(projeto)
+          return (
+            <View key={projeto.id} style={[s.projetoCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}> 
+              <View style={s.projetoTopo}>
+                <View style={s.projetoTopoTexto}>
+                  <Text style={[s.projetoTitulo, { color: C.text }]}>{projeto.projeto_nome || 'Projeto sem nome'}</Text>
+                  <Text style={[s.metaInfo, { color: C.muted }]}>{[projeto.municipio, projeto.estado].filter(Boolean).join(' / ') || 'Localizacao nao informada'}</Text>
+                </View>
+                <StatusBadge status={projeto.status} />
               </View>
-              <StatusBadge status={projeto.status} />
+              <Text style={[s.metaInfo, { color: C.muted }]}>Tipos: {chipDocumentos(projeto.documentos_tipos)}</Text>
+              <View style={[s.proximaAcaoCard, { borderColor: proximaAcao.cor, backgroundColor: `${proximaAcao.cor}15` }]}> 
+                <Text style={[s.proximaAcaoLabel, { color: proximaAcao.cor }]}>Próxima ação</Text>
+                <Text style={[s.metaInfo, { color: C.text, fontWeight: '700' }]}>{proximaAcao.titulo}</Text>
+                <Text style={[s.metaInfo, { color: C.muted }]}>{proximaAcao.descricao}</Text>
+              </View>
+              {projeto.magic_link_expira ? (() => {
+                const expira = new Date(projeto.magic_link_expira)
+                const hoje = new Date()
+                hoje.setHours(0, 0, 0, 0)
+                expira.setHours(0, 0, 0, 0)
+                const diasRestantes = Math.round((expira.getTime() - hoje.getTime()) / 86400000)
+                const expirado = diasRestantes < 0
+                return (
+                  <View style={[s.magicLinkStatus, { backgroundColor: expirado ? `${C.danger}18` : `${C.success}18`, borderColor: expirado ? C.danger : C.success }]}> 
+                    <Text style={[s.metaInfo, { color: expirado ? C.danger : C.success, fontWeight: '700' }]}>
+                      {expirado ? 'Link expirado' : `Válido até ${expira.toLocaleDateString('pt-BR')} · Expira em ${diasRestantes} dia${diasRestantes === 1 ? '' : 's'}`}
+                    </Text>
+                  </View>
+                )
+              })() : null}
+              <View style={[s.projetoAcoes, s.projetoAcoesWrap]}>
+                <TouchableOpacity style={[s.btnSecundario, s.projetoAcaoBtn, { borderColor: C.success }]} onPress={() => abrirMapaProjeto(projeto.id)}>
+                  <Text style={[s.btnSecundarioTxt, { color: C.success }]}>Ver no mapa</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.btnSecundario, s.projetoAcaoBtn, { borderColor: C.info }]} onPress={() => router.push(`/(tabs)/projeto/${projeto.id}` as any)}>
+                  <Text style={[s.btnSecundarioTxt, { color: C.info }]}>Abrir projeto</Text>
+                </TouchableOpacity>
+                {(() => {
+                  const expira = projeto.magic_link_expira ? new Date(projeto.magic_link_expira) : null
+                  const hoje = new Date()
+                  hoje.setHours(0, 0, 0, 0)
+                  if (expira) expira.setHours(0, 0, 0, 0)
+                  const expirado = expira ? expira.getTime() < hoje.getTime() : false
+                  return (
+                    <TouchableOpacity style={[s.btnSecundario, s.projetoAcaoBtn, { borderColor: expirado ? C.danger : C.primary }]} onPress={() => reenviarMagicLink(projeto)} disabled={reenviandoProjetoId === projeto.id}>
+                      {reenviandoProjetoId === projeto.id
+                        ? <ActivityIndicator color={expirado ? C.danger : C.primary} />
+                        : <Text style={[s.btnSecundarioTxt, { color: expirado ? C.danger : C.primary }]}>{expirado ? 'Renovar link' : 'Reenviar magic link'}</Text>}
+                    </TouchableOpacity>
+                  )
+                })()}
+              </View>
             </View>
-            <Text style={[s.metaInfo, { color: C.muted }]}>Tipos: {chipDocumentos(projeto.documentos_tipos)}</Text>
-            <Text style={[s.metaInfo, { color: C.muted }]}>Magic link expira: {formatarData(projeto.magic_link_expira)}</Text>
-            <View style={s.projetoAcoes}>
-              <TouchableOpacity style={[s.btnSecundario, { borderColor: C.info }]} onPress={() => router.push(`/projeto/${projeto.id}` as any)}>
-                <Text style={[s.btnSecundarioTxt, { color: C.info }]}>Abrir projeto</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.btnSecundario, { borderColor: C.primary }]} onPress={() => reenviarMagicLink(projeto)} disabled={reenviandoProjetoId === projeto.id}>
-                {reenviandoProjetoId === projeto.id ? <ActivityIndicator color={C.primary} /> : <Text style={[s.btnSecundarioTxt, { color: C.primary }]}>Reenviar magic link</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+          )
+        })}
       </View>
 
-      <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
+      <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}> 
         <Text style={[s.sectionTitulo, { color: C.text }]}>Confrontantes e vizinhos</Text>
         <ProjetoSelector projetos={detalhe.projetos} projetoId={projetoConfrontanteId} onSelect={setProjetoConfrontanteId} />
         <View style={s.grid}>
@@ -922,10 +1023,14 @@ const s = StyleSheet.create({
   projetoCard: { borderWidth: 0.5, borderRadius: 12, padding: 12, gap: 8 },
   confrontanteCard: { borderWidth: 0.5, borderRadius: 12, padding: 12, gap: 8 },
   vazioGeo: { borderWidth: 0.5, borderRadius: 12, padding: 12, gap: 4 },
+  proximaAcaoCard: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 4 },
+  proximaAcaoLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: '700' },
   projetoTopo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
   projetoTopoTexto: { flex: 1, gap: 4 },
   projetoTitulo: { fontSize: 15, fontWeight: '700' },
   projetoAcoes: { flexDirection: 'row', gap: 10 },
+  projetoAcoesWrap: { flexWrap: 'wrap' },
+  projetoAcaoBtn: { minWidth: 148, flexGrow: 1 },
   btnSecundario: { flex: 1, minHeight: 46, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   btnSecundarioTxt: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
   formatoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -933,4 +1038,9 @@ const s = StyleSheet.create({
   timelineItem: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   timelineDot: { width: 10, height: 10, borderRadius: 999, marginTop: 6 },
   timelineConteudo: { flex: 1, gap: 3, paddingBottom: 10 },
+  magicLinkStatus: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
 })
+
+
+
+

@@ -67,9 +67,13 @@ export function isConectado(): boolean {
 /**
  * Inicia leitura contínua de sentenças NMEA via SPP.
  * Chama onFix no máximo 1x/segundo com o último fix válido.
+ * Guard contra race conditions: verifica flag e retorna imediatamente se já ativa.
  */
 export function iniciarLeitura(onFix: (fix: NmeaFix) => void): void {
-  if (!_dispositivo || _leituraAtiva) return
+  // Guard robusto: verifica flag e retorna antes de qualquer inicialização
+  if (_leituraAtiva) return
+  if (!_dispositivo) return
+
   _leituraAtiva = true
   _buffer = ''
   _ultimoGGA = {}

@@ -162,7 +162,12 @@ def _buscar_dados(supabase, projeto_id: str) -> DadosDocumento:
 # ---------------------------------------------------------------------------
 
 def _preencher(template: str, dados: DadosDocumento, extra: dict = None) -> str:
-    """Substitui placeholders no template pelos dados reais."""
+    """Substitui placeholders no template pelos dados reais.
+
+    Ordena placeholders por comprimento (maior primeiro) para evitar substituições
+    parciais quando o valor de um placeholder contém texto que combine com outro
+    placeholder mais curto.
+    """
     ctx = {
         "NOME_PROPRIETARIO":    dados.cliente_nome.upper(),
         "CPF_PROPRIETARIO":     dados.cliente_cpf,
@@ -194,8 +199,10 @@ def _preencher(template: str, dados: DadosDocumento, extra: dict = None) -> str:
         ctx.update(extra)
 
     resultado = template
-    for chave, valor in ctx.items():
-        resultado = resultado.replace(f"{{{{{chave}}}}}", str(valor))
+    # Ordena por comprimento (maior primeiro) para evitar substituições parciais
+    chaves_ordenadas = sorted(ctx.keys(), key=len, reverse=True)
+    for chave in chaves_ordenadas:
+        resultado = resultado.replace(f"{{{{{chave}}}}}", str(ctx[chave]))
     return resultado
 
 

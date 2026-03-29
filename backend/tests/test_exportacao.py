@@ -6,7 +6,8 @@ import zipfile
 
 from integracoes import integracao_metrica as metrica_mod
 from integracoes.integracao_metrica import PacoteMetrica
-import routes.exportacao as exportacao_mod
+import routes.exportacao.pacote as exportacao_pacote_mod
+import routes.exportacao.routes as exportacao_mod
 
 
 def test_preparar_metrica_aceita_avisos_com_unicode(monkeypatch):
@@ -26,8 +27,8 @@ def test_preparar_metrica_aceita_avisos_com_unicode(monkeypatch):
 
     monkeypatch.setattr(metrica_mod, "gerar_pacote_metrica", fake_gerar_pacote_metrica)
     monkeypatch.setattr(
-        exportacao_mod,
-        "_coletar_contexto_pacote",
+        exportacao_pacote_mod,
+        "coletar_contexto_pacote",
         lambda *_args, **_kwargs: {
             "projeto": {
                 "id": "projeto-1",
@@ -118,8 +119,8 @@ def test_obter_manifesto_metrica_retorna_json_para_bridge(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        exportacao_mod,
-        "_coletar_contexto_pacote",
+        exportacao_pacote_mod,
+        "coletar_contexto_pacote",
         lambda *_args, **_kwargs: {
             "projeto": {
                 "id": "projeto-1",
@@ -153,3 +154,5 @@ def test_obter_manifesto_metrica_retorna_json_para_bridge(monkeypatch):
     assert manifesto["projeto"]["id"] == "projeto-1"
     assert manifesto["cliente"]["nome"] == "Maria"
     assert manifesto["checklist"][0]["id"] == "importar_pontos"
+
+

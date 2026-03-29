@@ -46,16 +46,25 @@ def _get_supabase():
 
 @router.post("/consultar", response_model=ConsultaResponse)
 def consultar_normas(payload: ConsultaRequest):
-    if not payload.pergunta.strip():
+    # Valida e sanitiza entrada
+    pergunta = payload.pergunta.strip()
+    if not pergunta:
         raise HTTPException(status_code=400, detail={"erro": "Pergunta não pode estar vazia", "codigo": 400})
+
+    # Limite de 500 caracteres para evitar exploração de recursos
+    if len(pergunta) > 500:
+        raise HTTPException(status_code=400, detail={"erro": "Pergunta excede 500 caracteres", "codigo": 400})
+
+    # Remove caracteres de controle (não imprimíveis)
+    pergunta_limpa = "".join(c for c in pergunta if ord(c) >= 32 or c in "\t\n\r")
 
     client = _get_anthropic()
     sb = _get_supabase()
 
-    # 1. Gera embedding da pergunta via voyage-3
+    # 1. Gera embedding da pergunta limpa via voyage-3
     emb_resp = client.embeddings.create(
         model="voyage-3",
-        input=[payload.pergunta],
+        input=[pergunta_limpa],
     )
     vetor = emb_resp.embeddings[0].embedding
 
@@ -77,7 +86,7 @@ def consultar_normas(payload: ConsultaRequest):
         f"[{c['fonte']}]\n{c['texto']}" for c in chunks.data
     )
 
-    # 4. Chama claude-sonnet-4-6 com o contexto
+    # 4. Chama claude-sonnet-4-6 com o contexto (usando pergunta sanitizada)
     msg = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
@@ -85,7 +94,7 @@ def consultar_normas(payload: ConsultaRequest):
         messages=[
             {
                 "role": "user",
-                "content": f"NORMAS INCRA:\n{contexto}\n\nPERGUNTA: {payload.pergunta}"
+                "content": f"NORMAS INCRA:\n{contexto}\n\nPERGUNTA: {pergunta_limpa}"
             }
         ]
     )

@@ -12,7 +12,7 @@ GET  /projetos/{id}/documentos      → lista docs gerados
 import uuid
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel
@@ -89,7 +89,7 @@ def gerar_magic_link(projeto_id: str, supabase=None):
 
     # Gerar token
     token = str(uuid.uuid4())
-    expira = datetime.utcnow() + timedelta(days=7)
+    expira = datetime.now(timezone.utc) + timedelta(days=7)
 
     # Salvar no banco
     sb.table("clientes").update({
@@ -167,7 +167,7 @@ def receber_formulario(
         raise HTTPException(401, {"erro": "[ERRO-601] Token inválido.", "codigo": 601})
 
     expira = cliente.get("magic_link_expira")
-    if expira and datetime.fromisoformat(expira) < datetime.utcnow():
+    if expira and datetime.fromisoformat(expira) < datetime.now(timezone.utc):
         raise HTTPException(401, {"erro": "[ERRO-602] Link expirado. Solicite um novo link.", "codigo": 602})
 
     cliente_id = cliente["id"]
@@ -198,7 +198,7 @@ def receber_formulario(
         "municipio":        dados.municipio,
         "cep":              dados.cep,
         "formulario_ok":    True,
-        "formulario_em":    datetime.utcnow().isoformat(),
+        "formulario_em":    datetime.now(timezone.utc).isoformat(),
     }).eq("id", cliente_id).execute()
 
     # Atualizar dados do projeto/imóvel

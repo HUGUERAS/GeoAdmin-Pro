@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 import tempfile
 import zipfile
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
 from typing import Any
 
 from pyproj import Transformer
