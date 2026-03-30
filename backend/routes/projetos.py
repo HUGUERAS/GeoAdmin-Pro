@@ -18,6 +18,7 @@ GET  /projetos/{id}/confrontacoes/cartas   -> gera ZIP de cartas de confrontacao
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -403,6 +404,30 @@ def _gerar_magic_links_iniciais(sb, projeto_id: str, participantes: list[dict[st
 
 
 
+def _reverter_criacao_projeto(sb, projeto_id: str) -> None:
+    agora = datetime.now(timezone.utc).isoformat()
+    try:
+        (
+            sb.table("projeto_clientes")
+            .update({"deleted_at": agora})
+            .eq("projeto_id", projeto_id)
+            .is_("deleted_at", "null")
+            .execute()
+        )
+    except Exception as exc:
+        if "projeto_clientes" not in str(exc).lower():
+            raise
+
+    try:
+        _atualizar_projeto_compativel(sb, projeto_id, {"deleted_at": agora})
+    except Exception:
+        try:
+            sb.table("projetos").update({"deleted_at": agora}).eq("id", projeto_id).execute()
+        except Exception:
+            pass
+
+
+
 def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
     projeto = _projeto_ou_404(sb, projeto_id)
     cliente = _cliente_primario(sb, projeto.get("cliente_id"))
@@ -519,18 +544,31 @@ def criar_projeto(payload: ProjetoCreate):
         raise HTTPException(status_code=500, detail={"erro": "Falha ao criar projeto", "codigo": 500})
 
     projeto_id = res.data[0]["id"]
-    participantes_salvos = salvar_participantes_projeto(sb, projeto_id, participantes) if participantes else []
-    principal_salvo = next((item for item in participantes_salvos if item.get("principal")), None)
-    cliente_principal_id = principal_salvo.get("cliente_id") if principal_salvo else cliente_id
-    if cliente_principal_id and cliente_principal_id != cliente_id:
-        _atualizar_projeto_compativel(sb, projeto_id, {"cliente_id": cliente_principal_id})
+    try:
+        participantes_salvos = salvar_participantes_projeto(sb, projeto_id, participantes) if participantes else []
+        principal_salvo = next((item for item in participantes_salvos if item.get("principal")), None)
+        cliente_principal_id = principal_salvo.get("cliente_id") if principal_salvo else cliente_id
+        if cliente_principal_id and cliente_principal_id != cliente_id:
+            _atualizar_projeto_compativel(sb, projeto_id, {"cliente_id": cliente_principal_id})
 
-    magic_links = _gerar_magic_links_iniciais(sb, projeto_id, participantes_salvos or participantes)
-    projeto = _enriquecer_projeto(sb, projeto_id)
-    if magic_links:
-        projeto["magic_links"] = magic_links
-        projeto["magic_link"] = next((item for item in magic_links if item.get("principal")), magic_links[0])
-    return projeto
+        magic_links = _gerar_magic_links_iniciais(sb, projeto_id, participantes_salvos or participantes)
+        projeto = _enriquecer_projeto(sb, projeto_id)
+        if magic_links:
+            projeto["magic_links"] = magic_links
+            projeto["magic_link"] = next((item for item in magic_links if item.get("principal")), magic_links[0])
+        return projeto
+    except HTTPException:
+        _reverter_criacao_projeto(sb, projeto_id)
+        raise
+    except Exception as exc:
+        _reverter_criacao_projeto(sb, projeto_id)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "erro": f"Falha ao concluir a criação do projeto. O cadastro foi revertido para evitar dados parciais: {exc}",
+                "codigo": 500,
+            },
+        ) from exc
 
 
 @router.get("/{projeto_id}", summary="Buscar projeto com dados operacionais")

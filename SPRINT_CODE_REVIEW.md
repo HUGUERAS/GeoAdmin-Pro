@@ -149,3 +149,36 @@ permitidos no backend/main.py linha 39-44. Use:
 allow_origins=['https://geoadmin-pro.vercel.app', 'http://localhost:8081', 'http://localhost:19006']
 Torne configurável via variável de ambiente ALLOWED_ORIGINS (separado por vírgula).
 ```
+
+
+---
+
+## Rodada 30/03/2026 — Soluções propostas para próximos pontos
+
+### Pontos já corrigidos nesta rodada
+- Bandeja cartográfica agora prioriza **Supabase Storage** e só usa disco local como contingência.
+- Magic link legado deixou de escolher “o projeto mais recente” quando há ambiguidade; agora exige **novo link individual**.
+- Reenvio do formulário do cliente passou a **sincronizar confrontantes**, em vez de duplicar registros.
+- Criação de projeto ganhou **reversão compensatória** para evitar projeto parcial salvo com erro na resposta.
+
+### Próximos pontos recomendados
+1. **Migrar arquivos cartográficos antigos do disco local para o Supabase Storage**
+   - Criar script de migração que leia `arquivos_projeto.storage_path` local, envie o binário ao bucket e atualize o registro para `supabase://bucket/path`.
+   - Isso fecha a janela entre as versões antigas e a persistência nova.
+
+2. **Encerrar o legado de token em `clientes.magic_link_token`**
+   - O caminho mais seguro é migrar tudo para `projeto_clientes.magic_link_token`.
+   - Depois da migração, o token legado pode virar compatibilidade temporária com prazo de expiração operacional.
+
+3. **Criar trilha de auditoria para promoção de arquivo a base oficial**
+   - Tabela sugerida: `eventos_cartograficos`.
+   - Guardar: quem promoveu, quando, qual arquivo, de qual classificação saiu e para qual uso oficial foi promovido.
+   - Isso reforça a regra de ouro: nenhum arquivo altera perímetro oficial sem ação explícita do topógrafo.
+
+4. **Separar copropriedade por área de participação no projeto**
+   - Hoje `projeto_clientes` resolve bem participantes do projeto.
+   - Próximo passo natural: tabela `area_clientes` para representar coproprietários reais em áreas específicas sem sobrecarregar `areas_projeto`.
+
+5. **APP_URL pública no ambiente publicado**
+   - Sem isso, o magic link continua saindo com URL local em alguns ambientes.
+   - Tratar como checklist obrigatório de deploy.

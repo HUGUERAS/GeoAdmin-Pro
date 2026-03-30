@@ -319,6 +319,50 @@ def _atualizar_cliente_formulario(sb, cliente_id: str, dados: DadosFormulario) -
     return cliente_id
 
 
+def _resolver_contexto_legacy_cliente(sb, cliente_id: str) -> tuple[str | None, dict[str, Any] | None]:
+    try:
+        resposta_vinculos = (
+            sb.table("projeto_clientes")
+            .select("id, projeto_id, cliente_id, papel, principal, recebe_magic_link, ordem, area_id, magic_link_token, magic_link_expira")
+            .eq("cliente_id", cliente_id)
+            .is_("deleted_at", "null")
+            .execute()
+        )
+        vinculos = getattr(resposta_vinculos, "data", None) or []
+    except Exception as exc:
+        if "projeto_clientes" in str(exc).lower():
+            vinculos = []
+        else:
+            raise
+
+    if len(vinculos) == 1:
+        vinculo = vinculos[0]
+        return vinculo.get("projeto_id"), vinculo
+    if len(vinculos) > 1:
+        raise HTTPException(409, {
+            "erro": "[ERRO-603] Este link antigo ficou ambíguo porque o cliente participa de mais de um projeto. Solicite um novo link individual.",
+            "codigo": 603,
+        })
+
+    projeto_res = (
+        sb.table("projetos")
+        .select("id")
+        .eq("cliente_id", cliente_id)
+        .is_("deleted_at", "null")
+        .order("criado_em", desc=True)
+        .execute()
+    )
+    projetos = getattr(projeto_res, "data", None) or []
+    if len(projetos) == 1:
+        return projetos[0].get("id"), None
+    if len(projetos) > 1:
+        raise HTTPException(409, {
+            "erro": "[ERRO-603] Este link antigo ficou ambíguo porque o cliente tem mais de um projeto ativo. Solicite um novo link individual.",
+            "codigo": 603,
+        })
+    return None, None
+
+
 def _validar_token(sb, token: str) -> tuple[dict[str, Any], str | None, dict[str, Any] | None]:
     vinculo = obter_vinculo_por_token(sb, token)
     if vinculo:
@@ -353,17 +397,8 @@ def _validar_token(sb, token: str) -> tuple[dict[str, Any], str | None, dict[str
     if expira and datetime.fromisoformat(str(expira).replace("Z", "+00:00")) < datetime.now(timezone.utc):
         raise HTTPException(401, {"erro": "[ERRO-602] Link expirado. Solicite um novo link.", "codigo": 602})
 
-    projeto_res = (
-        sb.table("projetos")
-        .select("id, nome, municipio, estado, comarca, matricula, cliente_id")
-        .eq("cliente_id", cliente["id"])
-        .is_("deleted_at", "null")
-        .order("criado_em", desc=True)
-        .limit(1)
-        .execute()
-    )
-    projeto = projeto_res.data[0] if projeto_res.data else None
-    return cliente, projeto.get("id") if projeto else None, None
+    projeto_id, vinculo_legacy = _resolver_contexto_legacy_cliente(sb, cliente["id"])
+    return cliente, projeto_id, vinculo_legacy
 
 
 def _carregar_area_contexto(sb, area_id: str | None) -> dict[str, Any] | None:
@@ -508,6 +543,49 @@ def _salvar_referencia_cliente(sb, cliente_id: str, projeto_id: str | None, nome
     )
 
 
+def _sincronizar_confrontantes_formulario(sb, projeto_id: str, cliente_id: str, confrontantes: list[dict[str, Any]]) -> None:
+    origem_cliente = f"formulario_cliente:{cliente_id}"
+    agora = datetime.now(timezone.utc).isoformat()
+    try:
+        resposta = (
+            sb.table("confrontantes")
+            .select("id, origem")
+            .eq("projeto_id", projeto_id)
+            .is_("deleted_at", "null")
+            .execute()
+        )
+        existentes = getattr(resposta, "data", None) or []
+    except Exception:
+        existentes = []
+
+    for item in existentes:
+        origem = str(item.get("origem") or "").strip().lower()
+        if origem in {"formulario_cliente", origem_cliente.lower()}:
+            (
+                sb.table("confrontantes")
+                .update({"deleted_at": agora})
+                .eq("id", item.get("id"))
+                .execute()
+            )
+
+    novos = []
+    for conf in confrontantes:
+        if not conf.get("nome"):
+            continue
+        novos.append({
+            "projeto_id": projeto_id,
+            "lado": conf.get("lado", "Outros"),
+            "nome": conf.get("nome"),
+            "cpf": conf.get("cpf", ""),
+            "nome_imovel": conf.get("nome_imovel", ""),
+            "matricula": conf.get("matricula", ""),
+            "tipo": conf.get("tipo", "particular"),
+            "origem": origem_cliente,
+        })
+    if novos:
+        sb.table("confrontantes").insert(novos).execute()
+
+
 @router.post("/projetos/{projeto_id}/magic-link", summary="Gerar link do formulário para o cliente")
 def gerar_magic_link(
     projeto_id: str,
@@ -629,20 +707,7 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
 
     if projeto_id:
         _atualizar_projeto_formulario(sb, projeto_id, dados)
-
-        for conf in dados.confrontantes:
-            if not conf.get("nome"):
-                continue
-            sb.table("confrontantes").insert({
-                "projeto_id": projeto_id,
-                "lado": conf.get("lado", "Outros"),
-                "nome": conf.get("nome"),
-                "cpf": conf.get("cpf", ""),
-                "nome_imovel": conf.get("nome_imovel", ""),
-                "matricula": conf.get("matricula", ""),
-                "tipo": conf.get("tipo", "particular"),
-                "origem": "formulario_cliente",
-            }).execute()
+        _sincronizar_confrontantes_formulario(sb, projeto_id, cliente_id, dados.confrontantes)
 
     vertices: list[dict[str, Any]] = []
     if dados.croqui_coords:
