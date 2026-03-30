@@ -160,6 +160,7 @@ npm run build:web
 ### Backend
 
 O backend esta preparado para deploy no Railway usando `backend/Procfile` e `backend/railway.json`.
+Para o magic link funcionar fora do ambiente local, configure tambem `APP_URL` no Railway apontando para a URL publica da API.
 
 ### GeoAdmin Bridge
 

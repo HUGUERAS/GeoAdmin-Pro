@@ -63,21 +63,39 @@ ALTER TABLE projetos
     ADD COLUMN IF NOT EXISTS tipo_processo TEXT DEFAULT 'INCRA_SIGEF'
         CHECK (tipo_processo IN ('INCRA_SIGEF', 'SEAPA', 'AMBOS'));
 
+ALTER TABLE clientes
+    ADD COLUMN IF NOT EXISTS cpf TEXT;
+
+UPDATE clientes
+SET cpf = COALESCE(cpf, cpf_cnpj)
+WHERE cpf IS NULL
+  AND cpf_cnpj IS NOT NULL;
+
 CREATE OR REPLACE VIEW vw_projetos_completo AS
 SELECT
     p.id,
-    p.nome,
-    p.nome                     AS projeto_nome,
     p.cliente_id,
-    p.status,
-    p.zona_utm,
-    p.srid,
+    p.nome,
     p.numero_job,
+    p.descricao,
     p.municipio,
     p.estado,
-    p.nome_imovel,
-    p.comarca,
     p.matricula,
+    p.comarca,
+    p.zona_utm,
+    p.srid,
+    p.status,
+    p.data_medicao,
+    p.data_protocolo,
+    p.data_aprovacao,
+    p.data_entrega,
+    p.prazo_estimado,
+    p.valor_servico,
+    p.valor_pago,
+    p.criado_em,
+    p.atualizado_em,
+    p.deleted_at,
+    p.nome_imovel,
     p.area_ha,
     p.classe_imovel,
     p.distancia_sede_km,
@@ -86,17 +104,22 @@ SELECT
     p.renda_familiar,
     p.funcao_publica,
     p.possui_imovel_rural,
-    p.tipo_processo,
-    p.created_at,
-    p.criado_em,
-    p.deleted_at,
     c.nome                     AS cliente_nome,
     c.telefone                 AS cliente_telefone,
     c.email                    AS cliente_email,
+    p.nome                     AS projeto_nome,
+    COALESCE(pt.total_pontos, 0::bigint) AS total_pontos,
+    p.tipo_processo,
     c.municipio                AS cliente_municipio,
     c.estado                   AS cliente_estado
 FROM projetos p
 LEFT JOIN clientes c ON c.id = p.cliente_id
+LEFT JOIN (
+    SELECT pontos.projeto_id, count(*) AS total_pontos
+    FROM pontos
+    WHERE pontos.coordenada IS NOT NULL
+    GROUP BY pontos.projeto_id
+) pt ON pt.projeto_id = p.id
 WHERE p.deleted_at IS NULL;
 
 CREATE OR REPLACE VIEW vw_projeto_clientes AS

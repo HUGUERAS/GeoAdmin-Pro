@@ -67,6 +67,96 @@ def _get_supabase():
     return _get()
 
 
+def _erro_schema(exc: Exception, trecho: str) -> bool:
+    return trecho.lower() in str(exc).lower()
+
+
+def _resolver_app_url() -> str:
+    for chave in ("APP_URL", "PUBLIC_APP_URL", "PUBLIC_BASE_URL"):
+        valor = (os.environ.get(chave) or "").strip()
+        if valor:
+            return valor.rstrip("/")
+
+    railway = (os.environ.get("RAILWAY_PUBLIC_DOMAIN") or "").strip()
+    if railway:
+        return f"https://{railway.lstrip('/')}".rstrip("/")
+
+    vercel = (os.environ.get("VERCEL_URL") or "").strip()
+    if vercel:
+        return f"https://{vercel.lstrip('/')}".rstrip("/")
+
+    return "http://127.0.0.1:8000"
+
+
+def _normalizar_estado_civil(valor: str) -> str:
+    chave = (valor or "").strip().lower()
+    mapa = {
+        "solteiro": "solteiro",
+        "solteiro(a)": "solteiro",
+        "casado": "casado",
+        "casado(a)": "casado",
+        "divorciado": "divorciado",
+        "divorciado(a)": "divorciado",
+        "viuvo": "viuvo",
+        "viúvo": "viuvo",
+        "viuvo(a)": "viuvo",
+        "viúvo(a)": "viuvo",
+        "uniao_estavel": "uniao_estavel",
+        "união estável": "uniao_estavel",
+    }
+    return mapa.get(chave, chave)
+
+
+def _payload_cliente_formulario(
+    dados: DadosFormulario,
+    *,
+    preferir_cpf_cnpj: bool = True,
+) -> dict[str, Any]:
+    payload = {
+        "nome": dados.nome,
+        "rg": dados.rg,
+        "estado_civil": _normalizar_estado_civil(dados.estado_civil),
+        "profissao": dados.profissao,
+        "telefone": dados.telefone,
+        "email": dados.email,
+        "conjuge_nome": dados.conjuge_nome,
+        "conjuge_cpf": dados.conjuge_cpf,
+        "endereco": dados.endereco,
+        "endereco_numero": dados.endereco_numero,
+        "municipio": dados.municipio,
+        "cep": dados.cep,
+        "formulario_ok": True,
+        "formulario_em": datetime.now(timezone.utc).isoformat(),
+    }
+    if preferir_cpf_cnpj:
+        payload["cpf_cnpj"] = dados.cpf
+    else:
+        payload["cpf"] = dados.cpf
+    return payload
+
+
+def _atualizar_cliente_formulario(sb, cliente_id: str, dados: DadosFormulario) -> None:
+    ultimo_erro: Exception | None = None
+    for preferir_cpf_cnpj in (True, False):
+        try:
+            (
+                sb.table("clientes")
+                .update(_payload_cliente_formulario(dados, preferir_cpf_cnpj=preferir_cpf_cnpj))
+                .eq("id", cliente_id)
+                .execute()
+            )
+            return
+        except Exception as exc:
+            ultimo_erro = exc
+            coluna = "cpf_cnpj" if preferir_cpf_cnpj else "cpf"
+            if _erro_schema(exc, f"'{coluna}' column"):
+                continue
+            raise
+
+    if ultimo_erro:
+        raise ultimo_erro
+
+
 def _validar_token(sb, token: str) -> tuple[dict[str, Any], str | None]:
     cliente_res = (
         sb.table("clientes")
@@ -234,7 +324,7 @@ def gerar_magic_link(projeto_id: str, supabase=None):
         "magic_link_expira": expira.isoformat(),
     }).eq("id", cliente_id).execute()
 
-    base_url = os.environ.get("APP_URL", "http://localhost:8000")
+    base_url = _resolver_app_url()
     link = f"{base_url}/formulario/cliente?token={token}"
 
     logger.info("Magic Link gerado para projeto '%s'", projeto["projeto_nome"])
@@ -282,23 +372,7 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
     payload_raw, uploads, geo_upload = await _extrair_payload_request(request)
     dados = _normalizar_payload(payload_raw)
 
-    sb.table("clientes").update({
-        "nome": dados.nome,
-        "cpf": dados.cpf,
-        "rg": dados.rg,
-        "estado_civil": dados.estado_civil,
-        "profissao": dados.profissao,
-        "telefone": dados.telefone,
-        "email": dados.email,
-        "conjuge_nome": dados.conjuge_nome,
-        "conjuge_cpf": dados.conjuge_cpf,
-        "endereco": dados.endereco,
-        "endereco_numero": dados.endereco_numero,
-        "municipio": dados.municipio,
-        "cep": dados.cep,
-        "formulario_ok": True,
-        "formulario_em": datetime.now(timezone.utc).isoformat(),
-    }).eq("id", cliente_id).execute()
+    _atualizar_cliente_formulario(sb, cliente_id, dados)
 
     if projeto_id:
         sb.table("projetos").update({

@@ -19,6 +19,90 @@ from shapely.ops import transform
 logger = logging.getLogger("geoadmin.referencia_cliente")
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+REFERENCIAS_STORE_PATH = DATA_DIR / "geometrias_referencia_cliente.json"
+
+
+def _deve_usar_fallback_local(exc: Exception, *identificadores: str) -> bool:
+    texto = str(exc).lower()
+    codigos = ("pgrst204", "pgrst205", "could not find", "schema cache")
+    if not any(codigo in texto for codigo in codigos):
+        return False
+    if not identificadores:
+        return True
+    return any(chave.lower() in texto for chave in identificadores)
+
+
+def _garantir_store_local() -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if not REFERENCIAS_STORE_PATH.exists():
+        REFERENCIAS_STORE_PATH.write_text(json.dumps({"registros": []}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _carregar_store_local() -> dict[str, Any]:
+    _garantir_store_local()
+    try:
+        payload = json.loads(REFERENCIAS_STORE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        payload = {"registros": []}
+    payload.setdefault("registros", [])
+    return payload
+
+
+def _salvar_store_local(payload: dict[str, Any]) -> None:
+    _garantir_store_local()
+    REFERENCIAS_STORE_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _registro_local_mais_recente(cliente_id: str) -> dict[str, Any] | None:
+    payload = _carregar_store_local()
+    registros = [
+        item for item in payload.get("registros", [])
+        if item.get("cliente_id") == cliente_id and not item.get("deleted_at")
+    ]
+    if not registros:
+        return None
+    registros.sort(key=lambda item: item.get("atualizado_em") or "", reverse=True)
+    return registros[0]
+
+
+def _salvar_registro_local(registro: dict[str, Any]) -> dict[str, Any]:
+    payload = _carregar_store_local()
+    registros = payload.setdefault("registros", [])
+    agora = _agora_iso()
+    atual = dict(registro)
+    atual.setdefault("id", atual.get("id") or f"ref-{cliente_id}" if (cliente_id := atual.get("cliente_id")) else f"ref-{len(registros)+1}")
+    atual["atualizado_em"] = agora
+    atual["deleted_at"] = None
+
+    for indice, item in enumerate(registros):
+        if item.get("id") == atual["id"] or (item.get("cliente_id") == atual.get("cliente_id") and not item.get("deleted_at")):
+            atual.setdefault("criado_em", item.get("criado_em") or agora)
+            registros[indice] = {**item, **atual}
+            _salvar_store_local(payload)
+            return registros[indice]
+
+    atual.setdefault("criado_em", agora)
+    registros.append(atual)
+    _salvar_store_local(payload)
+    return atual
+
+
+def _remover_registro_local(cliente_id: str) -> bool:
+    payload = _carregar_store_local()
+    agora = _agora_iso()
+    alterado = False
+    for item in payload.get("registros", []):
+        if item.get("cliente_id") == cliente_id and not item.get("deleted_at"):
+            item["deleted_at"] = agora
+            item["atualizado_em"] = agora
+            alterado = True
+    if alterado:
+        _salvar_store_local(payload)
+    return alterado
+
+
 def _agora_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -351,12 +435,15 @@ def obter_geometria_referencia(sb, cliente_id: str) -> dict[str, Any] | None:
             .maybe_single()
             .execute()
         )
-        if not res.data:
-            return None
-        return _normalizar_registro({**res.data, "persistencia": "supabase"})
+        dados = getattr(res, "data", None) if res is not None else None
+        if not dados:
+            local = _registro_local_mais_recente(cliente_id)
+            return _normalizar_registro({**local, "persistencia": "arquivo_local"}) if local else None
+        return _normalizar_registro({**dados, "persistencia": "supabase"})
     except Exception as exc:
         logger.warning("Falha ao ler geometria de referencia no Supabase: %s", exc)
-        return None
+        local = _registro_local_mais_recente(cliente_id)
+        return _normalizar_registro({**local, "persistencia": "arquivo_local"}) if local else None
 
 
 def salvar_geometria_referencia(
@@ -395,19 +482,21 @@ def salvar_geometria_referencia(
             .maybe_single()
             .execute()
         )
-        if existente.data:
+        existente_data = getattr(existente, "data", None) if existente is not None else None
+        if existente_data:
             res = (
                 sb.table("geometrias_referencia_cliente")
                 .update(payload)
-                .eq("id", existente.data["id"])
+                .eq("id", existente_data["id"])
                 .execute()
             )
         else:
             res = sb.table("geometrias_referencia_cliente").insert(payload).execute()
 
         registro = None
-        if res.data:
-            registro = _normalizar_registro({**res.data[0], "persistencia": "supabase"})
+        dados_res = getattr(res, "data", None) if res is not None else None
+        if dados_res:
+            registro = _normalizar_registro({**dados_res[0], "persistencia": "supabase"})
         if not registro:
             selecionado = (
                 sb.table("geometrias_referencia_cliente")
@@ -419,14 +508,22 @@ def salvar_geometria_referencia(
                 .maybe_single()
                 .execute()
             )
-            if selecionado.data:
-                registro = _normalizar_registro({**selecionado.data, "persistencia": "supabase"})
+            selecionado_data = getattr(selecionado, "data", None) if selecionado is not None else None
+            if selecionado_data:
+                registro = _normalizar_registro({**selecionado_data, "persistencia": "supabase"})
         if not registro:
             raise RuntimeError("Falha ao persistir geometria de referencia no Supabase.")
         return registro
     except Exception as exc:
         logger.warning("Falha ao salvar geometria de referencia no Supabase: %s", exc)
-        raise
+        registro = _salvar_registro_local({
+            **payload,
+            "vertices": vertices,
+            "resumo": resumo,
+            "comparativo": comparativo,
+            "persistencia": "arquivo_local",
+        })
+        return _normalizar_registro(registro) or registro
 
 
 def remover_geometria_referencia(sb, cliente_id: str) -> bool:
@@ -442,15 +539,16 @@ def remover_geometria_referencia(sb, cliente_id: str) -> bool:
             .maybe_single()
             .execute()
         )
-        if not existente.data:
-            return False
+        existente_data = getattr(existente, "data", None) if existente is not None else None
+        if not existente_data:
+            return _remover_registro_local(cliente_id)
         (
             sb.table("geometrias_referencia_cliente")
             .update({"deleted_at": agora, "atualizado_em": agora})
-            .eq("id", existente.data["id"])
+            .eq("id", existente_data["id"])
             .execute()
         )
         return True
     except Exception as exc:
         logger.warning("Falha ao remover geometria de referencia no Supabase: %s", exc)
-        return False
+        return _remover_registro_local(cliente_id)

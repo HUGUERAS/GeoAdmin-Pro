@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS geometrias_referencia_cliente (
     projeto_id       UUID        REFERENCES projetos(id) ON DELETE SET NULL,
     nome            TEXT        NOT NULL DEFAULT 'Referencia do cliente',
     origem_tipo     TEXT        NOT NULL
-                    CHECK (origem_tipo IN ('manual','importacao_texto','arquivo')),
+                    CHECK (origem_tipo IN ('manual','importacao_texto','arquivo','formulario_cliente')),
     arquivo_nome    TEXT,
     formato         TEXT        NOT NULL,
     vertices_json   JSONB       NOT NULL DEFAULT '[]'::jsonb,

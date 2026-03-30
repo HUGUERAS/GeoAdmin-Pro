@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import io
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -25,6 +26,9 @@ DATA_DIR = BASE_DIR / "data"
 UPLOADS_DIR = DATA_DIR / "formulario_uploads"
 TEMPLATES_DIR = BASE_DIR / "static" / "templates"
 TEMPLATE_CARTA_CONFRONTACAO = TEMPLATES_DIR / "carta_confrontacao.docx"
+AREAS_STORE_PATH = DATA_DIR / "areas_projeto.json"
+
+logger = logging.getLogger("geoadmin.areas_projeto")
 
 
 def _get_supabase():
@@ -34,6 +38,88 @@ def _get_supabase():
 
 def _agora_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _deve_usar_fallback_local(exc: Exception, *identificadores: str) -> bool:
+    texto = str(exc).lower()
+    codigos = ("pgrst204", "pgrst205", "could not find", "schema cache")
+    if not any(codigo in texto for codigo in codigos):
+        return False
+    if not identificadores:
+        return True
+    return any(chave.lower() in texto for chave in identificadores)
+
+
+def _garantir_store_local() -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if not AREAS_STORE_PATH.exists():
+        AREAS_STORE_PATH.write_text(json.dumps({"areas": []}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _carregar_store_local() -> dict[str, Any]:
+    _garantir_store_local()
+    try:
+        return json.loads(AREAS_STORE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {"areas": []}
+
+
+def _salvar_store_local(store: dict[str, Any]) -> None:
+    _garantir_store_local()
+    AREAS_STORE_PATH.write_text(json.dumps(store, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _listar_areas_local(projeto_id: str) -> list[dict[str, Any]]:
+    store = _carregar_store_local()
+    areas = [
+        _normalizar_area(_row_para_area({**item, "persistencia": "arquivo_local"}) or {})
+        for item in store.get("areas", [])
+        if item.get("projeto_id") == projeto_id and not item.get("deleted_at")
+    ]
+    areas.sort(key=lambda item: item.get("atualizado_em") or "", reverse=True)
+    return areas
+
+
+def _obter_area_local(area_id: str) -> dict[str, Any] | None:
+    store = _carregar_store_local()
+    for item in store.get("areas", []):
+        if item.get("id") == area_id and not item.get("deleted_at"):
+            return _normalizar_area(_row_para_area({**item, "persistencia": "arquivo_local"}) or {})
+    return None
+
+
+def _salvar_area_local(payload: dict[str, Any]) -> dict[str, Any]:
+    store = _carregar_store_local()
+    areas = store.setdefault("areas", [])
+    agora = _agora_iso()
+    for indice, area in enumerate(areas):
+        if area.get("id") == payload["id"]:
+            atualizado = {**area, **payload, "persistencia": "arquivo_local", "atualizado_em": agora, "deleted_at": None}
+            atualizado.setdefault("criado_em", area.get("criado_em") or agora)
+            areas[indice] = atualizado
+            _salvar_store_local(store)
+            return _normalizar_area(_row_para_area(atualizado) or {})
+
+    novo = {
+        **payload,
+        "persistencia": "arquivo_local",
+        "criado_em": payload.get("criado_em") or agora,
+        "atualizado_em": payload.get("atualizado_em") or agora,
+        "deleted_at": None,
+    }
+    areas.append(novo)
+    _salvar_store_local(store)
+    return _normalizar_area(_row_para_area(novo) or {})
+
+
+def _atualizar_anexos_local(area_id: str, anexos: list[dict[str, Any]]) -> None:
+    store = _carregar_store_local()
+    for area in store.get("areas", []):
+        if area.get("id") == area_id and not area.get("deleted_at"):
+            area["anexos"] = anexos
+            area["atualizado_em"] = _agora_iso()
+            break
+    _salvar_store_local(store)
 
 
 def _data_extenso_ptbr(data: datetime | None = None) -> str:
@@ -137,6 +223,7 @@ def _row_para_area(raw: dict[str, Any] | None) -> dict[str, Any] | None:
         "criado_em": raw.get("criado_em") or raw.get("created_at"),
         "atualizado_em": raw.get("atualizado_em") or raw.get("updated_at"),
         "deleted_at": raw.get("deleted_at"),
+        "persistencia": raw.get("persistencia", "supabase"),
     }
 
 
@@ -226,32 +313,39 @@ def _gerar_carta_confrontacao_docx(
 
 def listar_areas_projeto(projeto_id: str, sb=None) -> list[dict[str, Any]]:
     cliente = sb or _get_supabase()
-    res = (
-        cliente.table("areas_projeto")
-        .select("*")
-        .eq("projeto_id", projeto_id)
-        .is_("deleted_at", "null")
-        .order("atualizado_em", desc=True)
-        .execute()
-    )
-    areas = [_normalizar_area(_row_para_area(area) or {}) for area in (res.data or [])]
-    return areas
+    try:
+        res = (
+            cliente.table("areas_projeto")
+            .select("*")
+            .eq("projeto_id", projeto_id)
+            .is_("deleted_at", "null")
+            .order("atualizado_em", desc=True)
+            .execute()
+        )
+        return [_normalizar_area(_row_para_area(area) or {}) for area in (res.data or [])]
+    except Exception as exc:
+        logger.warning("Falha ao listar areas_projeto no Supabase: %s", exc)
+        return _listar_areas_local(projeto_id)
 
 
 def obter_area(area_id: str, sb=None) -> dict[str, Any] | None:
     cliente = sb or _get_supabase()
-    res = (
-        cliente.table("areas_projeto")
-        .select("*")
-        .eq("id", area_id)
-        .is_("deleted_at", "null")
-        .maybe_single()
-        .execute()
-    )
-    area = _row_para_area(res.data)
-    if not area:
-        return None
-    return _normalizar_area(area)
+    try:
+        res = (
+            cliente.table("areas_projeto")
+            .select("*")
+            .eq("id", area_id)
+            .is_("deleted_at", "null")
+            .maybe_single()
+            .execute()
+        )
+        area = _row_para_area(res.data)
+        if not area:
+            return None
+        return _normalizar_area(area)
+    except Exception as exc:
+        logger.warning("Falha ao obter area no Supabase: %s", exc)
+        return _obter_area_local(area_id)
 
 
 def salvar_area_projeto(
@@ -310,21 +404,25 @@ def salvar_area_projeto(
         "deleted_at": None,
     }
 
-    if existente:
-        res = cliente.table("areas_projeto").update(payload).eq("id", payload["id"]).execute()
-    else:
-        res = cliente.table("areas_projeto").insert(payload).execute()
+    try:
+        if existente and existente.get("persistencia") != "arquivo_local":
+            res = cliente.table("areas_projeto").update(payload).eq("id", payload["id"]).execute()
+        else:
+            res = cliente.table("areas_projeto").insert(payload).execute()
 
-    registro = None
-    if res.data:
-        registro = _row_para_area(res.data[0])
-    if not registro:
-        registro = _row_para_area(
-            cliente.table("areas_projeto").select("*").eq("id", payload["id"]).maybe_single().execute().data
-        )
-    if not registro:
-        raise RuntimeError("Falha ao persistir area do projeto no Supabase.")
-    return _normalizar_area(registro)
+        registro = None
+        if res.data:
+            registro = _row_para_area(res.data[0])
+        if not registro:
+            registro = _row_para_area(
+                cliente.table("areas_projeto").select("*").eq("id", payload["id"]).maybe_single().execute().data
+            )
+        if not registro:
+            raise RuntimeError("Falha ao persistir area do projeto no Supabase.")
+        return _normalizar_area(registro)
+    except Exception as exc:
+        logger.warning("Falha ao persistir area do projeto no Supabase: %s", exc)
+        return _salvar_area_local(payload)
 
 
 def anexar_arquivos_area(
@@ -363,7 +461,14 @@ def anexar_arquivos_area(
             }
         )
 
-    cliente.table("areas_projeto").update({"anexos": anexos}).eq("id", area_id).execute()
+    try:
+        if area.get("persistencia") == "arquivo_local":
+            _atualizar_anexos_local(area_id, anexos)
+        else:
+            cliente.table("areas_projeto").update({"anexos": anexos}).eq("id", area_id).execute()
+    except Exception as exc:
+        logger.warning("Falha ao anexar arquivos da area no Supabase: %s", exc)
+        _atualizar_anexos_local(area_id, anexos)
     return anexos
 
 

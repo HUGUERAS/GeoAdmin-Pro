@@ -109,6 +109,96 @@ def _get_supabase():
     return get_supabase()
 
 
+def _erro_schema(exc: Exception, trecho: str) -> bool:
+    return trecho.lower() in str(exc).lower()
+
+
+def _payload_cliente_compativel(
+    *,
+    nome: str,
+    cpf: str | None,
+    telefone: str | None,
+    preferir_cpf_cnpj: bool = True,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "nome": nome or "Cliente sem nome",
+        "telefone": telefone or None,
+    }
+    if preferir_cpf_cnpj:
+        payload["cpf_cnpj"] = cpf or None
+    else:
+        payload["cpf"] = cpf or None
+    return payload
+
+
+def _buscar_cliente_por_documento(sb, cpf: str) -> dict[str, Any] | None:
+    for campo in ("cpf_cnpj", "cpf"):
+        try:
+            cliente = (
+                sb.table("clientes")
+                .select("id")
+                .eq(campo, cpf)
+                .maybe_single()
+                .execute()
+                .data
+            )
+        except Exception as exc:
+            if _erro_schema(exc, f"'{campo}' column"):
+                continue
+            raise
+        if cliente:
+            return cliente
+    return None
+
+
+def _criar_cliente_compativel(sb, *, nome: str, cpf: str | None, telefone: str | None) -> str:
+    ultimo_erro: Exception | None = None
+    for preferir_cpf_cnpj in (True, False):
+        try:
+            res = sb.table("clientes").insert(
+                _payload_cliente_compativel(
+                    nome=nome,
+                    cpf=cpf,
+                    telefone=telefone,
+                    preferir_cpf_cnpj=preferir_cpf_cnpj,
+                )
+            ).execute()
+        except Exception as exc:
+            ultimo_erro = exc
+            coluna = "cpf_cnpj" if preferir_cpf_cnpj else "cpf"
+            if _erro_schema(exc, f"'{coluna}' column"):
+                continue
+            raise
+        if res.data:
+            return res.data[0]["id"]
+
+    if ultimo_erro:
+        raise ultimo_erro
+    raise HTTPException(status_code=500, detail={"erro": "Falha ao criar cliente do projeto", "codigo": 500})
+
+
+def _inserir_projeto_compativel(sb, dados: dict[str, Any]):
+    payload = dict(dados)
+    try:
+        return sb.table("projetos").insert(payload).execute()
+    except Exception as exc:
+        if payload.get("tipo_processo") is not None and _erro_schema(exc, "'tipo_processo' column"):
+            payload.pop("tipo_processo", None)
+            return sb.table("projetos").insert(payload).execute()
+        raise
+
+
+def _atualizar_projeto_compativel(sb, projeto_id: str, dados: dict[str, Any]):
+    payload = dict(dados)
+    try:
+        return sb.table("projetos").update(payload).eq("id", projeto_id).execute()
+    except Exception as exc:
+        if payload.get("tipo_processo") is not None and _erro_schema(exc, "'tipo_processo' column"):
+            payload.pop("tipo_processo", None)
+            return sb.table("projetos").update(payload).eq("id", projeto_id).execute()
+        raise
+
+
 def _projeto_ou_404(sb, projeto_id: str) -> dict[str, Any]:
     res = sb.table("vw_projetos_completo").select("*").eq("id", projeto_id).single().execute()
     if res is None or not res.data:
@@ -122,7 +212,7 @@ def _cliente_primario(sb, cliente_id: str | None) -> dict[str, Any] | None:
     return query_segura(
         lambda: (
             sb.table("clientes")
-            .select("id, nome, cpf, cpf_cnpj, telefone, email, formulario_ok, formulario_em, magic_link_expira")
+            .select("*")
             .eq("id", cliente_id)
             .maybe_single()
             .execute()
@@ -197,28 +287,19 @@ def _resolver_cliente_para_criacao(sb, payload: ProjetoCreate) -> str | None:
         return None
 
     if cpf:
-        cliente_existente = query_segura(
-            lambda: (
-                sb.table("clientes")
-                .select("id")
-                .eq("cpf", cpf)
-                .maybe_single()
-                .execute()
-                .data
-            ),
-            None,
-        )
+        cliente_existente = query_segura(lambda: _buscar_cliente_por_documento(sb, cpf), None)
         if cliente_existente:
             return cliente_existente.get("id")
 
-    res = sb.table("clientes").insert({
-        "nome": nome or "Cliente sem nome",
-        "cpf": cpf or None,
-        "telefone": telefone or None,
-    }).execute()
-    if not res.data:
-        raise HTTPException(status_code=500, detail={"erro": "Falha ao criar cliente do projeto", "codigo": 500})
-    return res.data[0]["id"]
+    try:
+        return _criar_cliente_compativel(
+            sb,
+            nome=nome or "Cliente sem nome",
+            cpf=cpf or None,
+            telefone=telefone or None,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail={"erro": f"Falha ao criar cliente do projeto: {exc}", "codigo": 500})
 
 
 def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
@@ -318,7 +399,7 @@ def criar_projeto(payload: ProjetoCreate):
         "tipo_processo": tipo_processo,
     }
     dados = {chave: valor for chave, valor in dados.items() if valor is not None}
-    res = sb.table("projetos").insert(dados).execute()
+    res = _inserir_projeto_compativel(sb, dados)
     if not res.data:
         raise HTTPException(status_code=500, detail={"erro": "Falha ao criar projeto", "codigo": 500})
 
@@ -355,7 +436,7 @@ def atualizar_projeto(projeto_id: str, payload: ProjetoUpdate):
     if not dados:
         raise HTTPException(status_code=400, detail={"erro": "Nenhum campo para atualizar", "codigo": 400})
 
-    res = sb.table("projetos").update(dados).eq("id", projeto_id).execute()
+    res = _atualizar_projeto_compativel(sb, projeto_id, dados)
     if not res.data:
         raise HTTPException(status_code=500, detail={"erro": "Falha ao atualizar projeto", "codigo": 500})
     return _enriquecer_projeto(sb, projeto_id)
