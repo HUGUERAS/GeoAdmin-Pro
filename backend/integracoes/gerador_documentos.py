@@ -38,23 +38,27 @@ class DadosDocumento:
     nome_imovel:    str
     municipio:      str
     estado:         str
-    comarca:        str
-    matricula:      str
-    area_ha:        float
-    area_m2:        float
+    endereco_imovel: str = ""
+    endereco_imovel_numero: str = ""
+    cep_imovel:     str = ""
+    comarca:        str = ""
+    matricula:      str = ""
+    area_ha:        float = 0.0
+    area_m2:        float = 0.0
 
     # Cliente
-    cliente_nome:   str
-    cliente_cpf:    str
-    cliente_rg:     str
-    estado_civil:   str
-    profissao:      str
-    telefone:       str
-    email:          str
-    endereco:       str
-    endereco_numero: str
-    cliente_municipio: str
-    cep:            str
+    cliente_nome:   str = ""
+    cliente_cpf:    str = ""
+    cliente_rg:     str = ""
+    estado_civil:   str = ""
+    profissao:      str = ""
+    telefone:       str = ""
+    email:          str = ""
+    endereco:       str = ""
+    endereco_numero: str = ""
+    cliente_municipio: str = ""
+    cliente_estado: str = ""
+    cep:            str = ""
     conjuge_nome:   str = ""
     conjuge_cpf:    str = ""
 
@@ -130,6 +134,9 @@ def _buscar_dados(supabase, projeto_id: str) -> DadosDocumento:
         nome_imovel=d.get("nome_imovel") or d.get("projeto_nome", ""),
         municipio=d.get("imovel_municipio", ""),
         estado=d.get("imovel_estado", "GO"),
+        endereco_imovel=d.get("endereco_imovel", ""),
+        endereco_imovel_numero=d.get("endereco_imovel_numero", ""),
+        cep_imovel=d.get("cep_imovel", ""),
         comarca=d.get("comarca", ""),
         matricula=d.get("matricula", ""),
         area_ha=area_ha,
@@ -144,6 +151,7 @@ def _buscar_dados(supabase, projeto_id: str) -> DadosDocumento:
         endereco=d.get("endereco", ""),
         endereco_numero=d.get("endereco_numero", ""),
         cliente_municipio=d.get("cliente_municipio", ""),
+        cliente_estado=d.get("cliente_estado") or d.get("imovel_estado", "GO"),
         cep=d.get("cep", ""),
         conjuge_nome=d.get("conjuge_nome") or "",
         conjuge_cpf=d.get("conjuge_cpf") or "",
@@ -158,11 +166,68 @@ def _buscar_dados(supabase, projeto_id: str) -> DadosDocumento:
 
 
 # ---------------------------------------------------------------------------
+# Helpers de apresentação
+# ---------------------------------------------------------------------------
+
+def _montar_linha_endereco(endereco: str, numero: str = "", municipio: str = "", estado: str = "", cep: str = "", fallback: str = "Não informado") -> str:
+    partes: list[str] = []
+    endereco = (endereco or "").strip()
+    numero = (numero or "").strip()
+    municipio = (municipio or "").strip()
+    estado = (estado or "").strip()
+    cep = (cep or "").strip()
+
+    if endereco and numero:
+        partes.append(f"{endereco}, N° {numero}")
+    elif endereco:
+        partes.append(endereco)
+    elif numero:
+        partes.append(f"N° {numero}")
+
+    local = " - ".join([parte for parte in [municipio, estado] if parte])
+    if local:
+        partes.append(local)
+    if cep:
+        partes.append(f"CEP {cep}")
+
+    return " | ".join(partes) if partes else fallback
+
+
+def _montar_localizacao_imovel(dados: DadosDocumento) -> str:
+    return _montar_linha_endereco(
+        dados.endereco_imovel,
+        dados.endereco_imovel_numero,
+        dados.municipio,
+        dados.estado,
+        dados.cep_imovel,
+        fallback="Localização do imóvel não informada",
+    )
+
+
+def _montar_endereco_residencial(dados: DadosDocumento) -> str:
+    return _montar_linha_endereco(
+        dados.endereco,
+        dados.endereco_numero,
+        dados.cliente_municipio,
+        dados.cliente_estado or dados.estado,
+        dados.cep,
+        fallback="Endereço residencial não informado",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Gerador de texto por template
 # ---------------------------------------------------------------------------
 
 def _preencher(template: str, dados: DadosDocumento, extra: dict = None) -> str:
-    """Substitui placeholders no template pelos dados reais."""
+    """Substitui placeholders no template pelos dados reais.
+
+    Ordena placeholders por comprimento (maior primeiro) para evitar substituições
+    parciais quando o valor de um placeholder contém texto que combine com outro
+    placeholder mais curto.
+    """
+    endereco_residencial = _montar_endereco_residencial(dados)
+    endereco_imovel = _montar_localizacao_imovel(dados)
     ctx = {
         "NOME_PROPRIETARIO":    dados.cliente_nome.upper(),
         "CPF_PROPRIETARIO":     dados.cliente_cpf,
@@ -172,12 +237,21 @@ def _preencher(template: str, dados: DadosDocumento, extra: dict = None) -> str:
         "ENDERECO":             dados.endereco,
         "NUMERO":               dados.endereco_numero,
         "MUNICIPIO_CLIENTE":    dados.cliente_municipio,
-        "ESTADO_CLIENTE":       dados.estado,
+        "ESTADO_CLIENTE":       dados.cliente_estado or dados.estado,
         "CEP":                  dados.cep,
+        "ENDERECO_RESIDENCIAL": dados.endereco,
+        "NUMERO_RESIDENCIAL":   dados.endereco_numero,
+        "CEP_RESIDENCIAL":      dados.cep,
+        "ENDERECO_RESIDENCIAL_COMPLETO": endereco_residencial,
         "TELEFONE":             dados.telefone,
         "EMAIL":                dados.email,
         "NOME_IMOVEL":          dados.nome_imovel.upper(),
         "MUNICIPIO_IMOVEL":     dados.municipio,
+        "ESTADO_IMOVEL":        dados.estado,
+        "ENDERECO_IMOVEL":      dados.endereco_imovel,
+        "NUMERO_IMOVEL":        dados.endereco_imovel_numero,
+        "CEP_IMOVEL":           dados.cep_imovel,
+        "ENDERECO_IMOVEL_COMPLETO": endereco_imovel,
         "AREA_HA":              f"{dados.area_ha:.4f}",
         "AREA_M2":              f"{dados.area_m2:.2f}",
         "MATRICULA":            dados.matricula,
@@ -194,8 +268,10 @@ def _preencher(template: str, dados: DadosDocumento, extra: dict = None) -> str:
         ctx.update(extra)
 
     resultado = template
-    for chave, valor in ctx.items():
-        resultado = resultado.replace(f"{{{{{chave}}}}}", str(valor))
+    # Ordena por comprimento (maior primeiro) para evitar substituições parciais
+    chaves_ordenadas = sorted(ctx.keys(), key=len, reverse=True)
+    for chave in chaves_ordenadas:
+        resultado = resultado.replace(f"{{{{{chave}}}}}", str(ctx[chave]))
     return resultado
 
 
@@ -213,14 +289,13 @@ Estado Civil: {{ESTADO_CIVIL}}
 Profissão: {{PROFISSAO}}
 E-mail: {{EMAIL}}
 
-Endereço: {{ENDERECO}}, N° {{NUMERO}}
-Município: {{MUNICIPIO_CLIENTE}} - {{ESTADO_CLIENTE}}
-CEP: {{CEP}}
+Endereço residencial: {{ENDERECO_RESIDENCIAL_COMPLETO}}
 Telefone: {{TELEFONE}}
 
 Nome do Imóvel: {{NOME_IMOVEL}}
+Localização do Imóvel: {{ENDERECO_IMOVEL_COMPLETO}}
 Área do Imóvel: {{AREA_HA}} ha
-Município do Imóvel: {{MUNICIPIO_IMOVEL}}
+Município do Imóvel: {{MUNICIPIO_IMOVEL}} - {{ESTADO_IMOVEL}}
 Matrícula: {{MATRICULA}}
 Comarca: {{COMARCA}}
 
@@ -236,7 +311,9 @@ TEMPLATE_ORDEM_SERVICO = """
 REQUERIMENTO DE ORDEM DE SERVIÇO
 
 Eu, {{NOME_PROPRIETARIO}}, portador do CPF: {{CPF_PROPRIETARIO}},
-ocupante do imóvel rural denominado {{NOME_IMOVEL}}.
+residente em {{ENDERECO_RESIDENCIAL_COMPLETO}},
+e ocupante do imóvel rural denominado {{NOME_IMOVEL}},
+localizado em {{ENDERECO_IMOVEL_COMPLETO}}.
 
 Venho por meio deste instrumento, solicitar a emissão da ordem de
 serviço para execução dos serviços topográficos de medição,
@@ -306,8 +383,10 @@ e CPF: {{CPF_PROPRIETARIO}}.
 
 Venho por meio deste instrumento particular, declarar que não possuo
 comprovante de endereço em meu nome, sendo certo e verdadeiro que
-resido e domicilio na Fazenda {{NOME_IMOVEL}}, localizada na zona rural
-do município {{MUNICIPIO_IMOVEL}}.
+resido e domicilio em {{ENDERECO_RESIDENCIAL_COMPLETO}}.
+
+Declaro ainda que o imóvel rural objeto deste processo,
+denominado {{NOME_IMOVEL}}, fica localizado em {{ENDERECO_IMOVEL_COMPLETO}}.
 
 Por ser verdade, firmo o presente, me responsabilizando pelas formas legais.
 
@@ -548,6 +627,9 @@ def _testar():
         nome_imovel="Fazenda Margarida",
         municipio="Pirenópolis",
         estado="GO",
+        endereco_imovel="Estrada da Vargem",
+        endereco_imovel_numero="Km 5",
+        cep_imovel="72980-000",
         comarca="Pirenópolis",
         matricula="1234",
         area_ha=45.6789,
@@ -559,10 +641,11 @@ def _testar():
         profissao="Agricultor",
         telefone="(61) 99999-0000",
         email="joao@email.com",
-        endereco="Fazenda Margarida s/n",
-        endereco_numero="s/n",
-        cliente_municipio="Pirenópolis",
-        cep="72980-000",
+        endereco="Rua Principal",
+        endereco_numero="45",
+        cliente_municipio="Anápolis",
+        cliente_estado="GO",
+        cep="75000-000",
         tecnico_nome="Hugo Desenrola",
         tecnico_cpf="987.654.321-00",
         tecnico_crt="CRT-001",

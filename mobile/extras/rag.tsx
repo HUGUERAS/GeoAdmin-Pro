@@ -8,8 +8,8 @@ import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native'
-import { Colors } from '../../../constants/Colors'
-import { apiPost } from '../../../lib/api'
+import { Colors } from '../constants/Colors'
+import { apiPost } from '../lib/api'
 
 interface ConsultaResponse {
   resposta: string
@@ -119,3 +119,5 @@ const s = StyleSheet.create({
   trechoBox:  { borderRadius: 8, padding: 10, marginTop: 4 },
   trechoTxt:  { fontSize: 12, fontStyle: 'italic', lineHeight: 18 },
 })
+
+

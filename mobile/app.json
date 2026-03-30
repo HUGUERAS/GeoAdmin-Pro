@@ -6,6 +6,7 @@
     "scheme": "geoadmin",
     "android": {
       "package": "com.hugeras.geoadminpro",
+      "versionCode": 2,
       "permissions": [
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",

@@ -51,8 +51,21 @@ async def importar_landstar(
     from main import get_supabase
     from integracoes.parser_landstar import parse_arquivo
 
-    # ── Ler e parsear o arquivo ────────────────────────────────────────────────
+    # ── Validar tamanho do arquivo (limite de 10MB) ─────────────────────────────
+    TAMANHO_MAXIMO_BYTES = 10 * 1024 * 1024  # 10MB
     conteudo_bytes = await arquivo.read()
+
+    if len(conteudo_bytes) > TAMANHO_MAXIMO_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail={
+                "erro": f"Arquivo excede o limite de 10MB (tamanho: {len(conteudo_bytes) / (1024 * 1024):.2f}MB)",
+                "codigo": 413,
+                "limite_bytes": TAMANHO_MAXIMO_BYTES,
+            }
+        )
+
+    # ── Ler e parsear o arquivo ────────────────────────────────────────────────
     try:
         conteudo = conteudo_bytes.decode("utf-8", errors="replace")
     except Exception as exc:

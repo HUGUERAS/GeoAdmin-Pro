@@ -7,10 +7,13 @@ GET  /pontos/{id}     → busca ponto por ID
 DELETE /pontos/{id}   → soft-delete
 """
 
+import logging
 from typing import List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+
+logger = logging.getLogger("geoadmin.pontos")
 
 router = APIRouter(prefix="/pontos", tags=["Pontos"])
 
@@ -95,8 +98,9 @@ def _normalizar_ponto(payload: PontoCreate) -> dict:
             dados["altitude_m"] = resultado["h_ortometrica"]
             dados["_geoide_aplicado"] = True
             dados["_ondulacao_N"]     = resultado["ondulacao_N"]
-        except Exception:
+        except Exception as exc:
             # Geoide não disponível ou ponto fora da cobertura — mantém altitude original
+            logger.warning("Falha ao aplicar geoide para ponto %s: %s", dados.get("nome"), exc)
             dados.setdefault("altitude_m", dados.get("cota"))
     else:
         dados.setdefault("altitude_m", dados.get("cota"))
@@ -133,10 +137,23 @@ def sincronizar_pontos(payload: SyncPayload):
     duplicados = 0
     itens: list[dict] = []
 
+    # Batch: coleta todos os local_ids e faz uma única query para buscar duplicados
+    local_ids_payload = [p.local_id for p in payload.pontos if p.local_id]
+    existentes_mapa = {}
+
+    if local_ids_payload:
+        res_existentes = (
+            sb.table("pontos")
+            .select("id, local_id")
+            .in_("local_id", local_ids_payload)
+            .execute()
+        )
+        existentes_mapa = {item["local_id"]: item for item in (res_existentes.data or [])}
+
     for p in payload.pontos:
         try:
-            # Dedup por local_id
-            existente = _buscar_existente_por_local_id(sb, p.local_id)
+            # Dedup por local_id usando mapa pre-carregado
+            existente = existentes_mapa.get(p.local_id)
             if existente:
                 duplicados += 1
                 itens.append(

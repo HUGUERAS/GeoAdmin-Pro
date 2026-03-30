@@ -5,31 +5,9 @@
  */
 
 import * as SQLite from 'expo-sqlite'
+import { SyncStatus, PontoLocal } from '../types/ponto'
 
-export type SyncStatus = 'pending' | 'synced' | 'error'
-
-export interface PontoLocal {
-  id: string            // UUID gerado no dispositivo
-  projeto_id: string
-  nome: string
-  lat: number
-  lon: number
-  norte: number
-  este: number
-  cota: number
-  codigo: string
-  status_gnss: string
-  satelites: number
-  pdop: number
-  sigma_e: number
-  sigma_n: number
-  sigma_u: number
-  origem: string
-  coletado_em: string   // ISO string
-  sync_status: SyncStatus
-  sync_tentativas: number
-  sync_em?: string      // ISO string quando synced
-}
+export { SyncStatus, PontoLocal }
 
 let _db: SQLite.SQLiteDatabase | null = null
 
@@ -65,6 +43,7 @@ export async function initDB(): Promise<void> {
     );
   `)
   await initProjetosCache()
+  await initAppConfig()
 }
 
 export async function salvarPonto(p: Omit<PontoLocal, 'sync_status' | 'sync_tentativas'>): Promise<string> {
@@ -122,6 +101,33 @@ export async function marcarErro(id: string): Promise<void> {
   )
 }
 
+/**
+ * Atualiza o status de múltiplos pontos em uma única transação SQLite.
+ * Mais eficiente do que chamar marcarSincronizado/marcarErro individualmente em loop.
+ */
+export async function marcarResultadosBatch(
+  sincronizados: string[],
+  erros: string[]
+): Promise<void> {
+  if (sincronizados.length === 0 && erros.length === 0) return
+  const db = getDb()
+  const agora = new Date().toISOString()
+  await db.withTransactionAsync(async () => {
+    for (const id of sincronizados) {
+      await db.runAsync(
+        `UPDATE pontos_locais SET sync_status = 'synced', sync_em = ? WHERE id = ?`,
+        [agora, id]
+      )
+    }
+    for (const id of erros) {
+      await db.runAsync(
+        `UPDATE pontos_locais SET sync_status = 'error', sync_tentativas = sync_tentativas + 1, sync_em = NULL WHERE id = ?`,
+        [id]
+      )
+    }
+  })
+}
+
 export async function contarPendentes(projeto_id?: string): Promise<number> {
   const db = getDb()
   const row = projeto_id
@@ -148,6 +154,35 @@ export async function ultimoNomePonto(projeto_id: string): Promise<string> {
   return row.nome.replace(/\d+$/, String(n).padStart(match[1].length, '0'))
 }
 
+
+// ── Preferências simples do app ─────────────────────────────────────────────
+
+export async function initAppConfig(): Promise<void> {
+  const db = getDb()
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS app_config (
+      chave         TEXT PRIMARY KEY,
+      valor         TEXT,
+      atualizado_em TEXT NOT NULL
+    );
+  `)
+}
+
+export async function salvarUltimoProjetoMapa(projeto_id: string): Promise<void> {
+  const db = getDb()
+  await db.runAsync(
+    `INSERT OR REPLACE INTO app_config (chave, valor, atualizado_em) VALUES ('ultimo_projeto_mapa', ?, ?)`,
+    [projeto_id, new Date().toISOString()]
+  )
+}
+
+export async function obterUltimoProjetoMapa(): Promise<string | null> {
+  const db = getDb()
+  const row = await db.getFirstAsync<{ valor: string }>(
+    `SELECT valor FROM app_config WHERE chave = 'ultimo_projeto_mapa'`
+  )
+  return row?.valor ?? null
+}
 // ── Cache de projetos ─────────────────────────────────────────────────────────
 
 export async function initProjetosCache(): Promise<void> {
@@ -177,7 +212,12 @@ export async function getCachedProjetos(): Promise<any[]> {
   const rows = await db.getAllAsync<{ dados: string }>(
     `SELECT dados FROM projetos_cache ORDER BY cached_em DESC`
   )
-  return rows.map(r => JSON.parse(r.dados))
+  try {
+    return rows.map(r => JSON.parse(r.dados))
+  } catch (erro) {
+    console.warn('Erro ao parsear projetos do cache:', erro)
+    return []
+  }
 }
 
 export async function cacheProjetoDetalhe(id: string, projeto: any): Promise<void> {
@@ -194,5 +234,39 @@ export async function getCachedProjetoDetalhe(id: string): Promise<any | null> {
     `SELECT dados FROM projetos_cache WHERE id = ?`,
     [id]
   )
-  return row ? JSON.parse(row.dados) : null
+  if (!row) return null
+  try {
+    return JSON.parse(row.dados)
+  } catch (erro) {
+    console.warn(`Erro ao parsear projeto ${id} do cache:`, erro)
+    return null
+  }
 }
+
+export async function contarErros(projeto_id?: string): Promise<number> {
+  const db = getDb()
+  const result = projeto_id
+    ? await db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM pontos_locais WHERE sync_status = 'error' AND projeto_id = ?`,
+        [projeto_id]
+      )
+    : await db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM pontos_locais WHERE sync_status = 'error'`
+      )
+  return result?.count ?? 0
+}
+
+export async function resetarErros(projeto_id?: string): Promise<void> {
+  const db = getDb()
+  if (projeto_id) {
+    await db.runAsync(
+      `UPDATE pontos_locais SET sync_status = 'pending', sync_tentativas = 0 WHERE sync_status = 'error' AND projeto_id = ?`,
+      [projeto_id]
+    )
+  } else {
+    await db.runAsync(
+      `UPDATE pontos_locais SET sync_status = 'pending', sync_tentativas = 0 WHERE sync_status = 'error'`
+    )
+  }
+}
+

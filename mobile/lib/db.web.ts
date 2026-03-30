@@ -4,30 +4,9 @@
  * Metro resolve este arquivo automaticamente na plataforma web.
  */
 
-export type SyncStatus = 'pending' | 'synced' | 'error'
+import { SyncStatus, PontoLocal } from '../types/ponto'
 
-export interface PontoLocal {
-  id: string
-  projeto_id: string
-  nome: string
-  lat: number
-  lon: number
-  norte: number
-  este: number
-  cota: number
-  codigo: string
-  status_gnss: string
-  satelites: number
-  pdop: number
-  sigma_e: number
-  sigma_n: number
-  sigma_u: number
-  origem: string
-  coletado_em: string
-  sync_status: SyncStatus
-  sync_tentativas: number
-  sync_em?: string
-}
+export { SyncStatus, PontoLocal }
 
 export async function initDB(): Promise<void> {}
 
@@ -41,6 +20,19 @@ export async function marcarSincronizado(_id: string): Promise<void> {}
 export async function marcarErro(_id: string): Promise<void> {}
 export async function contarPendentes(_projeto_id?: string): Promise<number> { return 0 }
 export async function ultimoNomePonto(_projeto_id: string): Promise<string> { return 'PT0001' }
+export async function initAppConfig(): Promise<void> {}
+
+export async function marcarResultadosBatch(_sincronizados: string[], _erros: string[]): Promise<void> {}
+export async function contarErros(_projeto_id?: string): Promise<number> { return 0 }
+export async function resetarErros(_projeto_id?: string): Promise<void> {}
+
+export async function salvarUltimoProjetoMapa(projeto_id: string): Promise<void> {
+  try { localStorage.setItem('ultimo_projeto_mapa', projeto_id) } catch {}
+}
+
+export async function obterUltimoProjetoMapa(): Promise<string | null> {
+  try { return localStorage.getItem('ultimo_projeto_mapa') } catch { return null }
+}
 
 // ── Cache de projetos via localStorage ───────────────────────────────────────
 
@@ -67,3 +59,4 @@ export async function getCachedProjetoDetalhe(id: string): Promise<any | null> {
     return raw ? JSON.parse(raw) : null
   } catch { return null }
 }
+

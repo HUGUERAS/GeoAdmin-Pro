@@ -9,13 +9,23 @@ import { Colors } from '../constants/Colors'
 
 interface Props {
   pendentes: number
+  erros?: number
   onPress: () => void
   sincronizando: boolean
 }
 
-export function SyncBadge({ pendentes, onPress, sincronizando }: Props) {
+export function SyncBadge({ pendentes, erros = 0, onPress, sincronizando }: Props) {
   const C = Colors.dark
-  const cor = pendentes > 0 ? C.primary : C.muted
+  const temErro = erros > 0
+  const cor = temErro ? C.danger : pendentes > 0 ? C.primary : C.muted
+  const total = pendentes + erros
+  const label = sincronizando
+    ? 'Sincronizando'
+    : temErro
+      ? `${erros} ponto(s) com erro — toque para retentar`
+      : pendentes > 0
+        ? `Sincronizar ${pendentes} ponto(s) pendente(s)`
+        : 'Sincronizado'
 
   return (
     <TouchableOpacity
@@ -23,15 +33,15 @@ export function SyncBadge({ pendentes, onPress, sincronizando }: Props) {
       style={s.container}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={sincronizando ? 'Sincronizando' : pendentes > 0 ? `Sincronizar ${pendentes} ponto(s) pendente(s)` : 'Sincronizado'}
+      accessibilityLabel={label}
     >
       {sincronizando
         ? <ActivityIndicator size="small" color={C.primary} />
-        : <Feather name="cloud" size={22} color={cor} />
+        : <Feather name={temErro ? 'cloud-off' : 'cloud'} size={22} color={cor} />
       }
-      {pendentes > 0 && !sincronizando && (
-        <View style={[s.badge, { backgroundColor: C.primary }]}>
-          <Text style={s.badgeTxt}>{pendentes > 99 ? '99+' : String(pendentes)}</Text>
+      {total > 0 && !sincronizando && (
+        <View style={[s.badge, { backgroundColor: cor }]}>
+          <Text style={s.badgeTxt}>{total > 99 ? '99+' : String(total)}</Text>
         </View>
       )}
     </TouchableOpacity>

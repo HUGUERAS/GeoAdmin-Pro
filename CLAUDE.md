@@ -70,7 +70,6 @@ Consequência direta: qualquer nova ferramenta deve ser projetada pensando em **
 **Ferramentas implementadas** (`calculos/`):
 | Ferramenta | Arquivo | Tipo | Endpoint |
 |---|---|---|---|
-| Inverso | `inverso.tsx` | backend | `POST /geo/inverso` |
 | Área | `area.tsx` | backend | `POST /geo/area` |
 | Conversão | `conversao.tsx` | backend | `POST /geo/converter/*` |
 | Deflexão | `deflexao.tsx` | frontend | — |
@@ -80,8 +79,14 @@ Consequência direta: qualquer nova ferramenta deve ser projetada pensando em **
 | Média Pts | `media.tsx` | frontend | — |
 | Irradiação | `irradiacao.tsx` | frontend | — |
 | Subdivisão | `subdivisao.tsx` | backend | `POST /geo/subdivisao` |
-| Normas INCRA | `rag.tsx` | backend | `POST /rag/consultar` |
-| GNSS BT | `bluetooth.tsx` | nativo | — (Android only) |
+| Pontos | `pontos.tsx` | frontend | — |
+| Linha | `linha.tsx` | frontend | — |
+| Polilinha | `polilinha.tsx` | frontend | — |
+| Nomenclatura | `nomenclatura.tsx` | frontend | — |
+
+**Fora da grade de cálculos (não linkados do `calculos/index.tsx`):**
+- `mobile/extras/rag.tsx` — Normas INCRA/RAG (protótipo, `POST /rag/consultar`)
+- `mobile/app/bluetooth.tsx` — GNSS via Bluetooth (Android only, nativo)
 
 **Componentes reutilizáveis:** `ProjetoCard`, `StatusBadge`, `FerramentaBtn`
 
@@ -102,11 +107,11 @@ npx eas-cli@latest build --platform android --profile preview
 | Módulo | Status |
 |---|---|
 | Projetos (lista + detalhe) | ✅ Implementado |
-| Cálculo Inverso | ✅ Implementado |
 | Exportação Métrica TOPO | ✅ Implementado |
 | Geração de Documentos GPRF | ✅ Implementado |
 | Mapa / Vista CAD + editor de perímetro | ✅ Implementado |
 | Ferramentas geodésicas (Área, Conversão, Deflexão, Interseção, Dist.P-L, Rotação, Média, Irradiação, Subdivisão) | ✅ Implementado |
+| Pontos e Linhas (Pontos, Linha, Polilinha, Nomenclatura) | ✅ Implementado |
 | Versão web (browser) | ✅ Implementado |
 | Gestão de Clientes | 🔜 Em breve |
 | Integração Ferramentas → CAD (inserir ponto calculado direto no perímetro) | 🔜 Próxima fase |

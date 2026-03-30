@@ -25,32 +25,38 @@ export default function TabLayout() {
         tabBarIcon: ({ color }) => <Feather name="folder" size={22} color={color} />,
         headerShown: false,
       }} />
-      <Tabs.Screen name="projeto/[id]" options={{ href: null }} />
+      <Tabs.Screen name="projeto/novo" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen name="projeto/[id]" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="calculos/index" options={{
         title: 'Cálculos',
         tabBarIcon: ({ color }) => <Feather name="cpu" size={22} color={color} />,
         headerShown: false,
       }} />
-      <Tabs.Screen name="calculos/inverso"    options={{ href: null }} />
-      <Tabs.Screen name="calculos/area"       options={{ href: null }} />
-      <Tabs.Screen name="calculos/conversao"  options={{ href: null }} />
-      <Tabs.Screen name="calculos/deflexao"   options={{ href: null }} />
-      <Tabs.Screen name="calculos/intersecao" options={{ href: null }} />
-      <Tabs.Screen name="calculos/distancia"  options={{ href: null }} />
-      <Tabs.Screen name="calculos/rotacao"    options={{ href: null }} />
-      <Tabs.Screen name="calculos/media"      options={{ href: null }} />
-      <Tabs.Screen name="calculos/irradiacao" options={{ href: null }} />
-      <Tabs.Screen name="calculos/subdivisao" options={{ href: null }} />
+      <Tabs.Screen name="calculos/area"        options={{ href: null }} />
+      <Tabs.Screen name="calculos/conversao"   options={{ href: null }} />
+      <Tabs.Screen name="calculos/deflexao"    options={{ href: null }} />
+      <Tabs.Screen name="calculos/intersecao"  options={{ href: null }} />
+      <Tabs.Screen name="calculos/distancia"   options={{ href: null }} />
+      <Tabs.Screen name="calculos/rotacao"     options={{ href: null }} />
+      <Tabs.Screen name="calculos/media"       options={{ href: null }} />
+      <Tabs.Screen name="calculos/irradiacao"  options={{ href: null }} />
+      <Tabs.Screen name="calculos/subdivisao"  options={{ href: null }} />
+      <Tabs.Screen name="calculos/pontos"      options={{ href: null }} />
+      <Tabs.Screen name="calculos/linha"       options={{ href: null }} />
+      <Tabs.Screen name="calculos/polilinha"   options={{ href: null }} />
+      <Tabs.Screen name="calculos/nomenclatura" options={{ href: null }} />
       <Tabs.Screen name="mapa/index" options={{
         title: 'Mapa',
         tabBarIcon: ({ color }) => <Feather name="map" size={22} color={color} />,
         headerShown: false,
       }} />
+      <Tabs.Screen name="mapa/[id]" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="clientes/index" options={{
         title: 'Clientes',
         tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
         headerShown: false,
       }} />
+      <Tabs.Screen name="clientes/[id]" options={{ href: null, headerShown: false }} />
     </Tabs>
   )
 }

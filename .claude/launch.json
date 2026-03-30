@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Backend FastAPI",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": ["main:app", "--reload", "--port", "8000"],
+      "port": 8000,
+      "cwd": "backend"
+    },
+    {
+      "name": "Mobile Expo Web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "web"],
+      "port": 19006,
+      "cwd": "mobile"
+    }
+  ]
+}
