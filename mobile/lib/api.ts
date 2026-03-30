@@ -36,6 +36,10 @@ export function getApiBaseUrl(): string {
     return explicitUrl.replace(/\/+$/, '');
   }
 
+  if (Platform.OS === 'web') {
+    return 'http://127.0.0.1:8000';
+  }
+
   const host = extractHostFromExpoConfig();
   if (host) {
     return `http://${host}:8000`;
@@ -210,3 +214,4 @@ export async function apiDelete<T>(path: string): Promise<T> {
     throw tratarErroFetch(erro);
   }
 }
+

@@ -26,8 +26,13 @@ from middleware.auth import verificar_token
 load_dotenv()
 _origens_padrao = [
     "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://localhost:8082",
+    "http://127.0.0.1:8082",
     "http://localhost:19006",
+    "http://127.0.0.1:19006",
     "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 _origens_permitidas = os.getenv("ALLOWED_ORIGINS", ",".join(_origens_padrao)).split(",")
 
@@ -122,3 +127,4 @@ def get_supabase() -> Client:
 
   _supabase_client = create_client(url, key)
   return _supabase_client
+

@@ -367,7 +367,7 @@
 
     <section class="progress" id="progress"></section>
 
-    <form id="formulario">
+    <form id="formulario" novalidate>
       <div class="step-card" data-step="0">
         <div class="step-header">
           <h2 class="step-title">1. Seus dados pessoais</h2>
@@ -379,23 +379,23 @@
         <div class="grid cols-2">
           <div class="field">
             <label class="required" for="nome">Nome completo</label>
-            <input id="nome" name="nome" required placeholder="Nome completo como no RG" />
+            <input id="nome" name="nome" required autocomplete="name" placeholder="Nome completo como no RG" />
           </div>
           <div class="field">
             <label class="required" for="telefone">Telefone</label>
-            <input id="telefone" name="telefone" required placeholder="(00) 00000-0000" />
+            <input id="telefone" name="telefone" required autocomplete="tel" inputmode="tel" placeholder="(00) 00000-0000" />
           </div>
           <div class="field">
             <label class="required" for="cpf">CPF</label>
-            <input id="cpf" name="cpf" required placeholder="000.000.000-00" />
+            <input id="cpf" name="cpf" required autocomplete="off" inputmode="numeric" placeholder="000.000.000-00" />
           </div>
           <div class="field">
             <label class="required" for="rg">RG</label>
-            <input id="rg" name="rg" required placeholder="Número do RG" />
+            <input id="rg" name="rg" required autocomplete="off" placeholder="Número do RG" />
           </div>
           <div class="field">
             <label class="required" for="estado_civil">Estado civil</label>
-            <select id="estado_civil" name="estado_civil" required>
+            <select id="estado_civil" name="estado_civil" required autocomplete="off">
               <option value="">Selecione</option>
               <option value="solteiro">Solteiro(a)</option>
               <option value="casado">Casado(a)</option>
@@ -406,22 +406,22 @@
           </div>
           <div class="field">
             <label for="profissao">Profissão</label>
-            <input id="profissao" name="profissao" placeholder="Ex.: Agricultor" />
+            <input id="profissao" name="profissao" autocomplete="organization-title" placeholder="Ex.: Agricultor" />
           </div>
           <div class="field">
             <label for="email">E-mail</label>
-            <input id="email" name="email" type="email" placeholder="seu@email.com" />
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="seu@email.com" />
           </div>
         </div>
 
         <div class="grid cols-2" id="conjuge-grid" style="display:none;margin-top:14px;">
           <div class="field">
             <label for="conjuge_nome">Nome do cônjuge</label>
-            <input id="conjuge_nome" name="conjuge_nome" />
+            <input id="conjuge_nome" name="conjuge_nome" autocomplete="off" />
           </div>
           <div class="field">
             <label for="conjuge_cpf">CPF do cônjuge</label>
-            <input id="conjuge_cpf" name="conjuge_cpf" placeholder="000.000.000-00" />
+            <input id="conjuge_cpf" name="conjuge_cpf" autocomplete="off" inputmode="numeric" placeholder="000.000.000-00" />
           </div>
         </div>
 
@@ -434,66 +434,94 @@
       <div class="step-card" data-step="1" hidden>
         <div class="step-header">
           <h2 class="step-title">2. Dados do imóvel</h2>
-          <p class="step-subtitle">Conte o essencial sobre a propriedade. Se algum número você não souber agora, pode deixar em branco.</p>
+          <p class="step-subtitle">Separe o endereço residencial do proprietário da localização do imóvel. Isso ajuda muito quando a pessoa mora na cidade e a área fica na fazenda ou chácara.</p>
         </div>
 
         <div class="grid cols-2">
           <div class="field">
             <label class="required" for="nome_imovel">Nome da área ou imóvel</label>
-            <input id="nome_imovel" name="nome_imovel" required placeholder="Ex.: Fazenda Boa Esperança" />
+            <input id="nome_imovel" name="nome_imovel" required autocomplete="organization" placeholder="Ex.: Fazenda Boa Esperança" />
           </div>
           <div class="field">
             <label for="area_nome">Nome da área dentro do projeto</label>
-            <input id="area_nome" name="area_nome" placeholder="Ex.: Área do lote 01" />
+            <input id="area_nome" name="area_nome" autocomplete="off" placeholder="Ex.: Área do lote 01" />
           </div>
           <div class="field">
             <label class="required" for="municipio_imovel">Município do imóvel</label>
-            <input id="municipio_imovel" name="municipio_imovel" required />
+            <input id="municipio_imovel" name="municipio_imovel" required list="lista-municipios" autocomplete="address-level2" placeholder="Digite ou escolha o município" />
           </div>
           <div class="field">
             <label for="comarca">Comarca</label>
-            <input id="comarca" name="comarca" />
+            <input id="comarca" name="comarca" autocomplete="off" />
           </div>
           <div class="field">
             <label for="matricula">Matrícula ou transcrição</label>
-            <input id="matricula" name="matricula" />
+            <input id="matricula" name="matricula" autocomplete="off" />
           </div>
           <div class="field">
             <label for="tempo_posse_anos">Tempo de posse (anos)</label>
-            <input id="tempo_posse_anos" name="tempo_posse_anos" type="number" min="0" max="120" />
+            <input id="tempo_posse_anos" name="tempo_posse_anos" type="number" min="0" max="120" autocomplete="off" inputmode="numeric" />
           </div>
           <div class="field">
             <label for="ccir">CCIR</label>
-            <input id="ccir" name="ccir" placeholder="Número do CCIR" />
+            <input id="ccir" name="ccir" autocomplete="off" placeholder="Número do CCIR" />
           </div>
           <div class="field">
             <label for="car">CAR</label>
-            <input id="car" name="car" placeholder="Código do CAR" />
+            <input id="car" name="car" autocomplete="off" placeholder="Código do CAR" />
           </div>
         </div>
 
+        <div class="note" style="margin-top:14px;">Endereço residencial do proprietário</div>
         <div class="grid cols-3" style="margin-top:14px;">
           <div class="field">
-            <label class="required" for="endereco">Endereço</label>
-            <input id="endereco" name="endereco" required placeholder="Rua, fazenda ou comunidade" />
+            <label class="required" for="endereco">Endereço residencial</label>
+            <input id="endereco" name="endereco" required autocomplete="street-address" placeholder="Rua, avenida, vila ou comunidade" />
           </div>
           <div class="field">
             <label for="endereco_numero">Número</label>
-            <input id="endereco_numero" name="endereco_numero" placeholder="s/n" />
+            <input id="endereco_numero" name="endereco_numero" autocomplete="address-line2" placeholder="s/n" />
           </div>
           <div class="field">
-            <label class="required" for="municipio">Município do endereço</label>
-            <input id="municipio" name="municipio" required />
+            <label class="required" for="municipio">Município do endereço residencial</label>
+            <input id="municipio" name="municipio" required list="lista-municipios" autocomplete="address-level2" placeholder="Digite ou escolha o município" />
           </div>
           <div class="field">
-            <label for="cep">CEP</label>
-            <input id="cep" name="cep" placeholder="00000-000" />
+            <label for="cep">CEP residencial</label>
+            <input id="cep" name="cep" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000" />
           </div>
         </div>
 
+        <div class="field" style="margin-top:10px; gap:10px;">
+          <label for="usar_municipio_imovel" style="text-transform:none; letter-spacing:0; font-size:14px; color:var(--text); display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input id="usar_municipio_imovel" name="usar_municipio_imovel" type="checkbox" autocomplete="off" style="width:auto; margin:0; accent-color: var(--accent);" />
+            Meu endereço residencial fica no mesmo município do imóvel
+          </label>
+          <div class="hint">Marque essa opção só se o município residencial for o mesmo da área.</div>
+        </div>
+
+        <div class="note" style="margin-top:18px;">Localização ou endereço do imóvel</div>
+        <div class="grid cols-3" style="margin-top:14px;">
+          <div class="field">
+            <label for="endereco_imovel">Endereço, comunidade ou localidade do imóvel</label>
+            <input id="endereco_imovel" name="endereco_imovel" autocomplete="shipping street-address" placeholder="Ex.: Fazenda Boa Esperança, Estrada do Córrego Fundo" />
+          </div>
+          <div class="field">
+            <label for="endereco_imovel_numero">Número, lote ou referência</label>
+            <input id="endereco_imovel_numero" name="endereco_imovel_numero" autocomplete="shipping address-line2" placeholder="s/n, Km 12, Gleba 02" />
+          </div>
+          <div class="field">
+            <label for="cep_imovel">CEP do imóvel</label>
+            <input id="cep_imovel" name="cep_imovel" autocomplete="shipping postal-code" inputmode="numeric" placeholder="00000-000" />
+          </div>
+        </div>
+        <div class="hint">Se a fazenda ou chácara não tiver endereço formal, descreva comunidade, estrada, gleba, assentamento ou um ponto de referência.</div>
+
+        <datalist id="lista-municipios"></datalist>
+
         <div class="field" style="margin-top:14px;">
           <label for="observacoes">Observações</label>
-          <textarea id="observacoes" name="observacoes" placeholder="Conte algo que ajude a localizar a área, descrever acessos, vizinhos conhecidos ou alguma particularidade importante."></textarea>
+          <textarea id="observacoes" name="observacoes" autocomplete="off" placeholder="Conte algo que ajude a localizar a área, descrever acessos, vizinhos conhecidos ou alguma particularidade importante."></textarea>
         </div>
 
         <div class="nav-row">
@@ -522,7 +550,7 @@
         <div class="grid" style="margin-top:16px;">
           <div class="field">
             <label for="croqui_coords">Coordenadas aproximadas (opcional)</label>
-            <textarea id="croqui_coords" name="croqui_coords" placeholder="Cole aqui linhas como lat,lon ou lon,lat. Exemplo:\n-14.19108,-49.40610\n-14.19150,-49.40560\n-14.19210,-49.40590"></textarea>
+            <textarea id="croqui_coords" name="croqui_coords" autocomplete="off" placeholder="Cole aqui linhas como lat,lon ou lon,lat. Exemplo:\n-14.19108,-49.40610\n-14.19150,-49.40560\n-14.19210,-49.40590"></textarea>
             <div class="hint">Se você não tiver coordenadas, pode pular esse campo e só desenhar o croqui ou enviar um arquivo.</div>
           </div>
         </div>
@@ -530,17 +558,17 @@
         <div class="upload-grid" style="margin-top:16px;">
           <div class="upload-box">
             <label for="arquivo_geometria">Arquivo geoespacial opcional</label>
-            <input id="arquivo_geometria" name="arquivo_geometria" type="file" accept=".geojson,.json,.kml,.csv,.txt,.zip" />
+            <input id="arquivo_geometria" name="arquivo_geometria" type="file" autocomplete="off" accept=".geojson,.json,.kml,.csv,.txt,.zip" />
             <div class="hint">Aceita GeoJSON, KML, CSV, TXT ou ZIP com shapefile.</div>
           </div>
           <div class="upload-box">
             <label for="anexos">Croqui, foto ou PDF</label>
-            <input id="anexos" name="anexos" type="file" accept="image/*,.pdf" multiple />
+            <input id="anexos" name="anexos" type="file" autocomplete="off" accept="image/*,.pdf" multiple />
             <div class="hint">Envie fotos do croqui, mapa escaneado ou qualquer documento que ajude na localização.</div>
           </div>
         </div>
 
-        <input type="hidden" id="croqui_svg" name="croqui_svg" />
+        <input type="hidden" id="croqui_svg" name="croqui_svg" autocomplete="off" />
 
         <div class="nav-row">
           <button type="button" class="secondary-btn" data-prev>Voltar</button>
@@ -556,7 +584,7 @@
 
         <div class="confrontantes" id="confrontantes"></div>
         <button type="button" class="ghost-btn" id="btn-add-conf" style="margin-top:14px;">Adicionar confrontante</button>
-        <input type="hidden" id="confrontantes_json" name="confrontantes_json" />
+        <input type="hidden" id="confrontantes_json" name="confrontantes_json" autocomplete="off" />
 
         <div class="status-banner" id="status-banner"></div>
         <div class="error-banner" id="error-banner"></div>
@@ -601,6 +629,132 @@ const steps = [...document.querySelectorAll('.step-card')]
 const sketchSvg = document.getElementById('sketch-svg')
 const sketchStatus = document.getElementById('sketch-status')
 const croquiSvgInput = document.getElementById('croqui_svg')
+const listaMunicipios = document.getElementById('lista-municipios')
+const municipioImovelInput = document.getElementById('municipio_imovel')
+const municipioEnderecoInput = document.getElementById('municipio')
+const usarMunicipioImovelInput = document.getElementById('usar_municipio_imovel')
+const enderecoInput = document.getElementById('endereco')
+const enderecoNumeroInput = document.getElementById('endereco_numero')
+const cepInput = document.getElementById('cep')
+const enderecoImovelInput = document.getElementById('endereco_imovel')
+const enderecoImovelNumeroInput = document.getElementById('endereco_imovel_numero')
+const cepImovelInput = document.getElementById('cep_imovel')
+const municipiosSugeridos = [
+  'Abadiânia','Acreúna','Águas Lindas de Goiás','Alexânia','Alto Horizonte','Alto Paraíso de Goiás','Anápolis','Aparecida de Goiânia','Aragarças','Bela Vista de Goiás',
+  'Bom Jardim de Goiás','Buriti Alegre','Cabeceiras','Caiapônia','Caldas Novas','Campinaçu','Campinorte','Campos Belos','Catalão','Cavalcante',
+  'Ceres','Cidade Ocidental','Cocalzinho de Goiás','Corumbá de Goiás','Cristalina','Crixás','Doverlândia','Formosa','Goiânia','Goianésia',
+  'Goianira','Goiás','Goiatuba','Gurupi','Hidrolândia','Iaciara','Indiara','Inhumas','Ipameri','Iporá',
+  'Itaberaí','Itaberaí','Itaguaru','Itapaci','Itapuranga','Itarumã','Jaraguá','Jataí','Jussara','Luziânia',
+  'Mambaí','Mara Rosa','Minaçu','Mineiros','Montes Claros de Goiás','Morrinhos','Mozarlândia','Nerópolis','Niquelândia','Novo Gama',
+  'Padre Bernardo','Palmeiras de Goiás','Palmeirópolis','Paranaiguara','Piranhas','Pirenópolis','Planaltina','Porangatu','Posse','Quirinópolis',
+  'Rio Verde','Sanclerlândia','Santa Helena de Goiás','Santa Rita do Araguaia','São João d\'Aliança','São Luís de Montes Belos','São Miguel do Araguaia','Senador Canedo','Silvânia','Simolândia',
+  'Sítio d\'Abadia','Trindade','Uruaçu','Uruana','Valparaíso de Goiás','Vicentinópolis','Vila Boa','Vila Propício','Brasília'
+]
+
+function normalizarMunicipio(valor) {
+  return (valor || '').trim()
+}
+
+function montarListaMunicipios(contexto = {}) {
+  const valoresContexto = [
+    contexto?.projeto?.municipio,
+    contexto?.projeto?.imovel_municipio,
+    contexto?.cliente?.municipio,
+    contexto?.cliente?.cliente_municipio,
+    contexto?.projeto?.cliente_municipio,
+    municipioImovelInput?.value,
+    municipioEnderecoInput?.value,
+  ]
+
+  const municipios = [...new Set([...municipiosSugeridos, ...valoresContexto]
+    .map(normalizarMunicipio)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, 'pt-BR')))]
+
+  listaMunicipios.innerHTML = municipios
+    .map((municipio) => `<option value="${municipio}"></option>`)
+    .join('')
+}
+
+function sincronizarMunicipioEndereco() {
+  if (!usarMunicipioImovelInput?.checked) return
+  const municipio = normalizarMunicipio(municipioImovelInput?.value)
+  if (municipio) {
+    municipioEnderecoInput.value = municipio
+  }
+}
+
+function mascaraCEP(input) {
+  let valor = (input.value || '').replace(/\D/g, '').slice(0, 8)
+  valor = valor.replace(/(\d{5})(\d)/, '$1-$2')
+  input.value = valor
+}
+
+async function consultarCep(cepNumerico) {
+  const resposta = await fetch(`https://viacep.com.br/ws/${cepNumerico}/json/`)
+  if (!resposta.ok) {
+    throw new Error('Falha ao consultar o CEP.')
+  }
+
+  const dados = await resposta.json()
+  if (dados.erro) {
+    throw new Error('CEP não encontrado. Confira os números digitados.')
+  }
+  return dados
+}
+
+async function buscarCepResidencial() {
+  const cepNumerico = (cepInput?.value || '').replace(/\D/g, '')
+  if (cepNumerico.length !== 8) {
+    return
+  }
+
+  try {
+    mostrarStatus('Consultando CEP residencial...')
+    const dados = await consultarCep(cepNumerico)
+
+    if (!enderecoInput.value && dados.logradouro) {
+      enderecoInput.value = dados.logradouro
+    }
+    if (!enderecoNumeroInput.value && dados.complemento) {
+      enderecoNumeroInput.value = dados.complemento
+    }
+    if (!municipioEnderecoInput.value || !usarMunicipioImovelInput?.checked) {
+      municipioEnderecoInput.value = normalizarMunicipio(dados.localidade)
+    }
+    montarListaMunicipios({ cliente: { municipio: dados.localidade } })
+    statusBanner.style.display = 'none'
+  } catch (erro) {
+    mostrarErro(erro.message || 'Não foi possível consultar o CEP residencial agora.')
+  }
+}
+
+async function buscarCepImovel() {
+  const cepNumerico = (cepImovelInput?.value || '').replace(/\D/g, '')
+  if (cepNumerico.length !== 8) {
+    return
+  }
+
+  try {
+    mostrarStatus('Consultando CEP do imóvel...')
+    const dados = await consultarCep(cepNumerico)
+
+    if (!enderecoImovelInput.value && dados.logradouro) {
+      enderecoImovelInput.value = dados.logradouro
+    }
+    if (!enderecoImovelNumeroInput.value && dados.complemento) {
+      enderecoImovelNumeroInput.value = dados.complemento
+    }
+    if (!municipioImovelInput.value) {
+      municipioImovelInput.value = normalizarMunicipio(dados.localidade)
+    }
+    montarListaMunicipios({ projeto: { municipio: dados.localidade, imovel_municipio: dados.localidade } })
+    sincronizarMunicipioEndereco()
+    statusBanner.style.display = 'none'
+  } catch (erro) {
+    mostrarErro(erro.message || 'Não foi possível consultar o CEP do imóvel agora.')
+  }
+}
 
 function renderProgress() {
   progress.innerHTML = passos.map((passo, index) => {
@@ -625,16 +779,47 @@ function mostrarPasso(index) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+function validarPasso(index) {
+  const passo = steps[index]
+  if (!passo) return true
+
+  const camposObrigatorios = [...passo.querySelectorAll('[required]')]
+  for (const campo of camposObrigatorios) {
+    if (typeof campo.checkValidity === 'function' && !campo.checkValidity()) {
+      mostrarErro('Confira os campos obrigatórios antes de continuar.')
+      campo.reportValidity()
+      if (typeof campo.focus === 'function') campo.focus()
+      return false
+    }
+  }
+
+  return true
+}
+
+function validarFormularioCompleto() {
+  for (let index = 0; index < steps.length; index += 1) {
+    const passo = steps[index]
+    if (!passo) continue
+
+    const camposObrigatorios = [...passo.querySelectorAll('[required]')]
+    const campoInvalido = camposObrigatorios.find(campo => typeof campo.checkValidity === 'function' && !campo.checkValidity())
+    if (campoInvalido) {
+      mostrarPasso(index)
+      mostrarErro('Ainda falta preencher alguns dados obrigatórios.')
+      campoInvalido.reportValidity()
+      if (typeof campoInvalido.focus === 'function') campoInvalido.focus()
+      return false
+    }
+  }
+
+  return true
+}
+
 function nextStep() {
-  if (estado.passoAtual === 0 && !document.getElementById('nome').value.trim()) {
-    mostrarErro('Preencha ao menos seu nome antes de continuar.')
-    return
-  }
-  if (estado.passoAtual === 1 && !document.getElementById('nome_imovel').value.trim()) {
-    mostrarErro('Informe o nome da área ou do imóvel antes de seguir.')
-    return
-  }
   limparMensagens()
+  if (!validarPasso(estado.passoAtual)) {
+    return
+  }
   mostrarPasso(estado.passoAtual + 1)
 }
 
@@ -673,30 +858,30 @@ function renderConfrontantes() {
       <button type="button" class="remove-conf" data-remove-conf="${index}">×</button>
       <div class="grid cols-2">
         <div class="field">
-          <label>Lado</label>
-          <select data-conf="lado" data-index="${index}">
+          <label for="confrontante_lado_${index}">Lado</label>
+          <select id="confrontante_lado_${index}" name="confrontante_lado_${index}" data-conf="lado" data-index="${index}" autocomplete="off">
             ${['Norte','Sul','Leste','Oeste','Outros'].map(l => `<option value="${l}" ${conf.lado === l ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
         </div>
         <div class="field">
-          <label>Nome</label>
-          <input data-conf="nome" data-index="${index}" value="${conf.nome || ''}" placeholder="Nome do confrontante" />
+          <label for="confrontante_nome_${index}">Nome</label>
+          <input id="confrontante_nome_${index}" name="confrontante_nome_${index}" data-conf="nome" data-index="${index}" autocomplete="name" value="${conf.nome || ''}" placeholder="Nome do confrontante" />
         </div>
         <div class="field">
-          <label>CPF</label>
-          <input data-conf="cpf" data-index="${index}" value="${conf.cpf || ''}" placeholder="000.000.000-00" />
+          <label for="confrontante_cpf_${index}">CPF</label>
+          <input id="confrontante_cpf_${index}" name="confrontante_cpf_${index}" data-conf="cpf" data-index="${index}" autocomplete="off" inputmode="numeric" value="${conf.cpf || ''}" placeholder="000.000.000-00" />
         </div>
         <div class="field">
-          <label>Imóvel confrontante</label>
-          <input data-conf="nome_imovel" data-index="${index}" value="${conf.nome_imovel || ''}" />
+          <label for="confrontante_imovel_${index}">Imóvel confrontante</label>
+          <input id="confrontante_imovel_${index}" name="confrontante_imovel_${index}" data-conf="nome_imovel" data-index="${index}" autocomplete="organization" value="${conf.nome_imovel || ''}" />
         </div>
         <div class="field">
-          <label>Matrícula</label>
-          <input data-conf="matricula" data-index="${index}" value="${conf.matricula || ''}" />
+          <label for="confrontante_matricula_${index}">Matrícula</label>
+          <input id="confrontante_matricula_${index}" name="confrontante_matricula_${index}" data-conf="matricula" data-index="${index}" autocomplete="off" value="${conf.matricula || ''}" />
         </div>
         <div class="field">
-          <label>Tipo</label>
-          <select data-conf="tipo" data-index="${index}">
+          <label for="confrontante_tipo_${index}">Tipo</label>
+          <select id="confrontante_tipo_${index}" name="confrontante_tipo_${index}" data-conf="tipo" data-index="${index}" autocomplete="off">
             ${['particular','estrada','rio','servidao','outros'].map(tipo => `<option value="${tipo}" ${conf.tipo === tipo ? 'selected' : ''}>${tipo}</option>`).join('')}
           </select>
         </div>
@@ -775,10 +960,32 @@ async function carregarContexto() {
     if (data.mensagem) {
       document.getElementById('hero-subtitle').textContent = data.mensagem
     }
+
+    const municipioImovelContexto = normalizarMunicipio(
+      data.projeto?.municipio ||
+      data.projeto?.imovel_municipio
+    )
+    const municipioClienteContexto = normalizarMunicipio(
+      data.cliente?.municipio ||
+      data.cliente?.cliente_municipio ||
+      data.projeto?.cliente_municipio
+    )
+
+    montarListaMunicipios(data)
+    if (municipioImovelContexto && !municipioImovelInput.value) {
+      municipioImovelInput.value = municipioImovelContexto
+    }
+    if (municipioClienteContexto && !municipioEnderecoInput.value) {
+      municipioEnderecoInput.value = municipioClienteContexto
+    }
+    if (!municipioEnderecoInput.value && usarMunicipioImovelInput?.checked) {
+      sincronizarMunicipioEndereco()
+    }
   } catch {
     document.getElementById('meta-projeto').textContent = 'Projeto indisponível'
     document.getElementById('meta-cliente').textContent = 'Cliente indisponível'
     document.getElementById('meta-validade').textContent = 'Verifique o link'
+    montarListaMunicipios()
   }
 }
 
@@ -786,6 +993,10 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault()
   limparMensagens()
   serializarConfrontantes()
+
+  if (!validarFormularioCompleto()) {
+    return
+  }
 
   const submitBtn = document.getElementById('btn-submit')
   submitBtn.disabled = true
@@ -835,6 +1046,16 @@ document.addEventListener('input', (event) => {
   if (target.id === 'cpf' || target.id === 'conjuge_cpf') {
     mascaraCPF(target)
   }
+  if (target.id === 'cep' || target.id === 'cep_imovel') {
+    mascaraCEP(target)
+  }
+  if (target.id === 'municipio_imovel') {
+    montarListaMunicipios()
+    sincronizarMunicipioEndereco()
+  }
+  if (target.id === 'municipio') {
+    montarListaMunicipios()
+  }
   if (target.dataset && target.dataset.conf) {
     const index = Number(target.dataset.index)
     estado.confrontantes[index][target.dataset.conf] = target.value
@@ -848,10 +1069,24 @@ document.addEventListener('click', (event) => {
   removeConfrontante(Number(button.dataset.removeConf))
 })
 
+usarMunicipioImovelInput?.addEventListener('change', () => {
+  if (usarMunicipioImovelInput.checked) {
+    sincronizarMunicipioEndereco()
+  }
+})
+
+cepInput?.addEventListener('blur', buscarCepResidencial)
+cepImovelInput?.addEventListener('blur', buscarCepImovel)
+
 renderProgress()
 renderConfrontantes()
 desenharSketch()
+montarListaMunicipios()
 carregarContexto()
 </script>
 </body>
 </html>
+
+
+
+
