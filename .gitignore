@@ -65,3 +65,6 @@ data/geometrias_referencia_cliente.json
 
 # Configurações locais de ferramentas de desenvolvimento
 .claude/settings.local.json
+# Metadados locais do Supabase CLI
+infra/supabase/supabase/
+
