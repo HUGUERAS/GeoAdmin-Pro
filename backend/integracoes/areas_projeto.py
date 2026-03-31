@@ -13,6 +13,7 @@ from pyproj import Transformer
 from shapely.geometry import Polygon
 from shapely.ops import transform
 
+from integracoes.projeto_clientes import listar_participantes_area, salvar_participantes_area
 from integracoes.referencia_cliente import resumir_vertices
 
 try:
@@ -30,6 +31,22 @@ AREAS_STORE_PATH = DATA_DIR / "areas_projeto.json"
 
 logger = logging.getLogger("geoadmin.areas_projeto")
 
+STATUS_OPERACIONAL_VALIDOS = {
+    "aguardando_cliente",
+    "cliente_vinculado",
+    "croqui_recebido",
+    "geometria_final",
+    "peca_pronta",
+}
+STATUS_DOCUMENTAL_VALIDOS = {
+    "pendente",
+    "formulario_ok",
+    "confrontantes_ok",
+    "documentacao_ok",
+    "peca_pronta",
+}
+
+
 
 def _get_supabase():
     from main import get_supabase
@@ -38,6 +55,37 @@ def _get_supabase():
 
 def _agora_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _normalizar_status_operacional(valor: str | None, *, possui_participante: bool = False, status_geometria: str | None = None) -> str:
+    chave = (valor or '').strip().lower()
+    if chave in STATUS_OPERACIONAL_VALIDOS:
+        return chave
+    if status_geometria == 'geometria_final':
+        return 'geometria_final'
+    if status_geometria == 'apenas_esboco':
+        return 'croqui_recebido'
+    if possui_participante:
+        return 'cliente_vinculado'
+    return 'aguardando_cliente'
+
+
+def _normalizar_status_documental(valor: str | None, *, possui_participante: bool = False) -> str:
+    chave = (valor or '').strip().lower()
+    if chave in STATUS_DOCUMENTAL_VALIDOS:
+        return chave
+    return 'formulario_ok' if possui_participante else 'pendente'
+
+
+def _identificacao_lote(area: dict[str, Any]) -> str:
+    partes = []
+    if area.get('quadra'):
+        partes.append(f"Qd. {area['quadra']}")
+    if area.get('codigo_lote'):
+        partes.append(f"Lt. {area['codigo_lote']}")
+    if area.get('setor'):
+        partes.append(str(area['setor']))
+    return ' · '.join(partes)
 
 
 def _deve_usar_fallback_local(exc: Exception, *identificadores: str) -> bool:
@@ -214,6 +262,11 @@ def _row_para_area(raw: dict[str, Any] | None) -> dict[str, Any] | None:
         "ccir": raw.get("ccir"),
         "car": raw.get("car"),
         "observacoes": raw.get("observacoes"),
+        "codigo_lote": raw.get("codigo_lote"),
+        "quadra": raw.get("quadra"),
+        "setor": raw.get("setor"),
+        "status_operacional": raw.get("status_operacional"),
+        "status_documental": raw.get("status_documental"),
         "origem_tipo": raw.get("origem_tipo") or "manual",
         "geometria_esboco": raw.get("geometria_esboco") or [],
         "geometria_final": raw.get("geometria_final") or [],
@@ -232,17 +285,44 @@ def _normalizar_area(area: dict[str, Any]) -> dict[str, Any]:
     resumo_esboco = area.get("resumo_esboco") or _resumo_vertices(area.get("geometria_esboco"))
     resumo_final = area.get("resumo_final") or _resumo_vertices(area.get("geometria_final"))
     resumo_ativo = resumo_final if tipo_geometria == "final" else resumo_esboco
+    status_geometria = _status_geometria(area)
+    participantes = area.get("participantes_area") or area.get("participantes") or []
 
     return {
         **area,
-        "status_geometria": _status_geometria(area),
+        "status_geometria": status_geometria,
         "tipo_geometria_ativa": tipo_geometria if geometria_ativa else None,
         "geometria_ativa": geometria_ativa,
         "resumo_esboco": resumo_esboco,
         "resumo_final": resumo_final,
         "resumo_ativo": resumo_ativo,
         "anexos": area.get("anexos") or [],
+        "codigo_lote": area.get("codigo_lote"),
+        "quadra": area.get("quadra"),
+        "setor": area.get("setor"),
+        "identificacao_lote": _identificacao_lote(area),
+        "participantes_area": participantes,
+        "participantes_total": len(participantes),
+        "status_operacional": _normalizar_status_operacional(area.get("status_operacional"), possui_participante=bool(participantes or area.get("cliente_id")), status_geometria=status_geometria),
+        "status_documental": _normalizar_status_documental(area.get("status_documental"), possui_participante=bool(participantes or area.get("cliente_id"))),
     }
+
+
+def _enriquecer_areas_com_participantes(areas: list[dict[str, Any]], sb=None, participantes_projeto: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    if not areas:
+        return []
+    cliente = sb or _get_supabase()
+    try:
+        mapa = listar_participantes_area(cliente, areas, participantes_projeto=participantes_projeto)
+    except Exception as exc:
+        logger.warning("Falha ao listar participantes por area: %s", exc)
+        mapa = {}
+
+    enriquecidas: list[dict[str, Any]] = []
+    for area in areas:
+        participantes = mapa.get(str(area.get("id")), [])
+        enriquecidas.append(_normalizar_area({**area, "participantes_area": participantes, "participantes": participantes}))
+    return enriquecidas
 
 
 def _substituir_placeholders_texto(texto: str, campos: dict[str, Any]) -> str:
@@ -311,7 +391,7 @@ def _gerar_carta_confrontacao_docx(
     return buffer.getvalue()
 
 
-def listar_areas_projeto(projeto_id: str, sb=None) -> list[dict[str, Any]]:
+def listar_areas_projeto(projeto_id: str, sb=None, participantes_projeto: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     cliente = sb or _get_supabase()
     try:
         res = (
@@ -322,13 +402,14 @@ def listar_areas_projeto(projeto_id: str, sb=None) -> list[dict[str, Any]]:
             .order("atualizado_em", desc=True)
             .execute()
         )
-        return [_normalizar_area(_row_para_area(area) or {}) for area in (res.data or [])]
+        areas = [_row_para_area(area) or {} for area in (res.data or [])]
+        return _enriquecer_areas_com_participantes(areas, sb=cliente, participantes_projeto=participantes_projeto)
     except Exception as exc:
         logger.warning("Falha ao listar areas_projeto no Supabase: %s", exc)
-        return _listar_areas_local(projeto_id)
+        return _enriquecer_areas_com_participantes(_listar_areas_local(projeto_id), sb=cliente, participantes_projeto=participantes_projeto)
 
 
-def obter_area(area_id: str, sb=None) -> dict[str, Any] | None:
+def obter_area(area_id: str, sb=None, participantes_projeto: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
     cliente = sb or _get_supabase()
     try:
         res = (
@@ -342,10 +423,13 @@ def obter_area(area_id: str, sb=None) -> dict[str, Any] | None:
         area = _row_para_area(res.data)
         if not area:
             return None
-        return _normalizar_area(area)
+        return _enriquecer_areas_com_participantes([area], sb=cliente, participantes_projeto=participantes_projeto)[0]
     except Exception as exc:
         logger.warning("Falha ao obter area no Supabase: %s", exc)
-        return _obter_area_local(area_id)
+        local = _obter_area_local(area_id)
+        if not local:
+            return None
+        return _enriquecer_areas_com_participantes([local], sb=cliente, participantes_projeto=participantes_projeto)[0]
 
 
 def salvar_area_projeto(
@@ -361,10 +445,16 @@ def salvar_area_projeto(
     ccir: str | None = None,
     car: str | None = None,
     observacoes: str | None = None,
+    codigo_lote: str | None = None,
+    quadra: str | None = None,
+    setor: str | None = None,
+    status_operacional: str | None = None,
+    status_documental: str | None = None,
     origem_tipo: str = "formulario",
     geometria_esboco: list[dict[str, Any]] | None = None,
     geometria_final: list[dict[str, Any]] | None = None,
     anexos: list[dict[str, Any]] | None = None,
+    participantes_area: list[dict[str, Any]] | None = None,
     area_id: str | None = None,
     sb=None,
 ) -> dict[str, Any]:
@@ -382,10 +472,14 @@ def salvar_area_projeto(
         else _vertices_validos((existente or {}).get("geometria_final"))
     )
 
+    cliente_participante = next((item.get("cliente_id") for item in (participantes_area or []) if item.get("cliente_id")), None)
+    cliente_id_efetivo = cliente_id or cliente_participante or (existente or {}).get("cliente_id")
+    possui_participante = bool(participantes_area or (existente or {}).get("participantes_area") or cliente_id_efetivo)
+    status_geometria = "geometria_final" if vertices_final else ("apenas_esboco" if vertices_esboco else None)
     payload = {
         "id": area_id or (existente or {}).get("id") or str(uuid4()),
         "projeto_id": projeto_id,
-        "cliente_id": cliente_id,
+        "cliente_id": cliente_id_efetivo,
         "nome": (nome or "").strip() or "Area sem nome",
         "proprietario_nome": proprietario_nome,
         "municipio": municipio,
@@ -395,6 +489,11 @@ def salvar_area_projeto(
         "ccir": ccir,
         "car": car,
         "observacoes": observacoes,
+        "codigo_lote": codigo_lote if codigo_lote is not None else (existente or {}).get("codigo_lote"),
+        "quadra": quadra if quadra is not None else (existente or {}).get("quadra"),
+        "setor": setor if setor is not None else (existente or {}).get("setor"),
+        "status_operacional": _normalizar_status_operacional(status_operacional if status_operacional is not None else (existente or {}).get("status_operacional"), possui_participante=possui_participante, status_geometria=status_geometria),
+        "status_documental": _normalizar_status_documental(status_documental if status_documental is not None else (existente or {}).get("status_documental"), possui_participante=possui_participante),
         "origem_tipo": origem_tipo,
         "geometria_esboco": vertices_esboco,
         "geometria_final": vertices_final,
@@ -419,10 +518,17 @@ def salvar_area_projeto(
             )
         if not registro:
             raise RuntimeError("Falha ao persistir area do projeto no Supabase.")
-        return _normalizar_area(registro)
+        if participantes_area is not None:
+            try:
+                participantes_salvos = salvar_participantes_area(cliente, registro["id"], participantes_area)
+                registro["participantes_area"] = participantes_salvos
+            except Exception as exc:
+                logger.warning("Falha ao persistir participantes da area: %s", exc)
+        return _enriquecer_areas_com_participantes([registro], sb=cliente)[0]
     except Exception as exc:
         logger.warning("Falha ao persistir area do projeto no Supabase: %s", exc)
-        return _salvar_area_local(payload)
+        area_local = _salvar_area_local(payload)
+        return _enriquecer_areas_com_participantes([area_local], sb=cliente)[0]
 
 
 def anexar_arquivos_area(
@@ -479,8 +585,9 @@ def sintetizar_areas_do_projeto(
     perimetro_ativo: dict[str, Any] | None,
     geometria_referencia: dict[str, Any] | None,
     sb=None,
+    participantes_projeto: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    areas = listar_areas_projeto(projeto.get("id"), sb=sb)
+    areas = listar_areas_projeto(projeto.get("id"), sb=sb, participantes_projeto=participantes_projeto)
     if areas:
         return areas
 
@@ -503,6 +610,8 @@ def sintetizar_areas_do_projeto(
                     "estado": projeto.get("estado"),
                     "comarca": projeto.get("comarca"),
                     "matricula": projeto.get("matricula"),
+                    "status_operacional": "croqui_recebido",
+                    "status_documental": "formulario_ok" if cliente_id else "pendente",
                     "origem_tipo": geometria_referencia.get("origem_tipo") or "referencia_cliente",
                     "geometria_esboco": geometria_referencia.get("vertices") or [],
                     "geometria_final": [],
@@ -536,7 +645,7 @@ def sintetizar_areas_do_projeto(
             )
         )
 
-    return sinteticas
+    return _enriquecer_areas_com_participantes(sinteticas, sb=sb, participantes_projeto=participantes_projeto)
 
 
 def detectar_confrontacoes(areas: list[dict[str, Any]]) -> list[dict[str, Any]]:
