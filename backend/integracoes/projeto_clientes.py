@@ -243,6 +243,153 @@ def listar_participantes_projeto(sb, projeto_id: str, cliente_principal: dict[st
     return []
 
 
+def _normalizar_saida_participante_area(item: dict[str, Any], cliente: dict[str, Any] | None = None) -> dict[str, Any]:
+    cliente = cliente or item.get('clientes') or {}
+    return {
+        'id': item.get('id'),
+        'area_id': item.get('area_id'),
+        'cliente_id': item.get('cliente_id') or cliente.get('id'),
+        'papel': item.get('papel') or 'outro',
+        'principal': bool(item.get('principal')),
+        'recebe_magic_link': bool(item.get('recebe_magic_link')),
+        'ordem': item.get('ordem') or 0,
+        'nome': cliente.get('nome') or item.get('nome'),
+        'cpf': cliente.get('cpf') or cliente.get('cpf_cnpj') or item.get('cpf'),
+        'telefone': cliente.get('telefone') or item.get('telefone'),
+        'email': cliente.get('email') or item.get('email'),
+    }
+
+
+def salvar_participantes_area(sb, area_id: str, participantes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    agora = datetime.now(timezone.utc).isoformat()
+    try:
+        (
+            sb.table('area_clientes')
+            .update({'deleted_at': agora})
+            .eq('area_id', area_id)
+            .is_('deleted_at', 'null')
+            .execute()
+        )
+    except Exception as exc:
+        if 'area_clientes' not in str(exc).lower():
+            raise
+        return []
+
+    if not participantes:
+        return []
+
+    registros: list[dict[str, Any]] = []
+    for ordem, participante in enumerate(participantes):
+        cliente_id = resolver_cliente_participante(sb, participante)
+        registros.append({
+            'area_id': area_id,
+            'cliente_id': cliente_id,
+            'papel': _normalizar_papel(participante.get('papel')),
+            'principal': bool(participante.get('principal')),
+            'recebe_magic_link': bool(participante.get('recebe_magic_link')),
+            'ordem': int(participante.get('ordem') or ordem),
+            'deleted_at': None,
+        })
+
+    resposta = sb.table('area_clientes').insert(registros).execute()
+    return [_normalizar_saida_participante_area(item) for item in _dados(resposta)]
+
+
+def listar_participantes_area(
+    sb,
+    areas: list[dict[str, Any]],
+    *,
+    participantes_projeto: list[dict[str, Any]] | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    ids_area = [str(item.get('id')) for item in areas if item.get('id') and not str(item.get('id')).endswith(('-ref', '-tec'))]
+    mapa: dict[str, list[dict[str, Any]]] = {str(item.get('id')): [] for item in areas if item.get('id')}
+    if not ids_area:
+        return mapa
+
+    try:
+        consulta = (
+            sb.table('area_clientes')
+            .select('id, area_id, cliente_id, papel, principal, recebe_magic_link, ordem, clientes!inner(id, nome, cpf_cnpj, cpf, telefone, email, deleted_at)')
+            .is_('deleted_at', 'null')
+            .order('ordem', desc=False)
+        )
+        if len(ids_area) == 1:
+            consulta = consulta.eq('area_id', ids_area[0])
+        else:
+            consulta = consulta.in_('area_id', ids_area)
+        resposta = consulta.execute()
+        for item in _dados(resposta):
+            cliente = item.get('clientes') or {}
+            if cliente.get('deleted_at'):
+                continue
+            area_id = str(item.get('area_id'))
+            mapa.setdefault(area_id, []).append(_normalizar_saida_participante_area(item, cliente))
+    except Exception as exc:
+        if 'area_clientes' not in str(exc).lower():
+            raise
+
+    if participantes_projeto:
+        for participante in participantes_projeto:
+            area_id = participante.get('area_id')
+            if not area_id:
+                continue
+            area_id = str(area_id)
+            if area_id not in mapa:
+                continue
+            if any(str(item.get('cliente_id')) == str(participante.get('cliente_id')) for item in mapa[area_id]):
+                continue
+            mapa[area_id].append({
+                'id': participante.get('id'),
+                'area_id': area_id,
+                'cliente_id': participante.get('cliente_id'),
+                'papel': participante.get('papel') or 'outro',
+                'principal': bool(participante.get('principal')),
+                'recebe_magic_link': bool(participante.get('recebe_magic_link')),
+                'ordem': participante.get('ordem') or 0,
+                'nome': participante.get('nome'),
+                'cpf': participante.get('cpf'),
+                'telefone': participante.get('telefone'),
+                'email': participante.get('email'),
+            })
+
+    participantes_por_cliente = {str(item.get('cliente_id')): item for item in (participantes_projeto or []) if item.get('cliente_id')}
+    for area in areas:
+        area_id = str(area.get('id'))
+        if mapa.get(area_id):
+            continue
+        cliente_id = area.get('cliente_id')
+        if cliente_id and str(cliente_id) in participantes_por_cliente:
+            participante = participantes_por_cliente[str(cliente_id)]
+            mapa[area_id] = [{
+                'id': participante.get('id'),
+                'area_id': area_id,
+                'cliente_id': participante.get('cliente_id'),
+                'papel': participante.get('papel') or 'principal',
+                'principal': True,
+                'recebe_magic_link': bool(participante.get('recebe_magic_link', True)),
+                'ordem': participante.get('ordem') or 0,
+                'nome': participante.get('nome') or area.get('proprietario_nome'),
+                'cpf': participante.get('cpf'),
+                'telefone': participante.get('telefone'),
+                'email': participante.get('email'),
+            }]
+        elif cliente_id or area.get('proprietario_nome'):
+            mapa[area_id] = [{
+                'id': None,
+                'area_id': area_id,
+                'cliente_id': cliente_id,
+                'papel': 'principal',
+                'principal': True,
+                'recebe_magic_link': False,
+                'ordem': 0,
+                'nome': area.get('proprietario_nome'),
+                'cpf': None,
+                'telefone': None,
+                'email': None,
+            }]
+    return mapa
+
+
 def _obter_participante_base(sb, projeto_id: str, projeto_cliente_id: str | None = None, cliente_id: str | None = None) -> dict[str, Any] | None:
     participantes = listar_participantes_projeto(sb, projeto_id)
     if projeto_cliente_id:
