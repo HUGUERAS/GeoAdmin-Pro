@@ -28,19 +28,31 @@ from pydantic import BaseModel, Field
 from integracoes.arquivos_projeto import (
     exportar_arquivos_projeto_zip,
     listar_arquivos_projeto,
+    listar_eventos_cartograficos,
+    migrar_arquivos_locais_para_storage,
+    promover_arquivo_base_oficial,
     salvar_arquivo_projeto,
 )
 from integracoes.areas_projeto import (
+    aplicar_revisoes_confrontacao,
     detectar_confrontacoes,
     gerar_cartas_confrontacao_zip,
+    importar_areas_projeto_em_lote,
+    importar_lotes_por_formato,
+    listar_areas_projeto,
+    listar_revisoes_confrontacao,
+    montar_painel_lotes,
     salvar_area_projeto,
+    salvar_revisoes_confrontacao,
     sintetizar_areas_do_projeto,
 )
 from integracoes.projeto_clientes import (
     listar_participantes_projeto,
+    listar_eventos_magic_link,
     normalizar_participantes_entrada,
     resolver_cliente_participante,
     salvar_participantes_projeto,
+    salvar_participantes_projeto_em_lote,
 )
 from integracoes.referencia_cliente import obter_geometria_referencia
 from routes.clientes.resumos import montar_checklist_projeto
@@ -149,6 +161,63 @@ class AreaProjetoUpdate(BaseModel):
     geometria_final: Optional[list[VerticePayload]] = None
     participantes_area: Optional[list[AreaParticipantePayload]] = None
 
+
+class ImportacaoLotePayload(BaseModel):
+    area_id: Optional[str] = None
+    nome: Optional[str] = None
+    cliente_id: Optional[str] = None
+    proprietario_nome: Optional[str] = None
+    municipio: Optional[str] = None
+    estado: Optional[str] = None
+    comarca: Optional[str] = None
+    matricula: Optional[str] = None
+    ccir: Optional[str] = None
+    car: Optional[str] = None
+    observacoes: Optional[str] = None
+    codigo_lote: Optional[str] = None
+    quadra: Optional[str] = None
+    setor: Optional[str] = None
+    status_operacional: Optional[str] = None
+    status_documental: Optional[str] = None
+    origem_tipo: Optional[str] = None
+    geometria_esboco: list[VerticePayload] = Field(default_factory=list)
+    geometria_final: list[VerticePayload] = Field(default_factory=list)
+    participantes_area: list[AreaParticipantePayload] = Field(default_factory=list)
+
+
+class ImportacaoLotesRequest(BaseModel):
+    lotes: list[ImportacaoLotePayload] = Field(default_factory=list)
+    atualizar_existentes: bool = True
+
+
+class VinculoLotePayload(BaseModel):
+    area_id: Optional[str] = None
+    codigo_lote: Optional[str] = None
+    quadra: Optional[str] = None
+    setor: Optional[str] = None
+    participantes: list[AreaParticipantePayload] = Field(default_factory=list)
+
+
+class VinculosLoteRequest(BaseModel):
+    vinculos: list[VinculoLotePayload] = Field(default_factory=list)
+
+
+class PromoverArquivoPayload(BaseModel):
+    autor: Optional[str] = None
+    observacao: Optional[str] = None
+    classificacao_destino: Optional[str] = None
+
+
+class RevisaoConfrontacaoPayload(BaseModel):
+    confronto_id: str
+    status_revisao: str = "confirmada"
+    tipo_relacao: str = "interna"
+    observacao: Optional[str] = None
+    autor: Optional[str] = None
+
+
+class RevisoesConfrontacaoRequest(BaseModel):
+    revisoes: list[RevisaoConfrontacaoPayload] = Field(default_factory=list)
 
 
 def _get_supabase():
@@ -421,6 +490,28 @@ def _proprietario_area_payload(
     return fallback
 
 
+def _chave_lote_referencia(*, codigo_lote: str | None, quadra: str | None, setor: str | None) -> str | None:
+    codigo = (codigo_lote or '').strip().lower()
+    quadra_valor = (quadra or '').strip().lower()
+    setor_valor = (setor or '').strip().lower()
+    if not any((codigo, quadra_valor, setor_valor)):
+        return None
+    return f"{quadra_valor}::{codigo}::{setor_valor}"
+
+
+def _resolver_area_por_referencia(areas: list[dict[str, Any]], *, area_id: str | None = None, codigo_lote: str | None = None, quadra: str | None = None, setor: str | None = None) -> dict[str, Any] | None:
+    if area_id:
+        return next((item for item in areas if str(item.get('id')) == str(area_id)), None)
+    chave_alvo = _chave_lote_referencia(codigo_lote=codigo_lote, quadra=quadra, setor=setor)
+    if not chave_alvo:
+        return None
+    for area in areas:
+        chave_area = _chave_lote_referencia(codigo_lote=area.get('codigo_lote'), quadra=area.get('quadra'), setor=area.get('setor'))
+        if chave_area == chave_alvo:
+            return area
+    return None
+
+
 def _cliente_principal_do_payload(sb, participantes: list[dict[str, Any]], payload: ProjetoCreate) -> str | None:
     if participantes:
         principal = next((item for item in participantes if item.get("principal")), None) or participantes[0]
@@ -574,6 +665,8 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
     confrontantes = _confrontantes_projeto(sb, projeto_id)
     geometria_referencia = obter_geometria_referencia(sb, projeto.get("cliente_id")) if projeto.get("cliente_id") else None
     arquivos_cartograficos = listar_arquivos_projeto(sb, projeto_id)
+    arquivos_eventos = listar_eventos_cartograficos(sb, projeto_id, limite=50)
+    magic_links_historico = listar_eventos_magic_link(sb, projeto_id, limite=50)
     areas = sintetizar_areas_do_projeto(
         projeto=projeto,
         cliente=cliente,
@@ -582,7 +675,9 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
         sb=sb,
         participantes_projeto=participantes,
     )
-    confrontacoes = detectar_confrontacoes(areas)
+    revisoes_confrontacao = listar_revisoes_confrontacao(sb, projeto_id)
+    confrontacoes_detectadas = detectar_confrontacoes(areas)
+    confrontacoes = aplicar_revisoes_confrontacao(confrontacoes_detectadas, revisoes_confrontacao)
 
     checklist = montar_checklist_projeto(
         cliente or {},
@@ -626,12 +721,22 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
         len(documentos),
     )
     projeto["arquivos_cartograficos"] = arquivos_cartograficos
+    projeto["arquivos_eventos"] = arquivos_eventos
+    projeto["magic_links_historico"] = magic_links_historico
     projeto["arquivos_resumo"] = {
         "total": len(arquivos_cartograficos),
+        "base_oficial_total": sum(1 for item in arquivos_cartograficos if item.get("base_oficial")),
+        "eventos_total": len(arquivos_eventos),
         "por_classificacao": {
             chave: sum(1 for item in arquivos_cartograficos if item.get("classificacao") == chave)
             for chave in sorted({item.get("classificacao") for item in arquivos_cartograficos if item.get("classificacao")})
         },
+    }
+    projeto["magic_links_resumo"] = {
+        "total_eventos": len(magic_links_historico),
+        "gerados": sum(1 for item in magic_links_historico if item.get("tipo_evento") in {"gerado", "reenviado"}),
+        "consumidos": sum(1 for item in magic_links_historico if item.get("tipo_evento") == "consumido"),
+        "ultimos_eventos": magic_links_historico[:10],
     }
     projeto["resumo_geo"] = {
         "areas_total": len(areas),
@@ -643,6 +748,9 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
         "arquivos_total": len(arquivos_cartograficos),
     }
     projeto["resumo_lotes"] = _resumo_lotes(areas)
+    projeto["painel_lotes"] = montar_painel_lotes(areas)
+    projeto["confrontacoes_resumo"] = _resumo_confrontacoes(confrontacoes, confrontantes)
+    projeto["prontidao_piloto"] = _prontidao_piloto(projeto)
     return projeto
 
 
@@ -796,6 +904,154 @@ def exportar_arquivos(projeto_id: str):
     )
 
 
+@router.get("/{projeto_id}/arquivos/eventos", summary="Listar auditoria cartografica do projeto")
+def listar_eventos_arquivos(projeto_id: str, limite: int = 100):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    eventos = listar_eventos_cartograficos(sb, projeto_id, limite=limite)
+    return {"total": len(eventos), "eventos": eventos}
+
+
+@router.post("/{projeto_id}/arquivos/{arquivo_id}/promover", summary="Promover arquivo para base oficial")
+def promover_arquivo(projeto_id: str, arquivo_id: str, payload: PromoverArquivoPayload):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    try:
+        arquivo = promover_arquivo_base_oficial(
+            sb,
+            projeto_id=projeto_id,
+            arquivo_id=arquivo_id,
+            autor=payload.autor,
+            observacao=payload.observacao,
+            classificacao_destino=payload.classificacao_destino,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail={"erro": str(exc), "codigo": 404})
+    return arquivo
+
+
+@router.post("/{projeto_id}/arquivos/migrar-legado", summary="Migrar arquivos antigos do fallback local para Supabase Storage")
+def migrar_arquivos_legados(projeto_id: str, limite: int = 100, autor: str | None = None):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    return migrar_arquivos_locais_para_storage(sb, projeto_id=projeto_id, limite=limite, autor=autor)
+
+
+@router.get("/{projeto_id}/lotes/painel", summary="Listar painel operacional por lote")
+def painel_lotes(projeto_id: str):
+    sb = _get_supabase()
+    projeto = _enriquecer_projeto(sb, projeto_id)
+    return {
+        "total": len(projeto.get("painel_lotes") or []),
+        "resumo_lotes": projeto.get("resumo_lotes"),
+        "lotes": projeto.get("painel_lotes") or [],
+    }
+
+
+@router.post("/{projeto_id}/areas/importar", summary="Importar areas/lotes em lote", status_code=201)
+def importar_areas_json(projeto_id: str, payload: ImportacaoLotesRequest):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    resultado = importar_areas_projeto_em_lote(
+        projeto_id=projeto_id,
+        lotes=[item.model_dump(exclude_none=True) for item in payload.lotes],
+        atualizar_existentes=payload.atualizar_existentes,
+        sb=sb,
+    )
+    return {**resultado, "resumo_lotes": _resumo_lotes(resultado.get("areas") or [])}
+
+
+@router.post("/{projeto_id}/areas/importar-arquivo", summary="Importar arquivo de lotes/areas", status_code=201)
+async def importar_areas_arquivo(
+    projeto_id: str,
+    arquivo: UploadFile = File(...),
+    formato: str | None = Form(None),
+    atualizar_existentes: bool = Form(True),
+    salvar_na_bandeja: bool = Form(True),
+    autor: str | None = Form(None),
+):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    conteudo = await arquivo.read()
+    if not conteudo:
+        raise HTTPException(status_code=422, detail={"erro": "Arquivo vazio", "codigo": 422})
+
+    formato_arquivo = (formato or (arquivo.filename or '').split('.')[-1]).lower()
+    try:
+        interpretado = importar_lotes_por_formato(formato_arquivo, conteudo)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={"erro": str(exc), "codigo": 422})
+
+    registro_arquivo = None
+    if salvar_na_bandeja:
+        registro_arquivo = salvar_arquivo_projeto(
+            sb,
+            projeto_id=projeto_id,
+            nome_arquivo=arquivo.filename or f'importacao-lotes.{formato_arquivo}',
+            conteudo=conteudo,
+            origem='topografo',
+            classificacao='camada_auxiliar',
+            mime_type=arquivo.content_type,
+            autor=autor,
+        )
+
+    resultado = importar_areas_projeto_em_lote(
+        projeto_id=projeto_id,
+        lotes=interpretado.get('lotes') or [],
+        atualizar_existentes=bool(atualizar_existentes),
+        sb=sb,
+    )
+    return {
+        **resultado,
+        "parcial": bool(interpretado.get('parcial')),
+        "mensagem": interpretado.get('mensagem'),
+        "arquivo_importado": registro_arquivo,
+    }
+
+
+@router.post("/{projeto_id}/areas/vinculos-lote", summary="Vincular participantes em lote por area/lote")
+def vincular_participantes_lote(projeto_id: str, payload: VinculosLoteRequest):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    participantes = listar_participantes_projeto(sb, projeto_id)
+    areas = listar_areas_projeto(projeto_id, sb=sb, participantes_projeto=participantes)
+    vinculos_normalizados: list[dict[str, Any]] = []
+    areas_afetadas: list[str] = []
+
+    for vinculo in payload.vinculos:
+        area = _resolver_area_por_referencia(
+            areas,
+            area_id=vinculo.area_id,
+            codigo_lote=vinculo.codigo_lote,
+            quadra=vinculo.quadra,
+            setor=vinculo.setor,
+        )
+        if not area:
+            continue
+        participantes_area = [item.model_dump(exclude_none=True) for item in vinculo.participantes]
+        if not participantes_area:
+            continue
+        vinculos_normalizados.append({
+            "area_id": area.get("id"),
+            "participantes": participantes_area,
+        })
+        areas_afetadas.append(str(area.get("id")))
+
+    if not vinculos_normalizados:
+        raise HTTPException(status_code=422, detail={"erro": "Nenhum vinculo de lote valido foi informado", "codigo": 422})
+
+    resultado_vinculos = salvar_participantes_projeto_em_lote(sb, projeto_id, vinculos_normalizados)
+    areas_atualizadas = listar_areas_projeto(projeto_id, sb=sb, participantes_projeto=listar_participantes_projeto(sb, projeto_id))
+    lotes_afetados = [item for item in montar_painel_lotes(areas_atualizadas) if str(item.get('area_id')) in set(areas_afetadas)]
+    return {
+        "vinculos_total": len(vinculos_normalizados),
+        "areas_afetadas": len(set(areas_afetadas)),
+        "participantes_projeto_total": len(resultado_vinculos.get("participantes_projeto") or []),
+        "participantes_area": resultado_vinculos.get("participantes_area") or {},
+        "lotes": lotes_afetados,
+    }
+
+
 @router.get("/{projeto_id}/areas", summary="Listar areas conhecidas do projeto")
 def listar_areas(projeto_id: str):
     sb = _get_supabase()
@@ -915,17 +1171,42 @@ def listar_confrontacoes(projeto_id: str):
         "total": len(projeto["confrontacoes"]),
         "confrontacoes": projeto["confrontacoes"],
         "areas_total": len(projeto["areas"]),
+        "resumo": projeto.get("confrontacoes_resumo") or {},
+    }
+
+
+@router.post("/{projeto_id}/confrontacoes/revisar", summary="Revisar confrontacoes detectadas")
+def revisar_confrontacoes(projeto_id: str, payload: RevisoesConfrontacaoRequest):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    if not payload.revisoes:
+        raise HTTPException(status_code=422, detail={"erro": "Nenhuma revisao informada", "codigo": 422})
+    revisoes = salvar_revisoes_confrontacao(
+        sb,
+        projeto_id,
+        [item.model_dump(exclude_none=True) for item in payload.revisoes],
+    )
+    projeto = _enriquecer_projeto(sb, projeto_id)
+    return {
+        "revisoes": revisoes,
+        "confrontacoes": projeto.get("confrontacoes") or [],
+        "resumo": projeto.get("confrontacoes_resumo") or {},
     }
 
 
 @router.get("/{projeto_id}/confrontacoes/cartas", summary="Gerar cartas de confrontacao em ZIP")
-def baixar_cartas_confrontacao(projeto_id: str):
+def baixar_cartas_confrontacao(projeto_id: str, area_ids: list[str] | None = None, somente_confirmadas: bool = False):
     sb = _get_supabase()
     projeto = _enriquecer_projeto(sb, projeto_id)
+    confrontacoes = _filtrar_confrontacoes_para_cartas(
+        projeto["confrontacoes"],
+        area_ids=area_ids,
+        somente_confirmadas=somente_confirmadas,
+    )
     zip_bytes = gerar_cartas_confrontacao_zip(
         projeto=projeto,
         areas=projeto["areas"],
-        confrontacoes=projeto["confrontacoes"],
+        confrontacoes=confrontacoes,
     )
     nome = f"Cartas_Confrontacao_{(projeto.get('projeto_nome') or 'Projeto').replace(' ', '_')[:30]}.zip"
     return Response(

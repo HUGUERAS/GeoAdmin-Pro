@@ -1,27 +1,28 @@
 export const Colors = {
   dark: {
-    background:  '#1a1a18',
-    card:        '#2c2c2a',
-    cardBorder:  '#444441',
-    primary:     '#EF9F27',
-    primaryDark: '#BA7517',
-    primaryText: '#412402',
-    text:        '#e8e6de',
-    muted:       '#aba99f',  // era #9c9a92 — corrigido para ratio ≥ 4.5:1 sobre card (#2c2c2a)
-    success:     '#1D9E75',
+    background:  '#0f1110',
+    card:        '#171a18',
+    cardBorder:  '#2a2f2c',
+    primary:     '#2FA56A',
+    primaryDark: '#1E7A4D',
+    primaryText: '#06160d',
+    text:        '#e6f1ea',
+    muted:       '#9aa99f',
+    success:     '#46C07E',
     danger:      '#E24B4A',
-    info:        '#378ADD',
-    purple:      '#7F77DD',
-    gray:        '#969490',  // era #888780 — corrigido para ratio ≥ 4.5:1 sobre card
+    info:        '#239B78',
+    warning:     '#C7A241',
+    purple:      '#5A8F73',
+    gray:        '#7f8b84',
   }
 }
 
 export const StatusColors: Record<string, string> = {
-  medicao:     '#378ADD',
-  montagem:    '#EF9F27',
-  protocolado: '#7F77DD',
-  aprovado:    '#1D9E75',
-  finalizado:  '#888780',
+  medicao:     '#239B78',
+  montagem:    '#2FA56A',
+  protocolado: '#58B881',
+  aprovado:    '#7CCB9C',
+  finalizado:  '#7f8b84',
 }
 
 export const StatusLabels: Record<string, string> = {
