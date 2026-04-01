@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _criar_cliente_supabase(url: str, key: str):
+    from supabase import create_client
+    return create_client(url, key)
+
+
 class LoginPayload(BaseModel):
     email: str
     senha: str
@@ -48,8 +53,7 @@ def login(payload: LoginPayload):
         )
 
     try:
-        from supabase import create_client
-        cliente = create_client(url, key)
+        cliente = _criar_cliente_supabase(url, key)
         resposta = cliente.auth.sign_in_with_password(
             {"email": payload.email, "password": payload.senha}
         )
