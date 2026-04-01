@@ -44,6 +44,7 @@ _origens_permitidas = os.getenv("ALLOWED_ORIGINS", ",".join(_origens_padrao)).sp
 #     def exemplo(usuario: dict = Depends(verificar_token)):
 #         print(f"Usuário autenticado: {usuario['sub']}")
 
+from routes.auth import router as auth_router
 from routes.exportacao import router as exportacao_router
 from routes.metrica_simples import router as metrica_router
 from routes.projetos import router as projetos_router
@@ -71,6 +72,7 @@ _static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 if os.path.isdir(_static_dir):
   app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
+app.include_router(auth_router)
 app.include_router(projetos_router)
 app.include_router(clientes_router)
 app.include_router(exportacao_router)

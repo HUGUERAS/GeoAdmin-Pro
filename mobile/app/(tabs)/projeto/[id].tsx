@@ -1181,7 +1181,12 @@ export default function DetalheProjetoScreen() {
                 </View>
                 <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
                   <Text style={[s.infoMiniLabel, { color: C.muted }]}>Magic link</Text>
-                  <Text style={[s.infoMiniValue, { color: C.text }]}>{formatarData(formulario.magic_link_expira, false)}</Text>
+                  {formulario.magic_link_aberto_em
+                    ? <Text style={[s.infoMiniValue, { color: C.success }]}>👁 Aberto</Text>
+                    : formulario.magic_link_enviado_em
+                      ? <Text style={[s.infoMiniValue, { color: C.warning }]}>📤 Enviado</Text>
+                      : <Text style={[s.infoMiniValue, { color: C.muted }]}>Não enviado</Text>
+                  }
                 </View>
                 <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
                   <Text style={[s.infoMiniLabel, { color: C.muted }]}>Documentos</Text>
