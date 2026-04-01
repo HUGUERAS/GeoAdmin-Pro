@@ -11,7 +11,7 @@ import { Colors } from '../../../constants/Colors'
 import { API_URL } from '../../../constants/Api'
 import { apiGet, apiPatch, apiDelete } from '../../../lib/api'
 
-type Ponto    = { id: string; nome: string; altitude_m: number; lon: number; lat: number; norte?: number; este?: number; codigo?: string; origem?: string }
+type Ponto    = { id: string; nome: string; altitude_m: number; lon: number; lat: number; norte?: number; este?: number; fuso?: number; codigo?: string; origem?: string }
 type Vertice  = { lon: number; lat: number; nome: string }
 type Layers   = { pontos: boolean; poligono: boolean; rotulos: boolean }
 type Mode     = 'mapa' | 'cad'
@@ -169,24 +169,52 @@ function distPontoLinhaLocal(p: Vertice, a: Vertice, b: Vertice): { dist: number
   }
 }
 
+// Elipsoide GRS80 = SIRGAS 2000 (mesmos parâmetros do WGS84 para fins práticos)
+const GRS80_A = 6378137.0
+const GRS80_F = 1 / 298.257222101
+const GRS80_B = GRS80_A * (1 - GRS80_F)
+const GRS80_E2 = (GRS80_A * GRS80_A - GRS80_B * GRS80_B) / (GRS80_A * GRS80_A)
+
 function latLonParaUTM(lat: number, lon: number): { norte: number; este: number; fuso: number } {
   const fuso = Math.floor((lon + 180) / 6) + 1
-  const a = 6378137.0, f = 1/298.257223563
-  const b = a * (1 - f)
-  const e2 = (a*a - b*b) / (a*a)
+  const a = GRS80_A, e2 = GRS80_E2
   const latR = lat * Math.PI / 180
   const lonR = lon * Math.PI / 180
   const lon0 = ((fuso - 1) * 6 - 180 + 3) * Math.PI / 180
-  const N = a / Math.sqrt(1 - e2 * Math.sin(latR)**2)
-  const T = Math.tan(latR)**2
-  const C = e2 / (1 - e2) * Math.cos(latR)**2
+  const N = a / Math.sqrt(1 - e2 * Math.sin(latR) ** 2)
+  const T = Math.tan(latR) ** 2
+  const C = e2 / (1 - e2) * Math.cos(latR) ** 2
   const A = Math.cos(latR) * (lonR - lon0)
-  const M = a * ((1 - e2/4 - 3*e2*e2/64) * latR
-    - (3*e2/8 + 3*e2*e2/32) * Math.sin(2*latR)
-    + (15*e2*e2/256) * Math.sin(4*latR))
-  const este = 0.9996 * N * (A + (1-T+C)*A**3/6) + 500000
-  const norte = 0.9996 * (M + N*Math.tan(latR)*(A**2/2 + (5-T+9*C)*A**4/24)) + (lat < 0 ? 10000000 : 0)
+  const M = a * ((1 - e2 / 4 - 3 * e2 * e2 / 64) * latR
+    - (3 * e2 / 8 + 3 * e2 * e2 / 32) * Math.sin(2 * latR)
+    + (15 * e2 * e2 / 256) * Math.sin(4 * latR))
+  const este  = 0.9996 * N * (A + (1 - T + C) * A ** 3 / 6) + 500000
+  const norte = 0.9996 * (M + N * Math.tan(latR) * (A ** 2 / 2 + (5 - T + 9 * C) * A ** 4 / 24)) + (lat < 0 ? 10000000 : 0)
   return { norte: Math.round(norte * 1000) / 1000, este: Math.round(este * 1000) / 1000, fuso }
+}
+
+// UTM → Geográfico (SIRGAS 2000 / GRS80) — hemisfério sul quando sulHem=true
+function utmParaLatLon(norte: number, este: number, fuso: number, sulHem = true): { lat: number; lon: number } {
+  const a = GRS80_A, e2 = GRS80_E2
+  const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2))
+  const lon0 = ((fuso - 1) * 6 - 180 + 3) * Math.PI / 180
+  const x = este - 500000
+  const y = sulHem ? norte - 10000000 : norte
+  const M = y / 0.9996
+  const mu = M / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64))
+  const phi1 = mu
+    + (3 * e1 / 2 - 27 * e1 ** 3 / 32) * Math.sin(2 * mu)
+    + (21 * e1 ** 2 / 16 - 55 * e1 ** 4 / 32) * Math.sin(4 * mu)
+    + (151 * e1 ** 3 / 96) * Math.sin(6 * mu)
+  const N1 = a / Math.sqrt(1 - e2 * Math.sin(phi1) ** 2)
+  const T1 = Math.tan(phi1) ** 2
+  const C1 = e2 / (1 - e2) * Math.cos(phi1) ** 2
+  const R1 = a * (1 - e2) / Math.pow(1 - e2 * Math.sin(phi1) ** 2, 1.5)
+  const D  = x / (N1 * 0.9996)
+  const lat = phi1 - (N1 * Math.tan(phi1) / R1)
+    * (D ** 2 / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1 ** 2 - 9 * e2 / (1 - e2)) * D ** 4 / 24)
+  const lon = lon0 + (D - (1 + 2 * T1 + C1) * D ** 3 / 6) / Math.cos(phi1)
+  return { lat: lat * 180 / Math.PI, lon: lon * 180 / Math.PI }
 }
 
 function vxNecessarios(ferr: NomeFerramenta): number {
@@ -327,12 +355,16 @@ function MapaWebView({ pontos, poligono, layers, onPontoClick }: {
 
 // ── CAD view ──────────────────────────────────────────────────────────────────
 
+const OSNAP_R = 22 // raio de snap em pixels
+
 function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVertices, origVertices,
   onVertexDrag, onVertexDelete, onMidpointAdd, onDragStart,
-  onVertexTap, selecaoAtiva, vxSelecionados, onPontoPress }: any) {
+  onVertexTap, selecaoAtiva, vxSelecionados, onPontoPress, osnapAtivo }: any) {
   const { width: W, height: H } = Dimensions.get('window')
   const svgH = H - 56 - 50 - 50
   const TOUCH_R = 20
+
+  const [snapTarget, setSnapTarget] = useState<{ x: number; y: number; nome: string } | null>(null)
 
   const allPts = useMemo(
     () => editMode ? [...(editVertices || []), ...(origVertices || [])] : [...(pontos || []), ...(polygonVerts || [])],
@@ -344,9 +376,9 @@ function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVert
   )
   const { toX, toY, fromX, fromY, minLon, maxLon, minLat, maxLat } = xform
 
-  const stateRef = useRef<any>({ editMode, editTool, editVertices, toX, toY, fromX, fromY, onVertexDrag, onDragStart, selecaoAtiva, onVertexTap })
+  const stateRef = useRef<any>({ editMode, editTool, editVertices, toX, toY, fromX, fromY, onVertexDrag, onDragStart, selecaoAtiva, onVertexTap, pontos, osnapAtivo })
   useEffect(() => {
-    stateRef.current = { editMode, editTool, editVertices, toX, toY, fromX, fromY, onVertexDrag, onDragStart, selecaoAtiva, onVertexTap }
+    stateRef.current = { editMode, editTool, editVertices, toX, toY, fromX, fromY, onVertexDrag, onDragStart, selecaoAtiva, onVertexTap, pontos, osnapAtivo }
   })
 
   const panRef = useRef<{ idx: number } | null>(null)
@@ -375,10 +407,21 @@ function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVert
     onPanResponderMove: (e: GestureResponderEvent) => {
       if (!panRef.current) return
       const { locationX: px, locationY: py } = e.nativeEvent
-      const { fromX: fx, fromY: fy, onVertexDrag: drag } = stateRef.current
-      drag(panRef.current.idx, fx(px), fy(py))
+      const { fromX: fx, fromY: fy, onVertexDrag: drag, toX: tx, toY: ty, pontos: pts, osnapAtivo: snap } = stateRef.current
+      let snapLon = fx(px), snapLat = fy(py)
+      if (snap && pts?.length) {
+        let bestD = OSNAP_R, snapped = false
+        for (const sp of pts) {
+          const d = Math.hypot(tx(sp.lon) - px, ty(sp.lat) - py)
+          if (d < bestD) { bestD = d; snapLon = sp.lon; snapLat = sp.lat; snapped = true
+            setSnapTarget({ x: tx(sp.lon), y: ty(sp.lat), nome: sp.nome })
+          }
+        }
+        if (!snapped) setSnapTarget(null)
+      }
+      drag(panRef.current.idx, snapLon, snapLat)
     },
-    onPanResponderRelease: () => { panRef.current = null },
+    onPanResponderRelease: () => { panRef.current = null; setSnapTarget(null) },
   })).current
 
   const lonInterval = niceInterval(maxLon - minLon)
@@ -499,6 +542,14 @@ function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVert
           </G>
         )
       })}
+      {snapTarget && (
+        <G>
+          <Circle cx={snapTarget.x} cy={snapTarget.y} r={14}
+            fill="none" stroke="#FFD700" strokeWidth={2} />
+          <Circle cx={snapTarget.x} cy={snapTarget.y} r={3}
+            fill="#FFD700" />
+        </G>
+      )}
     </Svg>
   )
 }
@@ -549,10 +600,15 @@ export default function MapaProjetoScreen() {
   // ── edição de ponto individual ────────────────────────────────────────────────
   const [pontoSelecionado,  setPontoSelecionado]  = useState<Ponto | null>(null)
   const [editNome,          setEditNome]          = useState('')
-  const [editLat,           setEditLat]           = useState('')
-  const [editLon,           setEditLon]           = useState('')
+  const [editNorte,         setEditNorte]         = useState('')
+  const [editEste,          setEditEste]          = useState('')
+  const [editFuso,          setEditFuso]          = useState('')
+  const [editCota,          setEditCota]          = useState('')
   const [editCodigo,        setEditCodigo]        = useState('')
   const [salvandoPonto,     setSalvandoPonto]     = useState(false)
+
+  // ── osnap ─────────────────────────────────────────────────────────────────────
+  const [osnapAtivo,        setOsnapAtivo]        = useState(false)
 
   // resultados
   const [resultado,    setResultado]    = useState<any>(null)
@@ -746,25 +802,43 @@ export default function MapaProjetoScreen() {
   const abrirEdicaoPonto = useCallback((ponto: Ponto) => {
     setPontoSelecionado(ponto)
     setEditNome(ponto.nome || '')
-    setEditLat(ponto.lat.toFixed(8))
-    setEditLon(ponto.lon.toFixed(8))
     setEditCodigo(ponto.codigo || '')
+    setEditCota(ponto.altitude_m != null ? String(ponto.altitude_m) : '')
+    // preferir norte/este vindos do backend; se não, converter
+    if (ponto.norte && ponto.este) {
+      const fuso = ponto.fuso ?? latLonParaUTM(ponto.lat, ponto.lon).fuso
+      setEditNorte(ponto.norte.toFixed(3))
+      setEditEste(ponto.este.toFixed(3))
+      setEditFuso(String(fuso))
+    } else {
+      const utm = latLonParaUTM(ponto.lat, ponto.lon)
+      setEditNorte(utm.norte.toFixed(3))
+      setEditEste(utm.este.toFixed(3))
+      setEditFuso(String(utm.fuso))
+    }
   }, [])
 
   const salvarEdicaoPonto = useCallback(async () => {
     if (!pontoSelecionado) return
-    const lat = parseFloat(editLat)
-    const lon = parseFloat(editLon)
+    const norte = parseFloat(editNorte)
+    const este  = parseFloat(editEste)
+    const fuso  = parseInt(editFuso)
     if (!editNome.trim()) { Alert.alert('Atenção', 'Nome não pode ser vazio.'); return }
-    if (isNaN(lat) || isNaN(lon)) { Alert.alert('Atenção', 'Coordenadas inválidas.'); return }
+    if (isNaN(norte) || isNaN(este) || isNaN(fuso)) { Alert.alert('Atenção', 'Coordenadas UTM inválidas.'); return }
+    const { lat, lon } = utmParaLatLon(norte, este, fuso, true)
+    const cota = editCota ? parseFloat(editCota) : null
     setSalvandoPonto(true)
+    const body: Record<string, unknown> = {
+      nome:  editNome.trim(),
+      lat,
+      lon,
+      norte,
+      este,
+      altitude_m: (cota !== null && !isNaN(cota)) ? cota : null,
+    }
+    if (editCodigo.trim()) body.codigo = editCodigo.trim()
     try {
-      const atualizado = await apiPatch<Ponto>(`/pontos/${pontoSelecionado.id}`, {
-        nome: editNome.trim(),
-        lat,
-        lon,
-        codigo: editCodigo.trim() || undefined,
-      })
+      const atualizado = await apiPatch<Ponto>(`/pontos/${pontoSelecionado.id}`, body as any)
       setPontos(prev => prev.map(p => p.id === atualizado.id ? { ...p, ...atualizado } : p))
       setPontoSelecionado(null)
     } catch (err: any) {
@@ -772,7 +846,7 @@ export default function MapaProjetoScreen() {
     } finally {
       setSalvandoPonto(false)
     }
-  }, [pontoSelecionado, editNome, editLat, editLon, editCodigo])
+  }, [pontoSelecionado, editNome, editNorte, editEste, editFuso, editCota, editCodigo])
 
   const deletarPonto = useCallback(() => {
     if (!pontoSelecionado) return
@@ -1150,11 +1224,18 @@ export default function MapaProjetoScreen() {
             disabled={undoStack.current.length === 0}>
             <Feather name="corner-up-left" size={18} color={C.muted} />
           </TouchableOpacity>
-          {/* Botão ferramentas ⚙ */}
-          <TouchableOpacity style={[s.etool, { borderColor: C.primary }]}
+          <TouchableOpacity
+            style={[s.etool, { borderColor: C.primary }]}
             onPress={() => setFerrPickerVisible(true)}
             accessibilityRole="button" accessibilityLabel="Ferramentas de cálculo">
             <Text style={{ color: C.primary, fontSize: 13 }}>⚙</Text>
+          </TouchableOpacity>
+          {/* Botão Osnap */}
+          <TouchableOpacity
+            style={[s.etool, osnapAtivo && { backgroundColor: '#FFD700', borderColor: '#FFD700' }]}
+            onPress={() => setOsnapAtivo(v => !v)}
+            accessibilityRole="button" accessibilityLabel="Snap a ponto">
+            <Text style={{ color: osnapAtivo ? '#1a1a18' : C.muted, fontSize: 12, fontWeight: '700' }}>⊙</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.etool, { marginLeft: 'auto' }]} onPress={cancelarEdit}>
             <Text style={{ color: C.muted, fontSize: 11 }}>Cancelar</Text>
@@ -1188,6 +1269,7 @@ export default function MapaProjetoScreen() {
             selecaoAtiva={selecaoAtiva}
             vxSelecionados={vxSelecionados}
             onPontoPress={abrirEdicaoPonto}
+            osnapAtivo={osnapAtivo}
           />
         )}
 
@@ -1212,11 +1294,14 @@ export default function MapaProjetoScreen() {
           </View>
         )}
 
-        {/* Coordinate overlay */}
+        {/* Coordinate overlay — UTM centro */}
         {hasGeometry && !editMode && region && (
           <View style={s.coordOverlay} pointerEvents="none">
             <Text style={s.coordText}>
-              {`Lat  ${region.latitude.toFixed(5)}°   Lon  ${region.longitude.toFixed(5)}°`}
+              {(() => {
+                const utm = latLonParaUTM(region.latitude, region.longitude)
+                return `N: ${utm.norte.toFixed(1)}  E: ${utm.este.toFixed(1)}  Fuso: ${utm.fuso}`
+              })()}
             </Text>
             <Text style={s.coordMuted}>
               {`Medidos: ${pontos.length} • Visíveis: ${visiblePoints.length} • Vértices: ${polygonVerts.length}`}
@@ -1573,12 +1658,9 @@ export default function MapaProjetoScreen() {
 
             {pontoSelecionado && (
               <>
-                <Text style={{ color: C.muted, fontSize: 11, marginBottom: 4 }}>ORIGEM: {pontoSelecionado.origem?.toUpperCase() || 'GPS'}</Text>
-                {pontoSelecionado.altitude_m != null && (
-                  <Text style={{ color: C.muted, fontSize: 11, marginBottom: 12 }}>
-                    Alt: {pontoSelecionado.altitude_m.toFixed(3)} m  {pontoSelecionado.norte ? `  N: ${pontoSelecionado.norte.toFixed(3)}  E: ${pontoSelecionado.este?.toFixed(3)}` : ''}
-                  </Text>
-                )}
+                <Text style={{ color: C.muted, fontSize: 11, marginBottom: 12 }}>
+                  ORIGEM: {pontoSelecionado.origem?.toUpperCase() || 'GPS'}
+                </Text>
 
                 <View style={{ gap: 12 }}>
                   <View>
@@ -1600,22 +1682,38 @@ export default function MapaProjetoScreen() {
                     />
                   </View>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Latitude</Text>
+                    <View style={{ flex: 2 }}>
+                      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Norte (m)</Text>
                       <TextInput
                         style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
-                        placeholderTextColor={C.muted} placeholder="-23.55000000"
-                        value={editLat} onChangeText={setEditLat} keyboardType="decimal-pad"
+                        placeholderTextColor={C.muted} placeholder="7395000.000"
+                        value={editNorte} onChangeText={setEditNorte} keyboardType="decimal-pad"
+                      />
+                    </View>
+                    <View style={{ flex: 2 }}>
+                      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Este (m)</Text>
+                      <TextInput
+                        style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
+                        placeholderTextColor={C.muted} placeholder="500000.000"
+                        value={editEste} onChangeText={setEditEste} keyboardType="decimal-pad"
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Longitude</Text>
+                      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Fuso</Text>
                       <TextInput
                         style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
-                        placeholderTextColor={C.muted} placeholder="-46.63000000"
-                        value={editLon} onChangeText={setEditLon} keyboardType="decimal-pad"
+                        placeholderTextColor={C.muted} placeholder="22"
+                        value={editFuso} onChangeText={setEditFuso} keyboardType="number-pad"
                       />
                     </View>
+                  </View>
+                  <View>
+                    <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Cota / Altitude (m)</Text>
+                    <TextInput
+                      style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
+                      placeholderTextColor={C.muted} placeholder="Ex: 850.000"
+                      value={editCota} onChangeText={setEditCota} keyboardType="decimal-pad"
+                    />
                   </View>
                 </View>
 
