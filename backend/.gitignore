@@ -1,6 +1,7 @@
-# Nunca versionar credenciais locais
+# Nunca versionar credenciais locais (.env.example é versionado propositalmente)
 .env
 .env.*
+!.env.example
 
 # Artefatos locais de Python
 __pycache__/

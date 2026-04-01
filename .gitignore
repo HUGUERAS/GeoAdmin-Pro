@@ -1,8 +1,9 @@
-# Variáveis de ambiente
+# Variáveis de ambiente (arquivos reais; .env.example é versionado propositalmente)
 *.env
 .env
 .env.*
 backend/.env
+!backend/.env.example
 
 # Credenciais
 mobile/credentials.json

@@ -1194,6 +1194,130 @@ def revisar_confrontacoes(projeto_id: str, payload: RevisoesConfrontacaoRequest)
     }
 
 
+@router.get("/{projeto_id}/metricas-piloto", summary="Métricas do piloto condominial")
+def metricas_piloto(projeto_id: str):
+    """
+    Retorna KPIs do piloto condominial para monitoramento em tempo real:
+    - lotes_cadastrados: total de áreas/lotes no projeto
+    - lotes_com_participante: lotes com ao menos um participante vinculado
+    - magic_links_enviados: total de eventos de envio de magic link
+    - formularios_preenchidos: lotes cujo participante preencheu o formulário
+    - lotes_com_croqui: lotes com geometria de esboço ou final recebida
+    - lotes_com_confrontantes_ok: lotes com status documental >= confrontantes_ok
+    - lotes_prontos: lotes com status operacional e documental finais
+    - por_status_operacional: contagem por status operacional
+    - por_status_documental: contagem por status documental
+    """
+    sb = _get_supabase()
+
+    # Áreas do projeto
+    res_areas = (
+        sb.table("areas_projeto")
+        .select(
+            "id, status_operacional, status_documental, "
+            "origem_tipo, resumo_esboco, resumo_final"
+        )
+        .eq("projeto_id", projeto_id)
+        .is_("deleted_at", "null")
+        .execute()
+    )
+    areas = getattr(res_areas, "data", None) or []
+
+    # Participantes por área (area_clientes)
+    area_ids = [a["id"] for a in areas]
+    participantes_por_area: dict[str, int] = {}
+    if area_ids:
+        res_ac = (
+            sb.table("area_clientes")
+            .select("area_id")
+            .in_("area_id", area_ids)
+            .is_("deleted_at", "null")
+            .execute()
+        )
+        for row in (getattr(res_ac, "data", None) or []):
+            aid = row["area_id"]
+            participantes_por_area[aid] = participantes_por_area.get(aid, 0) + 1
+
+    # Formulários preenchidos: busca clientes vinculados ao projeto com formulario_ok
+    res_pc = (
+        sb.table("projeto_clientes")
+        .select("cliente_id, area_id")
+        .eq("projeto_id", projeto_id)
+        .is_("deleted_at", "null")
+        .execute()
+    )
+    vinculos = getattr(res_pc, "data", None) or []
+    cliente_ids = list({v["cliente_id"] for v in vinculos if v.get("cliente_id")})
+    formularios_ok_ids: set[str] = set()
+    if cliente_ids:
+        res_cli = (
+            sb.table("clientes")
+            .select("id, formulario_ok")
+            .in_("id", cliente_ids)
+            .eq("formulario_ok", True)
+            .execute()
+        )
+        formularios_ok_ids = {r["id"] for r in (getattr(res_cli, "data", None) or [])}
+
+    # Áreas com formulário preenchido
+    areas_com_formulario: set[str] = set()
+    for v in vinculos:
+        if v.get("cliente_id") in formularios_ok_ids and v.get("area_id"):
+            areas_com_formulario.add(v["area_id"])
+
+    # Eventos de magic link enviados
+    res_ev = (
+        sb.table("eventos_magic_link")
+        .select("id", count="exact")
+        .eq("projeto_id", projeto_id)
+        .in_("tipo_evento", ["gerado", "reenviado"])
+        .is_("deleted_at", "null")
+        .execute()
+    )
+    magic_links_enviados = getattr(res_ev, "count", None) or len(getattr(res_ev, "data", None) or [])
+
+    # Contabilizar KPIs por área
+    STATUS_DOCUMENTAL_COM_CONFRONTANTES = {"confrontantes_ok", "documentacao_ok", "peca_pronta"}
+    STATUS_OPERACIONAL_COM_CROQUI = {"croqui_recebido", "geometria_final", "peca_pronta"}
+
+    lotes_com_participante = 0
+    lotes_com_croqui = 0
+    lotes_com_confrontantes_ok = 0
+    lotes_prontos = 0
+    por_status_operacional: dict[str, int] = {}
+    por_status_documental: dict[str, int] = {}
+
+    for area in areas:
+        aid = area["id"]
+        so = area.get("status_operacional") or "aguardando_cliente"
+        sd = area.get("status_documental") or "pendente"
+        por_status_operacional[so] = por_status_operacional.get(so, 0) + 1
+        por_status_documental[sd] = por_status_documental.get(sd, 0) + 1
+
+        if participantes_por_area.get(aid, 0) > 0:
+            lotes_com_participante += 1
+        if so in STATUS_OPERACIONAL_COM_CROQUI:
+            lotes_com_croqui += 1
+        if sd in STATUS_DOCUMENTAL_COM_CONFRONTANTES:
+            lotes_com_confrontantes_ok += 1
+        if so in {"geometria_final", "peca_pronta"} and sd in {"documentacao_ok", "peca_pronta"}:
+            lotes_prontos += 1
+
+    return {
+        "projeto_id": projeto_id,
+        "calculado_em": datetime.now(timezone.utc).isoformat(),
+        "lotes_cadastrados": len(areas),
+        "lotes_com_participante": lotes_com_participante,
+        "magic_links_enviados": magic_links_enviados,
+        "formularios_preenchidos": len(areas_com_formulario),
+        "lotes_com_croqui": lotes_com_croqui,
+        "lotes_com_confrontantes_ok": lotes_com_confrontantes_ok,
+        "lotes_prontos": lotes_prontos,
+        "por_status_operacional": por_status_operacional,
+        "por_status_documental": por_status_documental,
+    }
+
+
 @router.get("/{projeto_id}/confrontacoes/cartas", summary="Gerar cartas de confrontacao em ZIP")
 def baixar_cartas_confrontacao(projeto_id: str, area_ids: list[str] | None = None, somente_confirmadas: bool = False):
     sb = _get_supabase()
