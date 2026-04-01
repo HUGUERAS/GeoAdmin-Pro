@@ -235,6 +235,47 @@ def buscar_ponto(ponto_id: str):
     return res.data
 
 
+class PontoUpdate(BaseModel):
+    nome: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    norte: Optional[float] = None
+    este: Optional[float] = None
+    cota: Optional[float] = None
+    altitude_m: Optional[float] = None
+    codigo: Optional[str] = None
+
+
+@router.patch("/{ponto_id}", summary="Atualizar ponto")
+def atualizar_ponto(ponto_id: str, payload: PontoUpdate):
+    sb = _get_supabase()
+    res = sb.table("pontos").select("id").eq("id", ponto_id).is_("deleted_at", "null").maybe_single().execute()
+    if not res.data:
+        raise HTTPException(
+            status_code=404,
+            detail={"erro": "Ponto não encontrado", "codigo": 404}
+        )
+    atualizacoes = {k: v for k, v in payload.model_dump(exclude_none=True).items()}
+    if not atualizacoes:
+        raise HTTPException(
+            status_code=422,
+            detail={"erro": "Nenhum campo para atualizar", "codigo": 422}
+        )
+    # Se lat/lon mudar, recalcular altitude ortométrica
+    if "lat" in atualizacoes and "lon" in atualizacoes and "cota" not in atualizacoes:
+        existente = sb.table("pontos").select("cota, origem").eq("id", ponto_id).maybe_single().execute()
+        if existente.data:
+            atualizacoes.setdefault("cota", existente.data.get("cota"))
+    atualizacoes["atualizado_em"] = datetime.now(timezone.utc).isoformat()
+    res = sb.table("pontos").update(atualizacoes).eq("id", ponto_id).execute()
+    if not res.data:
+        raise HTTPException(
+            status_code=500,
+            detail={"erro": "Falha ao atualizar ponto", "codigo": 500}
+        )
+    return res.data[0]
+
+
 @router.delete("/{ponto_id}", summary="Remover ponto (soft-delete)")
 def deletar_ponto(ponto_id: str):
     sb = _get_supabase()

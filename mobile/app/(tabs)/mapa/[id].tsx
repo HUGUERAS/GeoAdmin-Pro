@@ -9,8 +9,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
 import { API_URL } from '../../../constants/Api'
+import { apiGet, apiPatch, apiDelete } from '../../../lib/api'
 
-type Ponto    = { id: string; nome: string; altitude_m: number; lon: number; lat: number }
+type Ponto    = { id: string; nome: string; altitude_m: number; lon: number; lat: number; norte?: number; este?: number; codigo?: string; origem?: string }
 type Vertice  = { lon: number; lat: number; nome: string }
 type Layers   = { pontos: boolean; poligono: boolean; rotulos: boolean }
 type Mode     = 'mapa' | 'cad'
@@ -250,8 +251,14 @@ function render(layers) {
   }
   if (layers.pontos) {
     pontos.forEach(function(p) {
-      L.circleMarker([p.lat,p.lon],{radius:5,color:'#fff',fillColor:'#EF9F27',fillOpacity:1,weight:1.5})
-        .bindPopup(p.nome).addTo(lg);
+      L.circleMarker([p.lat,p.lon],{radius:8,color:'#fff',fillColor:'#EF9F27',fillOpacity:1,weight:1.5})
+        .bindPopup('<b>'+p.nome+'</b><br>'+(p.codigo||'')+'<br>'+p.lat.toFixed(7)+', '+p.lon.toFixed(7))
+        .on('click', function(e){
+          L.DomEvent.stopPropagation(e);
+          var msg = JSON.stringify({type:'pontoclick',ponto:{id:p.id,nome:p.nome,lat:p.lat,lon:p.lon,altitude_m:p.altitude_m,norte:p.norte,este:p.este,codigo:p.codigo,origem:p.origem}});
+          if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(msg);}
+        })
+        .addTo(lg);
       if (layers.rotulos) {
         L.marker([p.lat,p.lon],{
           icon:L.divIcon({
@@ -282,7 +289,10 @@ window.addEventListener('message',function(e){try{var d=JSON.parse(e.data);updat
 
 // ── WebView satellite view ────────────────────────────────────────────────────
 
-function MapaWebView({ pontos, poligono, layers }: { pontos: Ponto[]; poligono: Vertice[]; layers: Layers }) {
+function MapaWebView({ pontos, poligono, layers, onPontoClick }: { 
+  pontos: Ponto[]; poligono: Vertice[]; layers: Layers; 
+  onPontoClick?: (ponto: Ponto) => void 
+}) {
   const webRef  = useRef<WebView>(null)
   const ready   = useRef(false)
 
@@ -303,6 +313,14 @@ function MapaWebView({ pontos, poligono, layers }: { pontos: Ponto[]; poligono: 
       javaScriptEnabled
       originWhitelist={['*']}
       onLoad={() => { ready.current = true; inject(pontos, poligono, layers) }}
+      onMessage={(event) => {
+        try {
+          const msg = JSON.parse(event.nativeEvent.data)
+          if (msg.type === 'pontoclick' && onPontoClick) {
+            onPontoClick(msg.ponto)
+          }
+        } catch (_) {}
+      }}
     />
   )
 }
@@ -311,7 +329,7 @@ function MapaWebView({ pontos, poligono, layers }: { pontos: Ponto[]; poligono: 
 
 function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVertices, origVertices,
   onVertexDrag, onVertexDelete, onMidpointAdd, onDragStart,
-  onVertexTap, selecaoAtiva, vxSelecionados }: any) {
+  onVertexTap, selecaoAtiva, vxSelecionados, onPontoPress }: any) {
   const { width: W, height: H } = Dimensions.get('window')
   const svgH = H - 56 - 50 - 50
   const TOUCH_R = 20
@@ -411,6 +429,8 @@ function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVert
             {layers.rotulos && (
               <SvgText x={x+7} y={y-4} fontSize={9} fill={C.text} fontWeight="bold">{p.nome}</SvgText>
             )}
+            {/* Hit area para toque */}
+            <Circle cx={x} cy={y} r={14} fill="transparent" onPress={() => onPontoPress?.(p)} />
           </G>
         )
       })}
@@ -526,6 +546,14 @@ export default function MapaProjetoScreen() {
   const [subArea,      setSubArea]      = useState('')
   const [subUnidade,   setSubUnidade]   = useState<'ha' | 'm2'>('ha')
 
+  // ── edição de ponto individual ────────────────────────────────────────────────
+  const [pontoSelecionado,  setPontoSelecionado]  = useState<Ponto | null>(null)
+  const [editNome,          setEditNome]          = useState('')
+  const [editLat,           setEditLat]           = useState('')
+  const [editLon,           setEditLon]           = useState('')
+  const [editCodigo,        setEditCodigo]        = useState('')
+  const [salvandoPonto,     setSalvandoPonto]     = useState(false)
+
   // resultados
   const [resultado,    setResultado]    = useState<any>(null)
   const autoToolKeyRef = useRef<string | null>(null)
@@ -536,12 +564,10 @@ export default function MapaProjetoScreen() {
   )
 
   useEffect(() => {
-    fetch(`${API_URL}/projetos/${id}`)
-      .then(r => r.json())
+    apiGet<any>(`/projetos/${id}`)
       .then(data => {
         const pontosProjeto = (data.pontos || []).filter((p: any) => p.lon != null && p.lat != null)
         const perimetroAtivo = (data.perimetro_ativo?.vertices || []).filter((v: any) => v.lon != null && v.lat != null)
-
         setProjeto(data)
         setPontos(pontosProjeto)
         setPolygonVerts(perimetroAtivo.length > 0 ? perimetroAtivo : pontosParaVertices(pontosProjeto))
@@ -717,7 +743,65 @@ export default function MapaProjetoScreen() {
     setSubArea(''); setSubUnidade('ha')
   }, [])
 
-  const abrirFerramenta = useCallback((ferr: NomeFerramenta) => {
+  const abrirEdicaoPonto = useCallback((ponto: Ponto) => {
+    setPontoSelecionado(ponto)
+    setEditNome(ponto.nome || '')
+    setEditLat(ponto.lat.toFixed(8))
+    setEditLon(ponto.lon.toFixed(8))
+    setEditCodigo(ponto.codigo || '')
+  }, [])
+
+  const salvarEdicaoPonto = useCallback(async () => {
+    if (!pontoSelecionado) return
+    const lat = parseFloat(editLat)
+    const lon = parseFloat(editLon)
+    if (!editNome.trim()) { Alert.alert('Atenção', 'Nome não pode ser vazio.'); return }
+    if (isNaN(lat) || isNaN(lon)) { Alert.alert('Atenção', 'Coordenadas inválidas.'); return }
+    setSalvandoPonto(true)
+    try {
+      const atualizado = await apiPatch<Ponto>(`/pontos/${pontoSelecionado.id}`, {
+        nome: editNome.trim(),
+        lat,
+        lon,
+        codigo: editCodigo.trim() || undefined,
+      })
+      setPontos(prev => prev.map(p => p.id === atualizado.id ? { ...p, ...atualizado } : p))
+      setPontoSelecionado(null)
+    } catch (err: any) {
+      Alert.alert('Erro', err?.message || 'Falha ao salvar ponto.')
+    } finally {
+      setSalvandoPonto(false)
+    }
+  }, [pontoSelecionado, editNome, editLat, editLon, editCodigo])
+
+  const deletarPonto = useCallback(() => {
+    if (!pontoSelecionado) return
+    Alert.alert(
+      'Deletar ponto',
+      `Remover "${pontoSelecionado.nome}"? Esta ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Deletar',
+          style: 'destructive',
+          onPress: async () => {
+            setSalvandoPonto(true)
+            try {
+              await apiDelete(`/pontos/${pontoSelecionado.id}`)
+              setPontos(prev => prev.filter(p => p.id !== pontoSelecionado.id))
+              setPontoSelecionado(null)
+            } catch (err: any) {
+              Alert.alert('Erro', err?.message || 'Falha ao deletar ponto.')
+            } finally {
+              setSalvandoPonto(false)
+            }
+          },
+        },
+      ]
+    )
+  }, [pontoSelecionado])
+
+  const abrirFerramenta= useCallback((ferr: NomeFerramenta) => {
     setFerrPickerVisible(false)
     setFerrAtiva(ferr)
     setVxSelecionados([])
@@ -1090,7 +1174,7 @@ export default function MapaProjetoScreen() {
             <Text style={[s.emptyMsg, { color: C.muted }]}>Nenhuma geometria disponível</Text>
           </View>
         ) : mode === 'mapa' ? (
-          <MapaWebView pontos={visiblePoints} poligono={polygonVerts} layers={layers} />
+          <MapaWebView pontos={visiblePoints} poligono={polygonVerts} layers={layers} onPontoClick={abrirEdicaoPonto} />
         ) : (
           <CadView
             pontos={visiblePoints} polygonVerts={polygonVerts} layers={layers} C={C}
@@ -1103,6 +1187,7 @@ export default function MapaProjetoScreen() {
             onVertexTap={handleVertexTap}
             selecaoAtiva={selecaoAtiva}
             vxSelecionados={vxSelecionados}
+            onPontoPress={abrirEdicaoPonto}
           />
         )}
 
@@ -1470,6 +1555,88 @@ export default function MapaProjetoScreen() {
                 </TouchableOpacity>
               )}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal edição de ponto ── */}
+      <Modal visible={pontoSelecionado !== null} transparent animationType="slide"
+        onRequestClose={() => setPontoSelecionado(null)}>
+        <View style={s.ferrModal}>
+          <View style={[s.ferrSheet, { backgroundColor: C.card }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[s.ferrSheetTitle, { color: C.text }]}>📍 Editar Ponto</Text>
+              <TouchableOpacity onPress={() => setPontoSelecionado(null)}>
+                <Feather name="x" size={20} color={C.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {pontoSelecionado && (
+              <>
+                <Text style={{ color: C.muted, fontSize: 11, marginBottom: 4 }}>ORIGEM: {pontoSelecionado.origem?.toUpperCase() || 'GPS'}</Text>
+                {pontoSelecionado.altitude_m != null && (
+                  <Text style={{ color: C.muted, fontSize: 11, marginBottom: 12 }}>
+                    Alt: {pontoSelecionado.altitude_m.toFixed(3)} m  {pontoSelecionado.norte ? `  N: ${pontoSelecionado.norte.toFixed(3)}  E: ${pontoSelecionado.este?.toFixed(3)}` : ''}
+                  </Text>
+                )}
+
+                <View style={{ gap: 12 }}>
+                  <View>
+                    <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Nome do ponto</Text>
+                    <TextInput
+                      style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
+                      placeholderTextColor={C.muted} placeholder="Ex: PT001"
+                      value={editNome} onChangeText={setEditNome}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                  <View>
+                    <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Código</Text>
+                    <TextInput
+                      style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
+                      placeholderTextColor={C.muted} placeholder="Ex: TP, BMB, PI"
+                      value={editCodigo} onChangeText={setEditCodigo}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Latitude</Text>
+                      <TextInput
+                        style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
+                        placeholderTextColor={C.muted} placeholder="-23.55000000"
+                        value={editLat} onChangeText={setEditLat} keyboardType="decimal-pad"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Longitude</Text>
+                      <TextInput
+                        style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
+                        placeholderTextColor={C.muted} placeholder="-46.63000000"
+                        value={editLon} onChangeText={setEditLon} keyboardType="decimal-pad"
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={{ backgroundColor: C.primary, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginTop: 16, marginBottom: 8, opacity: salvandoPonto ? 0.6 : 1 }}
+                  onPress={salvarEdicaoPonto}
+                  disabled={salvandoPonto}>
+                  {salvandoPonto
+                    ? <ActivityIndicator color={C.primaryText} />
+                    : <Text style={{ color: C.primaryText, fontWeight: '700', fontSize: 15 }}>Salvar</Text>
+                  }
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E24B4A', opacity: salvandoPonto ? 0.6 : 1 }}
+                  onPress={deletarPonto}
+                  disabled={salvandoPonto}>
+                  <Text style={{ color: '#E24B4A', fontWeight: '700', fontSize: 15 }}>🗑 Deletar ponto</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
