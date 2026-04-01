@@ -62,8 +62,9 @@ app = FastAPI(title="GeoAdmin Pro - Backend MVP")
 app.add_middleware(
   CORSMiddleware,
   allow_origins=[origem.strip() for origem in _origens_permitidas],
-  allow_methods=["*"],
-  allow_headers=["*"],
+  allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+  expose_headers=["Content-Disposition"],
 )
 
 _static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

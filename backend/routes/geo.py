@@ -76,10 +76,8 @@ def utm_para_geo(payload: UtmParaGeoRequest):
         t = Transformer.from_crs(crs_utm, "EPSG:4674", always_xy=True)
         lon, lat = t.transform(payload.este, payload.norte)
         return {"lat": round(lat, 8), "lon": round(lon, 8), "fuso": payload.fuso}
-    except Exception as exc:
-        raise HTTPException(500, str(exc))
-
-@router.post("/converter/geo-utm")
+    except Exception:
+        raise HTTPException(500, "Erro ao converter coordenadas. Verifique os parâmetros informados.")
 def geo_para_utm(payload: GeoParaUtmRequest):
     try:
         from pyproj import Transformer
@@ -89,11 +87,11 @@ def geo_para_utm(payload: GeoParaUtmRequest):
         t = Transformer.from_crs("EPSG:4674", crs_utm, always_xy=True)
         este, norte = t.transform(payload.lon, payload.lat)
         return {"norte": round(norte, 3), "este": round(este, 3), "fuso": fuso}
-    except Exception as exc:
-        raise HTTPException(500, str(exc))
+    except Exception:
+        raise HTTPException(500, "Erro ao converter coordenadas. Verifique os parâmetros informados.")
 
 
-# ─── Interseção ────────────────────────────────────────────────────────────────
+@router.post("/converter/geo-utm")
 
 class SemiretaInput(BaseModel):
     norte: float
@@ -287,8 +285,8 @@ def corrigir_altitude_endpoint(payload: AltitudeCorrRequest):
         raise HTTPException(404, str(exc))
     except ValueError as exc:
         raise HTTPException(422, str(exc))
-    except Exception as exc:
-        raise HTTPException(500, f"Erro ao aplicar geoide: {exc}")
+    except Exception:
+        raise HTTPException(500, "Erro ao aplicar modelo de geoide.")
 
 
 @router.get("/altitude/modelos",

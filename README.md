@@ -83,8 +83,8 @@ Importante:
 Crie `backend/.env` com:
 
 ```env
-SUPABASE_URL=https://jrlrlsotwsiidglcbifo.supabase.co
-SUPABASE_KEY=seu_service_key_ou_anon_key
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_KEY=sua_service_role_key
 ```
 
 Opcional:

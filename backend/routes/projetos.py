@@ -21,7 +21,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -756,6 +756,8 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
 
 @router.get("", summary="Listar todos os projetos")
 def listar_projetos(limite: int = 50, deslocamento: int = 0):
+    limite = min(max(int(limite), 1), 500)
+    deslocamento = max(int(deslocamento), 0)
     sb = _get_supabase()
     res = sb.table("vw_projetos_completo").select("*").order("criado_em", desc=True).range(deslocamento, deslocamento + limite - 1).execute()
     projetos = res.data or []

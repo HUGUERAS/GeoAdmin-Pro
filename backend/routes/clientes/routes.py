@@ -111,6 +111,8 @@ router = APIRouter(prefix="/clientes", tags=["Clientes & Documentacao"])
 
 @router.get("", summary="Listar clientes com resumo documental")
 def listar_clientes(busca: str | None = Query(None), limite: int = 50, deslocamento: int = 0):
+    limite = min(max(int(limite), 1), 500)
+    deslocamento = max(int(deslocamento), 0)
     """Lista clientes com resumo de documentação."""
     sb = get_supabase()
     clientes = sb.table("clientes").select("*").range(deslocamento, deslocamento + limite - 1).execute().data or []

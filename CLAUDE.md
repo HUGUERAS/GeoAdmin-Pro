@@ -41,8 +41,8 @@ Rotas:
 
 **Variáveis de ambiente necessárias:**
 ```
-SUPABASE_URL=https://jrlrlsotwsiidglcbifo.supabase.co
-SUPABASE_KEY=<service_key>
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_KEY=<service_role_key>
 ```
 
 ## Mobile (Expo)

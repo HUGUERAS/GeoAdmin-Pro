@@ -53,13 +53,15 @@ async def importar_landstar(
 
     # ── Validar tamanho do arquivo (limite de 10MB) ─────────────────────────────
     TAMANHO_MAXIMO_BYTES = 10 * 1024 * 1024  # 10MB
-    conteudo_bytes = await arquivo.read()
+    # Lê apenas MAX+1 bytes para evitar alocar o arquivo inteiro em memória
+    # antes de saber se ele excede o limite.
+    conteudo_bytes = await arquivo.read(TAMANHO_MAXIMO_BYTES + 1)
 
     if len(conteudo_bytes) > TAMANHO_MAXIMO_BYTES:
         raise HTTPException(
             status_code=413,
             detail={
-                "erro": f"Arquivo excede o limite de 10MB (tamanho: {len(conteudo_bytes) / (1024 * 1024):.2f}MB)",
+                "erro": f"Arquivo excede o limite de 10MB.",
                 "codigo": 413,
                 "limite_bytes": TAMANHO_MAXIMO_BYTES,
             }

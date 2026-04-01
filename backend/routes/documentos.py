@@ -18,9 +18,19 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field, ValidationError
+
+from utils.rate_limit import magic_link_limiter, token_limiter
+
+
+# ── Rate limiting dependencies ──────────────────────────────────────────────
+async def _rl_magic_link(request: Request) -> None:
+    magic_link_limiter.verificar(magic_link_limiter.chave_da_request(request))
+
+async def _rl_token(request: Request) -> None:
+    token_limiter.verificar(token_limiter.chave_da_request(request))
 
 from integracoes.areas_projeto import anexar_arquivos_area, salvar_area_projeto
 from integracoes.projeto_clientes import (
@@ -241,7 +251,34 @@ def _buscar_cliente_por_documento_formulario(sb, cpf: str) -> dict[str, Any] | N
     return None
 
 
+def _cliente_tem_projetos_ativos(sb, cliente_id: str) -> bool:
+    """Verifica se o cliente já tem projetos vinculados além de registros placeholder."""
+    res = (
+        sb.table("projeto_clientes")
+        .select("id")
+        .eq("cliente_id", cliente_id)
+        .is_("deleted_at", "null")
+        .limit(1)
+        .execute()
+    )
+    return bool(getattr(res, "data", None))
+
+
 def _reaproveitar_cliente_existente_formulario(sb, cliente_atual_id: str, cliente_existente_id: str, dados: DadosFormulario) -> str:
+    # Proteção contra account takeover: só permite reaproveitamento se o cliente
+    # existente NÃO tiver projetos ativos vinculados. Caso contrário, o CPF
+    # duplicado pode ser coincidência ou ataque — rejeita com 409.
+    if _cliente_tem_projetos_ativos(sb, cliente_existente_id):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "erro": (
+                    "Já existe um cadastro com esse CPF/CNPJ vinculado a outro projeto. "
+                    "Entre em contato com o responsável técnico para regularizar."
+                ),
+                "codigo": 409,
+            },
+        )
     resposta_cliente_atual = (
         sb.table("clientes")
         .select("magic_link_token, magic_link_expira")
@@ -721,6 +758,7 @@ def _sincronizar_confrontantes_formulario(sb, projeto_id: str, cliente_id: str, 
 @router.post("/projetos/{projeto_id}/magic-link", summary="Gerar link do formulário para o cliente")
 def gerar_magic_link(
     projeto_id: str,
+    _rl: None = Depends(_rl_magic_link),
     cliente_id: str | None = None,
     projeto_cliente_id: str | None = None,
     dias: int = 7,
@@ -897,13 +935,13 @@ def listar_historico_magic_links(projeto_id: str, projeto_cliente_id: str | None
 
 
 @router.get("/formulario/cliente/contexto", summary="Obter contexto do magic link")
-def contexto_formulario_cliente(token: str = Query(...)):
+def contexto_formulario_cliente(_rl: None = Depends(_rl_token), token: str = Query(...)):
     sb = _get_supabase()
     return _contexto_token(sb, token)
 
 
 @router.get("/formulario/cliente", response_class=HTMLResponse, summary="Formulário HTML para o cliente preencher")
-def formulario_cliente(token: str = Query(...)):
+def formulario_cliente(_rl: None = Depends(_rl_token), token: str = Query(...)):
     sb = _get_supabase()
     _contexto_token(sb, token)
     html_path = _arquivo_formulario_path()
@@ -1061,8 +1099,8 @@ def gerar_documentos(projeto_id: str, supabase=None):
         zip_bytes = gerar_todos_documentos(sb, projeto_id)
     except ValueError as e:
         raise HTTPException(422, {"erro": str(e), "codigo": 104})
-    except Exception as e:
-        raise HTTPException(500, {"erro": f"[ERRO-501] Falha ao gerar documentos: {e}", "codigo": 501})
+    except Exception:
+        raise HTTPException(500, {"erro": "[ERRO-501] Falha ao gerar documentos. Tente novamente ou contate o suporte.", "codigo": 501})
 
     nome = f"GPRF_{dados_check.get('projeto_nome', 'projeto').replace(' ', '_')[:25]}.zip"
     logger.info("Documentos GPRF gerados: %s (%s bytes)", nome, len(zip_bytes))
@@ -1080,7 +1118,7 @@ def listar_documentos(projeto_id: str, supabase=None):
 
     try:
         res = sb.table("documentos_gerados").select("*").eq("projeto_id", projeto_id).order("gerado_em", desc=True).execute()
-    except Exception as e:
-        raise HTTPException(500, {"erro": f"[ERRO-502] {e}", "codigo": 502})
+    except Exception:
+        raise HTTPException(500, {"erro": "[ERRO-502] Falha ao listar documentos.", "codigo": 502})
 
     return {"total": len(res.data), "documentos": res.data}
