@@ -6,18 +6,18 @@
 <title>GeoAdmin Pro — Formulário do Cliente</title>
 <style>
   :root {
-    --bg: #f2eee6;
-    --bg-soft: #fbf8f2;
-    --card: #fffdfa;
-    --text: #1f1b16;
-    --muted: #6d6559;
-    --border: #d9d0c1;
-    --line: #ebe2d3;
-    --accent: #c58b2b;
-    --accent-dark: #875915;
-    --success: #2f7d53;
+    --bg: #0d110f;
+    --bg-soft: #131816;
+    --card: #171c19;
+    --text: #e6f1ea;
+    --muted: #97a79c;
+    --border: #2a322d;
+    --line: #232a26;
+    --accent: #2fa56a;
+    --accent-dark: #174b32;
+    --success: #46c07e;
     --danger: #b24b42;
-    --shadow: 0 14px 34px rgba(44, 30, 10, 0.08);
+    --shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
     --radius: 20px;
   }
   * { box-sizing: border-box; }
@@ -25,15 +25,15 @@
     margin: 0;
     font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background:
-      radial-gradient(circle at top left, rgba(197,139,43,.15), transparent 24%),
-      linear-gradient(180deg, #f6f1e9 0%, #efe7db 100%);
+      radial-gradient(circle at top left, rgba(47,165,106,.16), transparent 24%),
+      linear-gradient(180deg, #0b0f0d 0%, #121815 100%);
     color: var(--text);
     min-height: 100vh;
   }
   .hero {
     padding: 28px 20px 18px;
-    background: linear-gradient(135deg, #31261a 0%, #56412a 52%, #7e5b22 100%);
-    color: #fff7e9;
+    background: linear-gradient(135deg, #08100c 0%, #102118 52%, #18492f 100%);
+    color: #e8f7ee;
     position: relative;
     overflow: hidden;
   }
@@ -116,13 +116,13 @@
     justify-content: center;
   }
   .progress-item.active {
-    border-color: rgba(197,139,43,.72);
-    background: linear-gradient(180deg, #fff6e6 0%, #fffdfa 100%);
-    box-shadow: 0 8px 20px rgba(197,139,43,.12);
+    border-color: rgba(47,165,106,.72);
+    background: linear-gradient(180deg, #102118 0%, #171c19 100%);
+    box-shadow: 0 8px 20px rgba(47,165,106,.16);
   }
   .progress-item.done {
     border-color: rgba(47,125,83,.42);
-    background: rgba(47,125,83,.08);
+    background: rgba(70,192,126,.12);
   }
   .step-index {
     width: 28px;
@@ -131,8 +131,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #f3e8d3;
-    color: var(--accent-dark);
+    background: #143122;
+    color: #7fe0a8;
     font-size: 12px;
     font-weight: 700;
   }
@@ -215,7 +215,7 @@
   .sketch-shell {
     border: 1px dashed rgba(133, 89, 21, .45);
     border-radius: 18px;
-    background: linear-gradient(180deg, #fffaf1 0%, #f7efe1 100%);
+    background: linear-gradient(180deg, #111613 0%, #161d19 100%);
     padding: 14px;
     display: grid;
     gap: 12px;
@@ -250,9 +250,9 @@
   .nav-row .spacer { flex: 1; }
   .sketch-board {
     width: 100%;
-    background: #fff;
+    background: #101512;
     border-radius: 14px;
-    border: 1px solid rgba(133, 89, 21, .2);
+    border: 1px solid rgba(47,165,106,.22);
     aspect-ratio: 16 / 10;
     overflow: hidden;
     position: relative;
@@ -267,7 +267,7 @@
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 14px;
-    background: #fff;
+    background: #101512;
   }
   .upload-box input { padding: 10px; background: transparent; }
   .confrontantes { display: grid; gap: 12px; }
@@ -292,9 +292,9 @@
     margin-top: 14px;
     padding: 14px 16px;
     border-radius: 14px;
-    background: rgba(47,125,83,.08);
+    background: rgba(70,192,126,.12);
     color: var(--success);
-    border: 1px solid rgba(47,125,83,.18);
+    border: 1px solid rgba(70,192,126,.24);
     display: none;
   }
   .error-banner {
@@ -346,7 +346,7 @@
   <section class="hero">
     <div class="eyebrow">GeoAdmin Pro · Regularização Rural</div>
     <h1 id="hero-title">Preencha seus dados e esboce sua área</h1>
-    <p id="hero-subtitle">Este formulário ajuda a montar as peças técnicas da regularização com mais rapidez e menos retrabalho.</p>
+    <p id="hero-subtitle">Este formulário ajuda a montar as peças técnicas da regularização com mais rapidez e menos retrabalho. Você está vendo apenas o seu recorte dentro do projeto.</p>
   </section>
 
   <main class="shell">
@@ -356,8 +356,16 @@
         <div class="meta-value" id="meta-projeto">Carregando...</div>
       </div>
       <div>
-        <div class="meta-label">Cliente</div>
+        <div class="meta-label">Participante</div>
         <div class="meta-value" id="meta-cliente">Carregando...</div>
+      </div>
+      <div>
+        <div class="meta-label">Papel no processo</div>
+        <div class="meta-value" id="meta-papel">Carregando...</div>
+      </div>
+      <div>
+        <div class="meta-label">Lote / unidade</div>
+        <div class="meta-value" id="meta-lote">Carregando...</div>
       </div>
       <div>
         <div class="meta-label">Validade do link</div>
@@ -950,7 +958,9 @@ async function carregarContexto() {
     if (!res.ok) throw new Error('Falha ao carregar contexto')
     const data = await res.json()
     document.getElementById('meta-projeto').textContent = data.projeto?.projeto_nome || 'Projeto em preparação'
-    document.getElementById('meta-cliente').textContent = data.cliente?.nome || 'Cliente'
+    document.getElementById('meta-cliente').textContent = data.cliente?.nome || 'Participante'
+    document.getElementById('meta-papel').textContent = data.participante?.papel || 'Participante do processo'
+    document.getElementById('meta-lote').textContent = data.lote?.identificacao || data.area?.nome || 'Recorte sem lote específico'
     document.getElementById('meta-validade').textContent = data.cliente?.magic_link_expira
       ? new Date(data.cliente.magic_link_expira).toLocaleString('pt-BR')
       : 'Sem validade'
@@ -958,7 +968,7 @@ async function carregarContexto() {
       document.getElementById('hero-title').textContent = `Projeto ${data.projeto.projeto_nome}`
     }
     if (data.mensagem) {
-      document.getElementById('hero-subtitle').textContent = data.mensagem
+      document.getElementById('hero-subtitle').textContent = `${data.mensagem} Você não tem acesso aos demais lotes ou imóveis do projeto.`
     }
 
     const municipioImovelContexto = normalizarMunicipio(
@@ -983,7 +993,9 @@ async function carregarContexto() {
     }
   } catch {
     document.getElementById('meta-projeto').textContent = 'Projeto indisponível'
-    document.getElementById('meta-cliente').textContent = 'Cliente indisponível'
+    document.getElementById('meta-cliente').textContent = 'Participante indisponível'
+    document.getElementById('meta-papel').textContent = 'Papel indisponível'
+    document.getElementById('meta-lote').textContent = 'Lote indisponível'
     document.getElementById('meta-validade').textContent = 'Verifique o link'
     montarListaMunicipios()
   }
