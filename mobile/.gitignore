@@ -13,3 +13,16 @@ dist/
 
 credentials.json
 credentials/
+
+# Build outputs
+build/
+*.apk
+*.aab
+*.ipa
+
+# EAS / Expo
+.eas-build/
+.expo-shared/
+
+# TypeScript
+*.tsbuildinfo

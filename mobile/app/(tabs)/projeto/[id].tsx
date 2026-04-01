@@ -9,6 +9,8 @@ import {
   Alert,
   Clipboard,
   Platform,
+  Modal,
+  TextInput,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import * as DocumentPicker from 'expo-document-picker'
@@ -20,7 +22,7 @@ import { StatusBadge } from '../../../components/StatusBadge'
 import { SyncBadge } from '../../../components/SyncBadge'
 import { contarPendentes, initDB, cacheProjetoDetalhe, getCachedProjetoDetalhe, contarErros, resetarErros, salvarUltimoProjetoMapa } from '../../../lib/db'
 import { sincronizar } from '../../../lib/sync'
-import { apiPost, apiPostFormData } from '../../../lib/api'
+import { apiPost, apiPostFormData, apiPatch } from '../../../lib/api'
 
 type ProximaEtapa = {
   titulo: string
@@ -234,6 +236,29 @@ function rotuloStatusLote(valor: string | null | undefined, tipo: 'operacional' 
   const mapa = tipo === 'operacional' ? mapaOperacional : mapaDocumental
   return mapa[status] || fallback
 }
+function statusEfetivo(area: any): { texto: string; cor: string } {
+  const sd = normalizarStatus(area.status_documental)
+  const so = normalizarStatus(area.status_operacional)
+  if (sd === 'completo' || sd === 'validado') return { texto: '✓ Completo', cor: Colors.dark.success }
+  if (so === 'peca_pronta') return { texto: '✓ Peça pronta', cor: Colors.dark.success }
+  if (so === 'geometria_final') return { texto: '📐 Geom. final', cor: Colors.dark.info }
+  if (so === 'formulario_ok') return { texto: '📋 Form. ok', cor: Colors.dark.info }
+  if (so === 'cliente_vinculado') return { texto: '👤 Cliente ok', cor: Colors.dark.info }
+  if (so === 'aguardando_cliente') return { texto: '⏳ Aguard. cliente', cor: Colors.dark.warning }
+  return { texto: '📌 Pendente', cor: Colors.dark.danger }
+}
+
+function validarLotePronto(area: any): string[] {
+  const problemas: string[] = []
+  const participantes = area.participantes_area || area.participantes || area.area_clientes || []
+  if (!participantes.length) problemas.push('Sem participante vinculado')
+  const temGeometria = area.tem_geometria === true || (area.resumo_ativo?.vertices_total || 0) > 0 || (area.geometria_final?.length || 0) > 0
+  if (!temGeometria) problemas.push('Sem geometria cadastrada')
+  const soOk = ['formulario_ok', 'croqui_recebido', 'geometria_final', 'confrontantes_ok', 'peca_pronta']
+  const statusOp = normalizarStatus(area.status_operacional)
+  if (!soOk.includes(statusOp)) problemas.push('Formulário não preenchido')
+  return problemas
+}
 
 export default function DetalheProjetoScreen() {
   const C = Colors.dark
@@ -252,6 +277,11 @@ export default function DetalheProjetoScreen() {
   const [importandoLotes, setImportandoLotes] = useState(false)
   const [migrandoArquivos, setMigrandoArquivos] = useState(false)
   const [revisandoConfrontoId, setRevisandoConfrontoId] = useState<string | null>(null)
+  const [expandedAreaIds, setExpandedAreaIds] = useState<Set<string>>(new Set())
+  const [modalVincularLote, setModalVincularLote] = useState(false)
+  const [loteBuscaTermo, setLoteBuscaTermo] = useState('')
+  const [selectedParticipanteId, setSelectedParticipanteId] = useState<string | null>(null)
+  const [vinculandoLote, setVinculandoLote] = useState(false)
 
   const atualizarPendentes = useCallback(async () => {
     const n = await contarPendentes(id)
@@ -480,6 +510,80 @@ export default function DetalheProjetoScreen() {
       // segue a navegação mesmo sem persistir contexto
     }
     router.push(`/(tabs)/mapa/${id}` as any)
+  }
+  const vincularLoteAoParticipante = async (areaId: string, participanteId: string) => {
+    setVinculandoLote(true)
+    try {
+      await apiPost(`/projetos/${id}/areas/vinculos-lote`, {
+        vinculos: [{ area_id: areaId, participante_id: participanteId }]
+      })
+      setModalVincularLote(false)
+      await carregarProjeto()
+      Alert.alert('Lote vinculado', 'O participante foi associado ao lote com sucesso.')
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message || 'Não foi possível vincular o lote.')
+    } finally {
+      setVinculandoLote(false)
+    }
+  }
+
+  const atualizarStatusArea = async (areaId: string, novoStatus: string) => {
+    try {
+      await apiPatch(`/projetos/${id}/areas/${areaId}`, { status_operacional: novoStatus })
+      await carregarProjeto()
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message || 'Não foi possível atualizar o status.')
+    }
+  }
+
+  const handleMarcarGeometriaFinal = (area: any) => {
+    const problemas = validarLotePronto(area)
+    const avisos = problemas.filter(p => !p.includes('geometria'))
+    if (avisos.length > 0) {
+      Alert.alert(
+        '⚠️ Itens pendentes',
+        `Faltam:\n• ${avisos.join('\n• ')}\n\nDeseja marcar geometria final mesmo assim?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Marcar mesmo assim', onPress: () => atualizarStatusArea(area.id, 'geometria_final') }
+        ]
+      )
+    } else {
+      atualizarStatusArea(area.id, 'geometria_final')
+    }
+  }
+
+  const handleMarcarPecaPronta = (area: any) => {
+    const problemas = validarLotePronto(area)
+    if (problemas.length > 0) {
+      Alert.alert(
+        '⚠️ Lote incompleto',
+        `Não é possível marcar como pronto:\n• ${problemas.join('\n• ')}\n\nDeseja prosseguir mesmo assim?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Marcar mesmo assim', style: 'destructive', onPress: () => atualizarStatusArea(area.id, 'peca_pronta') }
+        ]
+      )
+    } else {
+      atualizarStatusArea(area.id, 'peca_pronta')
+    }
+  }
+
+  const alterarParticipanteComAviso = (areaId: string, novoClienteId: string, callback: () => void) => {
+    const areaAtual = areas.find((a: any) => a.id === areaId)
+    const clienteAtual = areaAtual?.cliente_id
+    if (clienteAtual && clienteAtual !== novoClienteId) {
+      Alert.alert(
+        '⚠️ Alterar cliente',
+        'Alterar o cliente invalidará os documentos existentes deste lote. Deseja continuar?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Continuar', style: 'destructive', onPress: callback },
+        ]
+      )
+    } else {
+      callback()
+    }
   }
 
   if (loading) return (
@@ -797,12 +901,35 @@ export default function DetalheProjetoScreen() {
                       <Text style={[s.cardSubtitle, { color: C.muted }]}>{area.proprietario_nome || projeto.cliente_nome || 'Responsável pendente'}</Text>
                     </View>
                     <View style={s.inlineStatusStack}>
-                      <View style={[s.inlineStatus, { backgroundColor: `${statusGeometria.cor}16`, borderColor: statusGeometria.cor }]}>
-                        <Text style={[s.inlineStatusTxt, { color: statusGeometria.cor }]}>{statusGeometria.texto}</Text>
-                      </View>
-                      <View style={[s.inlineStatus, { backgroundColor: `${statusOperacional.cor}16`, borderColor: statusOperacional.cor }]}>
-                        <Text style={[s.inlineStatusTxt, { color: statusOperacional.cor }]}>{statusOperacional.texto}</Text>
-                      </View>
+                      {(() => {
+                        const efetivo = statusEfetivo(area)
+                        const expanded = expandedAreaIds.has(area.id)
+                        return (
+                          <>
+                            <View style={[s.inlineStatus, { backgroundColor: `${efetivo.cor}16`, borderColor: efetivo.cor }]}>
+                              <Text style={[s.inlineStatusTxt, { color: efetivo.cor }]}>{efetivo.texto}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setExpandedAreaIds(prev => {
+                              const next = new Set(prev)
+                              if (next.has(area.id)) next.delete(area.id)
+                              else next.add(area.id)
+                              return next
+                            })}>
+                              <Text style={[s.inlineStatusTxt, { color: C.muted }]}>{expanded ? '↑ ocultar' : '↕ detalhes'}</Text>
+                            </TouchableOpacity>
+                            {expanded && (
+                              <>
+                                <View style={[s.inlineStatus, { backgroundColor: `${statusGeometria.cor}16`, borderColor: statusGeometria.cor }]}>
+                                  <Text style={[s.inlineStatusTxt, { color: statusGeometria.cor }]}>{statusGeometria.texto}</Text>
+                                </View>
+                                <View style={[s.inlineStatus, { backgroundColor: `${statusOperacional.cor}16`, borderColor: statusOperacional.cor }]}>
+                                  <Text style={[s.inlineStatusTxt, { color: statusOperacional.cor }]}>{statusOperacional.texto}</Text>
+                                </View>
+                              </>
+                            )}
+                          </>
+                        )
+                      })()}
                     </View>
                   </View>
 
@@ -851,6 +978,20 @@ export default function DetalheProjetoScreen() {
                   )}
 
                   <Text style={[s.areaMeta, { color: C.muted }]}>Município: {area.municipio || projeto.municipio || 'Pendente'} · Matrícula: {area.matricula || 'Pendente'} · Anexos: {area.anexos?.length ?? 0}</Text>
+                  <View style={[s.inlineActionsRow, { marginTop: 4 }]}>
+                    <TouchableOpacity
+                      style={[s.inlineBtn, { borderColor: C.info }]}
+                      onPress={() => handleMarcarGeometriaFinal(area)}
+                    >
+                      <Text style={[s.inlineBtnTxt, { color: C.info }]}>📐 Fechar geometria</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.inlineBtn, { borderColor: C.success }]}
+                      onPress={() => handleMarcarPecaPronta(area)}
+                    >
+                      <Text style={[s.inlineBtnTxt, { color: C.success }]}>✓ Marcar pronta</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )
             })}
@@ -882,11 +1023,27 @@ export default function DetalheProjetoScreen() {
                     </View>
                     <Text style={[s.clientMeta, { color: C.muted }]}>{areaVinculada ? `Lote vinculado: ${nomeLote(areaVinculada)}` : 'Sem lote específico vinculado'}</Text>
                     <Text style={[s.clientMeta, { color: C.muted }]}>{item.recebe_magic_link ? 'Recebe magic link' : 'Sem envio automático de link'}</Text>
+                    {(() => {
+                      const aberto = item.magic_link_aberto_em
+                      const enviado = item.magic_link_enviado_em || item.enviado_em
+                      if (aberto) return <Text style={[s.clientMeta, { color: C.success }]}>👁 Aberto em {formatarData(aberto, false)}</Text>
+                      if (enviado) return <Text style={[s.clientMeta, { color: C.warning }]}>📤 Enviado, aguardando abertura</Text>
+                      return <Text style={[s.clientMeta, { color: C.muted }]}>Não enviado</Text>
+                    })()}
                     {item.cliente_id ? (
                       <TouchableOpacity style={[s.inlineBtn, { borderColor: C.success }]} onPress={() => router.push(`/(tabs)/clientes/${item.cliente_id}` as any)}>
                         <Text style={[s.inlineBtnTxt, { color: C.success }]}>Abrir cliente & documentação</Text>
                       </TouchableOpacity>
                     ) : null}
+                    <TouchableOpacity
+                      style={[s.inlineBtn, { borderColor: C.info }]}
+                      onPress={() => {
+                        setSelectedParticipanteId(String(item.id || item.cliente_id || ''))
+                        setModalVincularLote(true)
+                      }}
+                    >
+                      <Text style={[s.inlineBtnTxt, { color: C.info }]}>🔗 Vincular lote</Text>
+                    </TouchableOpacity>
                   </View>
                 )
               })}
@@ -926,6 +1083,22 @@ export default function DetalheProjetoScreen() {
                 </View>
               </View>
 
+              {confrontacoes.length > 0 && (
+                <View style={{ gap: 6 }}>
+                  <Text style={[s.cardSubtitle, { color: C.text }]}>
+                    {confrontacoesResumo.confirmadas || 0} de {confrontacoesResumo.total || confrontacoes.length} confrontações resolvidas
+                  </Text>
+                  <View style={{ height: 6, backgroundColor: C.background, borderRadius: 3, overflow: 'hidden' }}>
+                    <View style={{
+                      height: '100%',
+                      width: `${Math.round(((confrontacoesResumo.confirmadas || 0) / Math.max(confrontacoesResumo.total || confrontacoes.length, 1)) * 100)}%`,
+                      backgroundColor: C.success,
+                      borderRadius: 3
+                    }} />
+                  </View>
+                </View>
+              )}
+
               {confrontacoes.length === 0 ? (
                 <Text style={[s.emptyTxt, { color: C.muted }]}>Nenhuma confrontação geométrica foi detectada ainda. Isso aparece quando existem áreas suficientes com esboço ou geometria final.</Text>
               ) : confrontacoes.map((item: any) => {
@@ -952,12 +1125,38 @@ export default function DetalheProjetoScreen() {
                     <Text style={[s.confMeta, { color: C.muted }]}>Contato aproximado: {item.contato_m ?? 0} m · Interseção: {item.area_intersecao_ha ?? 0} ha</Text>
                     {item.observacao ? <Text style={[s.confMeta, { color: C.muted }]}>Observação: {item.observacao}</Text> : null}
                     <View style={s.actionsGrid}>
-                      <TouchableOpacity style={[s.inlineBtn, { borderColor: C.success, opacity: revisando ? 0.6 : 1 }]} onPress={() => revisarConfrontacao(String(item.id), 'confirmada', (item.tipo_relacao || 'interna') as any)} disabled={revisando}>
-                        <Text style={[s.inlineBtnTxt, { color: C.success }]}>{revisando ? 'Salvando...' : 'Confirmar'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[s.inlineBtn, { borderColor: C.muted, opacity: revisando ? 0.6 : 1 }]} onPress={() => revisarConfrontacao(String(item.id), 'descartada', (item.tipo_relacao || 'interna') as any)} disabled={revisando}>
-                        <Text style={[s.inlineBtnTxt, { color: C.muted }]}>{revisando ? 'Salvando...' : 'Descartar'}</Text>
-                      </TouchableOpacity>
+                      {(() => {
+                        const statusRevisao = normalizarStatus(item.status_revisao || item.status)
+                        if (statusRevisao === 'confirmada') {
+                          return <View style={[s.inlineStatus, { backgroundColor: `${C.success}16`, borderColor: C.success }]}>
+                            <Text style={[s.inlineStatusTxt, { color: C.success }]}>✓ Resolvida{item.resolvida_em ? ` em ${formatarData(item.resolvida_em, false)}` : ''}</Text>
+                          </View>
+                        }
+                        if (statusRevisao === 'descartada') {
+                          return <View style={[s.inlineStatus, { backgroundColor: `${C.muted}16`, borderColor: C.muted }]}>
+                            <Text style={[s.inlineStatusTxt, { color: C.muted }]}>✗ Descartada</Text>
+                          </View>
+                        }
+                        return (
+                          <>
+                            <TouchableOpacity
+                              style={[s.inlineBtn, { borderColor: C.info }]}
+                              onPress={() => {
+                                Clipboard.setString(`Olá! Há uma confrontação de divisa entre os lotes ${item.area_a?.nome || 'A'} e ${item.area_b?.nome || 'B'} no projeto ${projeto.projeto_nome}. Por favor, compareça para assinar a carta de confrontação.`)
+                                Alert.alert('Mensagem copiada', 'Cole no WhatsApp do confrontante.')
+                              }}
+                            >
+                              <Text style={[s.inlineBtnTxt, { color: C.info }]}>✉️ Notificar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[s.inlineBtn, { borderColor: C.success, opacity: revisando ? 0.6 : 1 }]} onPress={() => revisarConfrontacao(String(item.id), 'confirmada', (item.tipo_relacao || 'interna') as any)} disabled={revisando}>
+                              <Text style={[s.inlineBtnTxt, { color: C.success }]}>{revisando ? 'Salvando...' : 'Confirmar'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[s.inlineBtn, { borderColor: C.muted, opacity: revisando ? 0.6 : 1 }]} onPress={() => revisarConfrontacao(String(item.id), 'descartada', (item.tipo_relacao || 'interna') as any)} disabled={revisando}>
+                              <Text style={[s.inlineBtnTxt, { color: C.muted }]}>{revisando ? 'Salvando...' : 'Descartar'}</Text>
+                            </TouchableOpacity>
+                          </>
+                        )
+                      })()}
                     </View>
                   </View>
                 )
@@ -1068,6 +1267,47 @@ export default function DetalheProjetoScreen() {
           </View>
         )}
       </View>
+      <Modal visible={modalVincularLote} animationType="slide" transparent onRequestClose={() => setModalVincularLote(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, maxHeight: '80%' }]}>
+            <Text style={[s.cardTitle, { color: C.text }]}>Selecionar lote</Text>
+            <TextInput
+              style={[{ color: C.text, borderColor: C.cardBorder, borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 8 }]}
+              placeholder="Buscar lote..."
+              placeholderTextColor={C.muted}
+              value={loteBuscaTermo}
+              onChangeText={setLoteBuscaTermo}
+            />
+            <ScrollView>
+              {areas
+                .filter((a: any) => {
+                  const termo = loteBuscaTermo.trim().toLowerCase()
+                  if (!termo) return true
+                  const nome = `${a.codigo_lote || ''} ${a.quadra || ''} ${a.proprietario_nome || ''}`.toLowerCase()
+                  return nome.includes(termo)
+                })
+                .map((a: any) => (
+                  <TouchableOpacity
+                    key={a.id}
+                    style={[s.participanteCard, { borderColor: C.cardBorder }]}
+                    onPress={() => selectedParticipanteId && vincularLoteAoParticipante(a.id, selectedParticipanteId)}
+                    disabled={vinculandoLote}
+                  >
+                    <Text style={[s.clientName, { color: C.text }]}>{nomeLote(a)}</Text>
+                    {a.proprietario_nome ? <Text style={[s.clientMeta, { color: C.muted }]}>{a.proprietario_nome}</Text> : null}
+                  </TouchableOpacity>
+                ))
+              }
+            </ScrollView>
+            <TouchableOpacity
+              style={[s.inlineBtn, { borderColor: C.muted, alignSelf: 'center', marginTop: 8 }]}
+              onPress={() => setModalVincularLote(false)}
+            >
+              <Text style={[s.inlineBtnTxt, { color: C.muted }]}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -1143,3 +1383,5 @@ const s = StyleSheet.create({
   bannerTxt: { color: '#FFF8DC', fontSize: 12, fontWeight: '500', textAlign: 'center' },
   semCacheTxt: { fontSize: 14, textAlign: 'center', paddingHorizontal: 24 },
 })
+
+

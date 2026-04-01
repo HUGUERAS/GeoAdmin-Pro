@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import { useFocusEffect } from '@react-navigation/native'
@@ -69,6 +70,9 @@ export default function ProjetosScreen() {
   const [offline, setOffline]       = useState(false)
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null)
   const [busca, setBusca]           = useState('')
+  const prevProjetosRef = useRef<any[]>([])
+  const [novosFormulariosOk, setNovosFormulariosOk] = useState(0)
+  const [novosFormulariosProjetoId, setNovosFormulariosProjetoId] = useState<string | null>(null)
 
   const carregar = async () => {
     try {
@@ -81,6 +85,26 @@ export default function ProjetosScreen() {
       const lista = data.projetos || []
       await cacheProjetos(lista)
       setProjetos(lista)
+      // Detect newly-filled formularios
+      const areasComFormOk: string[] = []
+      lista.forEach((p: any) => {
+        (p.areas || []).forEach((a: any) => {
+          if (a.status_operacional === 'formulario_ok') areasComFormOk.push(a.id)
+        })
+      })
+      try {
+        const jaVistos = JSON.parse(await AsyncStorage.getItem('cache_formulario_ok_ids') || '[]') as string[]
+        const novos = areasComFormOk.filter(id => !jaVistos.includes(id))
+        if (novos.length > 0) {
+          const projetoComNovo = lista.find((p: any) =>
+            (p.areas || []).some((a: any) => novos.includes(a.id))
+          )
+          setNovosFormulariosOk(novos.length)
+          setNovosFormulariosProjetoId(projetoComNovo?.id || null)
+          await AsyncStorage.setItem('cache_formulario_ok_ids', JSON.stringify([...jaVistos, ...novos]))
+        }
+      } catch {}
+      prevProjetosRef.current = lista
     } catch {
       try {
         const cached = await getCachedProjetos()
@@ -113,6 +137,31 @@ export default function ProjetosScreen() {
   }), [busca, filtroStatus, projetos, termo])
 
   const cardsMeta = useMemo(() => metaDashboard(projetos), [projetos])
+
+  const proximaAcao = useMemo(() => {
+    const todasAreas = projetos.flatMap((p: any) => p.areas || [])
+    const errosProjetos = projetos.filter((p: any) => (p.sync_erros || 0) > 0).length
+
+    if (errosProjetos > 0)
+      return { texto: `⚠️ ${errosProjetos} projeto(s) com erros — sincronizar`, cor: C.danger, projetoId: projetos.find((p: any) => (p.sync_erros || 0) > 0)?.id || null }
+
+    const aguardando = todasAreas.filter((a: any) => a.status_operacional === 'aguardando_cliente')
+    if (aguardando.length > 0)
+      return { texto: `📲 Enviar magic link para ${aguardando.length} lote(s)`, cor: C.warning, projetoId: null }
+
+    const prontoGeom = todasAreas.filter((a: any) => a.status_operacional === 'formulario_ok')
+    if (prontoGeom.length > 0)
+      return { texto: `📐 ${prontoGeom.length} lote(s) prontos para fechar geometria`, cor: C.info, projetoId: null }
+
+    const aguardandoConf = todasAreas.filter((a: any) => a.status_operacional === 'geometria_final')
+    if (aguardandoConf.length > 0)
+      return { texto: `🤝 ${aguardandoConf.length} lote(s) aguardando confrontação`, cor: C.primary, projetoId: null }
+
+    if (projetos.length > 0)
+      return { texto: '🎉 Tudo em dia!', cor: C.success, projetoId: null }
+
+    return null
+  }, [projetos, C])
 
   return (
     <View style={[s.container, { backgroundColor: C.background }]}>
@@ -188,6 +237,29 @@ export default function ProjetosScreen() {
               </View>
             </View>
 
+            {!loading && !erro && proximaAcao ? (
+              <TouchableOpacity
+                style={[s.proximaAcaoCard, { backgroundColor: `${proximaAcao.cor}14`, borderColor: proximaAcao.cor }]}
+                onPress={() => proximaAcao.projetoId ? router.push(`/projeto/${proximaAcao.projetoId}` as any) : undefined}
+                activeOpacity={proximaAcao.projetoId ? 0.7 : 1}
+              >
+                <Text style={[s.proximaAcaoLabel, { color: proximaAcao.cor }]}>Próxima ação</Text>
+                <Text style={[s.proximaAcaoTxt, { color: C.text }]}>{proximaAcao.texto}</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {novosFormulariosOk > 0 && (
+              <TouchableOpacity
+                style={s.bannerFormulario}
+                onPress={() => {
+                  if (novosFormulariosProjetoId) router.push(`/projeto/${novosFormulariosProjetoId}` as any)
+                  setNovosFormulariosOk(0)
+                }}
+              >
+                <Text style={s.bannerFormularioTxt}>📋 {novosFormulariosOk} lote(s) com formulário preenchido — toque para revisar</Text>
+              </TouchableOpacity>
+            )}
+
             {offline && (
               <View style={s.bannerOffline}>
                 <Text style={s.bannerTxt}>Offline — exibindo dados em cache</Text>
@@ -250,4 +322,13 @@ const s = StyleSheet.create({
   btnRetry: { marginTop: 16, borderWidth: 1, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 14 },
   bannerOffline: { backgroundColor: '#B8860B', paddingVertical: 6, paddingHorizontal: 14, marginBottom: 8 },
   bannerTxt: { color: '#FFF8DC', fontSize: 12, fontWeight: '500', textAlign: 'center' },
+  bannerFormulario: { backgroundColor: '#8B6914', paddingVertical: 10, paddingHorizontal: 14, marginHorizontal: 16, marginTop: 8, borderRadius: 10 },
+  bannerFormularioTxt: { color: '#FFF8DC', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  proximaAcaoCard: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 6, marginHorizontal: 16, marginTop: 8 },
+  proximaAcaoLabel: { fontSize: 11, textTransform: 'uppercase', fontWeight: '700', letterSpacing: 0.6 },
+  proximaAcaoTxt: { fontSize: 14, fontWeight: '600', lineHeight: 20 },
 })
+
+
+
+

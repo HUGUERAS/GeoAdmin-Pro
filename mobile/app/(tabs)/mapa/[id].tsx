@@ -121,6 +121,42 @@ function pontosVisiveis(pontos: Ponto[], polygonVerts: Vertice[]): Ponto[] {
   return visiveis
 }
 
+function bboxVertice(verts: Vertice[]) {
+  const lons = verts.map(v => v.lon), lats = verts.map(v => v.lat)
+  return { minLon: Math.min(...lons), maxLon: Math.max(...lons), minLat: Math.min(...lats), maxLat: Math.max(...lats) }
+}
+
+function bboxOverlap(a: ReturnType<typeof bboxVertice>, b: ReturnType<typeof bboxVertice>) {
+  return a.minLon < b.maxLon && a.maxLon > b.minLon && a.minLat < b.maxLat && a.maxLat > b.minLat
+}
+
+function segmentsIntersect(p1: {x:number;y:number}, p2: {x:number;y:number}, p3: {x:number;y:number}, p4: {x:number;y:number}): boolean {
+  const d1x = p2.x - p1.x, d1y = p2.y - p1.y
+  const d2x = p4.x - p3.x, d2y = p4.y - p3.y
+  const cross = d1x * d2y - d1y * d2x
+  if (Math.abs(cross) < 1e-10) return false
+  const t = ((p3.x - p1.x) * d2y - (p3.y - p1.y) * d2x) / cross
+  const u = ((p3.x - p1.x) * d1y - (p3.y - p1.y) * d1x) / cross
+  return t > 0 && t < 1 && u > 0 && u < 1
+}
+
+function poligonosSeIntersectam(poly1: Vertice[], poly2: Vertice[]): boolean {
+  if (poly1.length < 3 || poly2.length < 3) return false
+  const b1 = bboxVertice(poly1), b2 = bboxVertice(poly2)
+  if (!bboxOverlap(b1, b2)) return false
+  for (let i = 0; i < poly1.length; i++) {
+    const a1 = poly1[i], a2 = poly1[(i + 1) % poly1.length]
+    for (let j = 0; j < poly2.length; j++) {
+      const b1v = poly2[j], b2v = poly2[(j + 1) % poly2.length]
+      if (segmentsIntersect(
+        { x: a1.lon, y: a1.lat }, { x: a2.lon, y: a2.lat },
+        { x: b1v.lon, y: b1v.lat }, { x: b2v.lon, y: b2v.lat }
+      )) return true
+    }
+  }
+  return false
+}
+
 function dmsParaDecimal(dms: string): number {
   const match = dms.match(/(\d+)°(\d+)'([\d.]+)"/)
   if (!match) return parseFloat(dms)
@@ -757,14 +793,38 @@ export default function MapaProjetoScreen() {
         Alert.alert('Erro', 'Falha ao salvar o perímetro: ' + (err?.message || 'erro desconhecido'))
       }
     }
-    Alert.alert(
-      'Salvar perímetro',
-      'Deseja salvar as alterações no perímetro deste projeto?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salvar', onPress: () => doSave() },
-      ]
-    )
+    // Check overlaps with other areas
+    const areas = (projeto as any)?.areas || []
+    let loteConflito: string | null = null
+    for (const area of areas) {
+      const verts: Vertice[] = (area.geometria_final || area.resumo_ativo?.vertices || [])
+        .map((v: any) => ({ lon: v.lon ?? v.longitude, lat: v.lat ?? v.latitude, nome: v.nome ?? '' }))
+        .filter((v: Vertice) => v.lon && v.lat)
+      if (verts.length >= 3 && poligonosSeIntersectam(editVerts, verts)) {
+        loteConflito = area.codigo_lote || area.nome || 'Lote desconhecido'
+        break
+      }
+    }
+
+    if (loteConflito) {
+      Alert.alert(
+        '⚠️ Sobreposição detectada',
+        `O perímetro se sobrepõe com o lote "${loteConflito}". Deseja salvar mesmo assim?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Salvar mesmo assim', style: 'destructive', onPress: () => doSave() },
+        ]
+      )
+    } else {
+      Alert.alert(
+        'Salvar perímetro',
+        'Deseja salvar as alterações no perímetro deste projeto?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Salvar', onPress: () => doSave() },
+        ]
+      )
+    }
   }, [id, projeto, editVerts])
 
   const cancelarEdit = useCallback(() => {
@@ -1775,3 +1835,4 @@ const s = StyleSheet.create({
   ferrSheetTitle: { fontSize: 18, fontWeight: '700' },
   input:          { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, backgroundColor: 'transparent' },
 })
+

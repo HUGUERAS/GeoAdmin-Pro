@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Alert,
   Platform,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as DocumentPicker from 'expo-document-picker'
 import { useRouter } from 'expo-router'
 import { Colors } from '../../../constants/Colors'
@@ -165,9 +166,25 @@ export default function NovoProjetoScreen() {
   })
   const [participantes, setParticipantes] = useState<ParticipanteProjeto[]>([criarParticipanteInicial()])
   const [arquivosBase, setArquivosBase] = useState<ArquivoBase[]>([])
+  const [rascunhoSalvo, setRascunhoSalvo] = useState(false)
+
+  useEffect(() => {
+    AsyncStorage.getItem('draft_novo_projeto').then((val) => {
+      if (!val) return
+      try {
+        const draft = JSON.parse(val)
+        if (draft.form) setForm(draft.form)
+        if (draft.participantes) setParticipantes(draft.participantes)
+      } catch {}
+    })
+  }, [])
 
   const atualizar = (campo: keyof FormProjeto, valor: string) => {
-    setForm((atual) => ({ ...atual, [campo]: valor }))
+    setForm((atual) => {
+      const novoForm = { ...atual, [campo]: valor }
+      AsyncStorage.setItem('draft_novo_projeto', JSON.stringify({ form: novoForm, participantes })).then(() => setRascunhoSalvo(true))
+      return novoForm
+    })
   }
 
   const atualizarParticipante = (
@@ -317,6 +334,7 @@ export default function NovoProjetoScreen() {
         )
       }
 
+      AsyncStorage.removeItem('draft_novo_projeto')
       router.replace(`/(tabs)/projeto/${projeto.id}` as any)
     } catch (error: any) {
       Alert.alert('Erro', error?.message || 'Nao foi possivel criar o projeto agora.')
@@ -543,6 +561,20 @@ export default function NovoProjetoScreen() {
         )}
       </View>
 
+      {rascunhoSalvo && (
+        <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>✓ Rascunho salvo</Text>
+      )}
+      <TouchableOpacity
+        onPress={() => {
+          AsyncStorage.removeItem('draft_novo_projeto')
+          setForm({ nome: '', municipio: '', estado: 'GO', status: 'medicao', zona_utm: '23S' })
+          setParticipantes([criarParticipanteInicial()])
+          setRascunhoSalvo(false)
+        }}
+        style={{ alignSelf: 'center', padding: 8 }}
+      >
+        <Text style={{ color: C.danger, fontSize: 12 }}>Limpar rascunho</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={[s.submit, { backgroundColor: C.primary, opacity: salvando ? 0.7 : 1 }]} onPress={salvar} disabled={salvando}>
         <Text style={[s.submitTxt, { color: C.primaryText }]}>{salvando ? 'Criando...' : 'Criar projeto'}</Text>
       </TouchableOpacity>
@@ -593,5 +625,6 @@ const s = StyleSheet.create({
   submit: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 30 },
   submitTxt: { fontSize: 15, fontWeight: '800' },
 })
+
 
 

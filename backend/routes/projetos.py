@@ -1131,6 +1131,18 @@ def atualizar_area(projeto_id: str, area_id: str, payload: AreaProjetoUpdate):
 
     dados = payload.model_dump(exclude_none=True)
     participantes_area = _participantes_area_payload(payload.participantes_area) if payload.participantes_area is not None else (area_atual.get("participantes_area") or [])
+
+    # Detect participant change and invalidate docs
+    novo_cliente_id = dados.get("cliente_id") or (
+        participantes_area[0].get("cliente_id") if participantes_area else None
+    )
+    cliente_atual = area_atual.get("cliente_id")
+    if novo_cliente_id and cliente_atual and str(novo_cliente_id) != str(cliente_atual):
+        dados["status_documental"] = "pendente"
+        agora = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+        obs_atual = area_atual.get("observacoes") or ""
+        dados["observacoes"] = f"{obs_atual}\nCliente alterado em {agora} — documentos invalidados".strip()
+
     return salvar_area_projeto(
         projeto_id=projeto_id,
         cliente_id=_cliente_area_payload(
@@ -1163,6 +1175,38 @@ def atualizar_area(projeto_id: str, area_id: str, payload: AreaProjetoUpdate):
         participantes_area=participantes_area,
         area_id=area_id,
     )
+
+
+@router.get("/magic-link/{token}/ping", summary="Registrar abertura de magic link pelo cliente")
+def ping_magic_link(token: str):
+    """Chamado pelo cliente ao abrir o formulário — registra a data de abertura do link."""
+    sb = _get_supabase()
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        sb.table("eventos_magic_link").update({"aberto_em": now}).eq("token", token).is_("aberto_em", "null").execute()
+    except Exception:
+        pass
+    try:
+        sb.table("projeto_clientes").update({"magic_link_aberto_em": now}).eq("token", token).execute()
+    except Exception:
+        pass
+    return {"ok": True, "registrado_em": now}
+
+
+@router.get("/magic-link/{token}/ping", summary="Registrar abertura de magic link pelo cliente")
+def ping_magic_link(token: str):
+    """Chamado pelo cliente ao abrir o formulario -- registra a data de abertura do link."""
+    sb = _get_supabase()
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        sb.table("eventos_magic_link").update({"aberto_em": now}).eq("token", token).is_("aberto_em", "null").execute()
+    except Exception:
+        pass
+    try:
+        sb.table("projeto_clientes").update({"magic_link_aberto_em": now}).eq("token", token).execute()
+    except Exception:
+        pass
+    return {"ok": True, "registrado_em": now}
 
 
 @router.get("/{projeto_id}/confrontacoes", summary="Detectar confrontacoes entre areas do projeto")
@@ -1340,3 +1384,5 @@ def baixar_cartas_confrontacao(projeto_id: str, area_ids: list[str] | None = Non
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{nome}"'},
     )
+
+

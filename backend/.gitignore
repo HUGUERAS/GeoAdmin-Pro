@@ -11,6 +11,16 @@ __pycache__/
 data/geometrias_referencia_cliente.json
 # Logs locais do servidor
 *.log
+logs/
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+
+# Build / dist
+build/
+dist/
+*.egg-info/
 
 # Fallback local de areas
 data/areas_projeto.json
