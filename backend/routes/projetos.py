@@ -1192,23 +1192,6 @@ def ping_magic_link(token: str):
         pass
     return {"ok": True, "registrado_em": now}
 
-
-@router.get("/magic-link/{token}/ping", summary="Registrar abertura de magic link pelo cliente")
-def ping_magic_link(token: str):
-    """Chamado pelo cliente ao abrir o formulario -- registra a data de abertura do link."""
-    sb = _get_supabase()
-    now = datetime.now(timezone.utc).isoformat()
-    try:
-        sb.table("eventos_magic_link").update({"aberto_em": now}).eq("token", token).is_("aberto_em", "null").execute()
-    except Exception:
-        pass
-    try:
-        sb.table("projeto_clientes").update({"magic_link_aberto_em": now}).eq("token", token).execute()
-    except Exception:
-        pass
-    return {"ok": True, "registrado_em": now}
-
-
 @router.get("/{projeto_id}/confrontacoes", summary="Detectar confrontacoes entre areas do projeto")
 def listar_confrontacoes(projeto_id: str):
     sb = _get_supabase()
@@ -1384,5 +1367,6 @@ def baixar_cartas_confrontacao(projeto_id: str, area_ids: list[str] | None = Non
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{nome}"'},
     )
+
 
 
