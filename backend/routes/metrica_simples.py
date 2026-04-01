@@ -9,11 +9,12 @@ Sem dependências externas. Quando o Supabase estiver estável, um GET
 /projetos/{id}/metrica/txt busca os pontos no banco e chama esta mesma lógica.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from middleware.auth import verificar_token
 from fastapi.responses import Response, PlainTextResponse
 from pydantic import BaseModel
 
-router = APIRouter(tags=["Métrica"])
+router = APIRouter(tags=["Métrica"], dependencies=[Depends(verificar_token)])
 
 
 class PontoPayload(BaseModel):

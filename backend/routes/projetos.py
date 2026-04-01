@@ -57,8 +57,10 @@ from integracoes.projeto_clientes import (
 from integracoes.referencia_cliente import obter_geometria_referencia
 from routes.clientes.resumos import montar_checklist_projeto
 from routes.clientes.utils import query_segura, status_documentacao
+from fastapi import Depends
+from middleware.auth import verificar_token
 
-router = APIRouter(prefix="/projetos", tags=["Projetos"])
+router = APIRouter(prefix="/projetos", tags=["Projetos"], dependencies=[Depends(verificar_token)])
 
 TIPOS_PROCESSO_VALIDOS = {"INCRA_SIGEF", "SEAPA", "AMBOS"}
 

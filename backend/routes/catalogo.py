@@ -12,9 +12,10 @@ import logging
 import xml.etree.ElementTree as ET
 from functools import lru_cache
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from middleware.auth import verificar_token
 
-router = APIRouter(prefix="/catalogo", tags=["Catálogo"])
+router = APIRouter(prefix="/catalogo", tags=["Catálogo"], dependencies=[Depends(verificar_token)])
 logger = logging.getLogger("geoadmin.catalogo")
 
 # Caminhos locais (configuráveis via .env)

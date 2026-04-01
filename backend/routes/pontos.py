@@ -10,12 +10,13 @@ DELETE /pontos/{id}   → soft-delete
 import logging
 from typing import List, Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from middleware.auth import verificar_token
 from pydantic import BaseModel
 
 logger = logging.getLogger("geoadmin.pontos")
 
-router = APIRouter(prefix="/pontos", tags=["Pontos"])
+router = APIRouter(prefix="/pontos", tags=["Pontos"], dependencies=[Depends(verificar_token)])
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────────

@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from middleware.auth import verificar_token
 from pydantic import BaseModel
 
-
-router = APIRouter(prefix="/perimetros", tags=["perimetros"])
+router = APIRouter(prefix="/perimetros", tags=["perimetros"], dependencies=[Depends(verificar_token)])
 
 
 class Vertice(BaseModel):

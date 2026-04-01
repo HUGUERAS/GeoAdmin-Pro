@@ -15,10 +15,11 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Depends
+from middleware.auth import verificar_token
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/importar", tags=["Importação"])
+router = APIRouter(prefix="/importar", tags=["Importação"], dependencies=[Depends(verificar_token)])
 logger = logging.getLogger("geoadmin.importar")
 
 

@@ -18,7 +18,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Depends
+from middleware.auth import verificar_token
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field, ValidationError
 
@@ -39,7 +40,7 @@ from integracoes.referencia_cliente import (
 from routes.perimetros import buscar_perimetro_ativo
 
 logger = logging.getLogger("geoadmin.documentos")
-router = APIRouter(tags=["Documentos GPRF"])
+router = APIRouter(tags=["Documentos GPRF"], dependencies=[Depends(verificar_token)])
 
 
 class GerarMagicLinksLotePayload(BaseModel):

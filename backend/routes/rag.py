@@ -5,10 +5,11 @@ POST /rag/consultar  → pergunta em linguagem natural → resposta baseada nas 
 """
 
 import os
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from middleware.auth import verificar_token
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/rag", tags=["RAG Normas INCRA"])
+router = APIRouter(prefix="/rag", tags=["RAG Normas INCRA"], dependencies=[Depends(verificar_token)])
 
 SYSTEM_PROMPT = """Você é assistente técnico especializado em georreferenciamento e regularização fundiária rural no Brasil.
 Responda com base exclusivamente nos trechos das normas INCRA fornecidos abaixo.

@@ -4,7 +4,8 @@ Endpoints de exportação para Métrica TOPO.
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from middleware.auth import verificar_token
 from fastapi.responses import Response
 
 from .pacote import gerar_manifesto_metrica, preparar_zip_metrica
@@ -12,7 +13,7 @@ from .utils import nome_arquivo
 
 logger = logging.getLogger("geoadmin.exportacao")
 
-router = APIRouter(prefix="/projetos", tags=["Exportação"])
+router = APIRouter(prefix="/projetos", tags=["Exportação"], dependencies=[Depends(verificar_token)])
 
 
 @router.get("/{projeto_id}/metrica/manifesto", summary="Obter manifesto JSON para o bridge do Métrica")

@@ -102,9 +102,12 @@ class GeometriaTextoPayload(BaseModel):
     conteudo: str
 
 
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, Depends
+from middleware.auth import verificar_token
+
 # === Router ===
 
-router = APIRouter(prefix="/clientes", tags=["Clientes & Documentacao"])
+router = APIRouter(prefix="/clientes", tags=["Clientes & Documentacao"], dependencies=[Depends(verificar_token)])
 
 
 # === Endpoints: Listagem e Detalhe ===

@@ -15,11 +15,12 @@ Endpoints:
 
 import math
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from middleware.auth import verificar_token
 from pydantic import BaseModel
 from shapely.geometry import Polygon
 
-router = APIRouter(prefix="/geo", tags=["geo"])
+router = APIRouter(prefix="/geo", tags=["geo"], dependencies=[Depends(verificar_token)])
 
 
 class PontoUTM(BaseModel):

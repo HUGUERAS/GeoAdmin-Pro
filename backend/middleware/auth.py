@@ -34,11 +34,13 @@ async def verificar_token(
     if request.url.path in ROTAS_PUBLICAS:
         return {"sub": "anonimo", "role": "anon"}
 
-    auth_obrigatorio = os.getenv("AUTH_OBRIGATORIO", "false").lower() == "true"
+    # Por PADRÃO (default = 'true'), a autenticação é OBRIGATÓRIA.
+    # Evita que contêineres e deployments subam expostos à internet.
+    auth_obrigatorio = os.getenv("AUTH_OBRIGATORIO", "true").lower() == "true"
 
     if not credenciais:
         if not auth_obrigatorio:
-            logger.debug("Auth desabilitado — acesso anônimo permitido")
+            logger.debug("Auth desabilitado localmente (AUTH_OBRIGATORIO=false) — acesso anônimo permitido")
             return {"sub": "dev-local", "role": "anon"}
         raise HTTPException(
             status_code=401,
