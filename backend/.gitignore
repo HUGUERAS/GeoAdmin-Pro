@@ -8,9 +8,3 @@ __pycache__/
 
 # Fallback local temporario da geometria de referencia
 data/geometrias_referencia_cliente.json
-# Logs locais do servidor
-*.log
-
-# Fallback local de areas
-data/areas_projeto.json
-
