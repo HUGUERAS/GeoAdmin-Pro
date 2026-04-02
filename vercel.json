@@ -6,6 +6,10 @@
     {
       "source": "/proxy/:path*",
       "destination": "https://geoadmin-pro-production.up.railway.app/:path*"
+    },
+    {
+      "source": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/:font",
+      "destination": "/fonts/:font"
     }
   ],
   "headers": [

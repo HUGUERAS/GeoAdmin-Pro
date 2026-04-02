@@ -650,26 +650,42 @@ def _resumo_lotes_lista(sb, projeto_ids: list[str]) -> dict[str, dict[str, Any]]
 
 
 
+def _safe(fn, *args, default=None, label="", **kwargs):
+    import logging as _log
+    try:
+        return fn(*args, **kwargs)
+    except Exception as exc:
+        _log.getLogger(__name__).warning("_enriquecer_projeto: falha em %s: %s", label or fn.__name__, exc)
+        return default
+
+
 def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
     projeto = _projeto_ou_404(sb, projeto_id)
-    cliente = _cliente_primario(sb, projeto.get("cliente_id"))
+    cliente = _safe(_cliente_primario, sb, projeto.get("cliente_id"), default=None, label="_cliente_primario")
     participantes = listar_participantes_projeto(sb, projeto_id, cliente_principal=cliente)
-    pontos_res = (
-        sb.table("vw_pontos_geo")
-        .select("id, nome, altitude_m, descricao, codigo, lon, lat")
-        .eq("projeto_id", projeto_id)
-        .execute()
-    )
-    pontos = pontos_res.data or []
-    perimetro_ativo = _perimetro_ativo(sb, projeto_id)
-    formulario = _formulario_projeto(sb, projeto_id, projeto.get("cliente_id"))
-    documentos = _documentos_projeto(sb, projeto_id)
-    confrontantes = _confrontantes_projeto(sb, projeto_id)
-    geometria_referencia = obter_geometria_referencia(sb, projeto.get("cliente_id")) if projeto.get("cliente_id") else None
-    arquivos_cartograficos = listar_arquivos_projeto(sb, projeto_id)
-    arquivos_eventos = listar_eventos_cartograficos(sb, projeto_id, limite=50)
-    magic_links_historico = listar_eventos_magic_link(sb, projeto_id, limite=50)
-    areas = sintetizar_areas_do_projeto(
+
+    def _pontos():
+        res = (
+            sb.table("vw_pontos_geo")
+            .select("id, nome, altitude_m, descricao, codigo, lon, lat")
+            .eq("projeto_id", projeto_id)
+            .execute()
+        )
+        return res.data or []
+
+    pontos = _safe(_pontos, default=[], label="pontos")
+    perimetro_ativo = _safe(_perimetro_ativo, sb, projeto_id, default=None, label="_perimetro_ativo")
+    formulario = _safe(_formulario_projeto, sb, projeto_id, projeto.get("cliente_id"), default=None, label="_formulario_projeto")
+    documentos = _safe(_documentos_projeto, sb, projeto_id, default=[], label="_documentos_projeto")
+    confrontantes = _safe(_confrontantes_projeto, sb, projeto_id, default=[], label="_confrontantes_projeto")
+    geometria_referencia = _safe(obter_geometria_referencia, sb, projeto.get("cliente_id"), default=None, label="geometria_referencia") if projeto.get("cliente_id") else None
+    arquivos_cartograficos = _safe(listar_arquivos_projeto, sb, projeto_id, default=[], label="listar_arquivos_projeto")
+    arquivos_eventos = _safe(listar_eventos_cartograficos, sb, projeto_id, limite=50, default=[], label="listar_eventos_cartograficos")
+    magic_links_historico = _safe(listar_eventos_magic_link, sb, projeto_id, limite=50, default=[], label="listar_eventos_magic_link")
+    areas = _safe(
+        sintetizar_areas_do_projeto,
+        default=[],
+        label="sintetizar_areas_do_projeto",
         projeto=projeto,
         cliente=cliente,
         perimetro_ativo=perimetro_ativo,
@@ -677,11 +693,12 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
         sb=sb,
         participantes_projeto=participantes,
     )
-    revisoes_confrontacao = listar_revisoes_confrontacao(sb, projeto_id)
-    confrontacoes_detectadas = detectar_confrontacoes(areas)
-    confrontacoes = aplicar_revisoes_confrontacao(confrontacoes_detectadas, revisoes_confrontacao)
+    revisoes_confrontacao = _safe(listar_revisoes_confrontacao, sb, projeto_id, default=[], label="listar_revisoes_confrontacao")
+    confrontacoes_detectadas = _safe(detectar_confrontacoes, areas, default=[], label="detectar_confrontacoes")
+    confrontacoes = _safe(aplicar_revisoes_confrontacao, confrontacoes_detectadas, revisoes_confrontacao, default=[], label="aplicar_revisoes_confrontacao")
 
-    checklist = montar_checklist_projeto(
+    checklist = _safe(
+        montar_checklist_projeto,
         cliente or {},
         {
             **projeto,
@@ -692,6 +709,8 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
             "magic_link_expira": (formulario or {}).get("magic_link_expira") or (cliente or {}).get("magic_link_expira"),
         },
         perimetro_ativo,
+        default={},
+        label="montar_checklist_projeto",
     )
 
     projeto["projeto_nome"] = projeto.get("nome", "")
@@ -717,10 +736,13 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
     projeto["confrontacoes"] = confrontacoes
     projeto["geometria_referencia"] = geometria_referencia
     projeto["checklist_documental"] = checklist
-    projeto["status_documentacao"] = status_documentacao(
+    projeto["status_documentacao"] = _safe(
+        status_documentacao,
         [projeto],
         bool((projeto["formulario"] or {}).get("formulario_ok")),
         len(documentos),
+        default=None,
+        label="status_documentacao",
     )
     projeto["arquivos_cartograficos"] = arquivos_cartograficos
     projeto["arquivos_eventos"] = arquivos_eventos
@@ -749,10 +771,10 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
         "participantes_total": len(participantes),
         "arquivos_total": len(arquivos_cartograficos),
     }
-    projeto["resumo_lotes"] = _resumo_lotes(areas)
-    projeto["painel_lotes"] = montar_painel_lotes(areas)
-    projeto["confrontacoes_resumo"] = _resumo_confrontacoes(confrontacoes, confrontantes)
-    projeto["prontidao_piloto"] = _prontidao_piloto(projeto)
+    projeto["resumo_lotes"] = _safe(_resumo_lotes, areas, default={}, label="_resumo_lotes")
+    projeto["painel_lotes"] = _safe(montar_painel_lotes, areas, default={}, label="montar_painel_lotes")
+    projeto["confrontacoes_resumo"] = _safe(_resumo_confrontacoes, confrontacoes, confrontantes, default={}, label="_resumo_confrontacoes")
+    projeto["prontidao_piloto"] = _safe(_prontidao_piloto, projeto, default={}, label="_prontidao_piloto")
     return projeto
 
 
