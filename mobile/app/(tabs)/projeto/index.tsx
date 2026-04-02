@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View,
@@ -71,6 +71,12 @@ export default function ProjetosScreen() {
   const [offline, setOffline]       = useState(false)
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null)
   const [busca, setBusca]           = useState('')
+  // topInset starts at 0 matching the static HTML; updated after hydration
+  const [topInset, setTopInset]     = useState(0)
+
+  useEffect(() => {
+    setTopInset(insets.top)
+  }, [insets.top])
 
   const carregar = async () => {
     try {
@@ -128,7 +134,7 @@ export default function ProjetosScreen() {
         )}
         ListHeaderComponent={
           <>
-            <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
+            <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(topInset + 12, 20) }]}>
               <View style={s.topRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.titulo, { color: C.text }]}>Projetos</Text>

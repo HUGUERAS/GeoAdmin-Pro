@@ -53,7 +53,8 @@ function getApiBaseUrlWeb(): string {
     return `${protocol}//${hostname}:8000`;
   }
 
-  return API_PUBLICA_PADRAO;
+  // Produção (Vercel/CDN): usar proxy relativo para evitar CORS
+  return '/proxy';
 }
 
 export function getApiBaseUrl(): string {

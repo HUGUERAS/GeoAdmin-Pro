@@ -29,6 +29,12 @@ wheels/
 .installed.cfg
 *.egg
 
+# Não ignorar os diretórios mobile que coincidem com padrões Python acima
+!mobile/dist/
+!mobile/dist/**
+!mobile/lib/
+!mobile/lib/**
+
 # Ambientes virtuais
 venv/
 env/
