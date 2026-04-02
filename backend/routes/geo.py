@@ -15,8 +15,9 @@ Endpoints:
 
 import math
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from middleware.auth import verificar_token
+from middleware.limiter import limiter
 from pydantic import BaseModel
 from shapely.geometry import Polygon
 
@@ -28,13 +29,42 @@ class PontoUTM(BaseModel):
     este: float
 
 
+# ─── Inverso ──────────────────────────────────────────────────────────────────
+
+class InversoRequest(BaseModel):
+    p1: PontoUTM
+    p2: PontoUTM
+
+@router.post("/inverso")
+def calcular_inverso(payload: InversoRequest):
+    """Distância e azimute entre dois pontos UTM (problema inverso)."""
+    dn = payload.p2.norte - payload.p1.norte
+    de = payload.p2.este  - payload.p1.este
+    distancia = math.sqrt(dn * dn + de * de)
+    az_rad = math.atan2(de, dn)
+    az_deg = math.degrees(az_rad) % 360
+    # Converter graus decimais → graus/minutos/segundos
+    g = int(az_deg)
+    mf = (az_deg - g) * 60
+    m = int(mf)
+    s = round((mf - m) * 60, 1)
+    return {
+        "distancia_m": round(distancia, 4),
+        "azimute_graus": round(az_deg, 8),
+        "azimute_gms": f"{g}°{str(m).zfill(2)}'{str(s).zfill(4)}\"",
+        "delta_norte": round(dn, 4),
+        "delta_este": round(de, 4),
+    }
+
+
 # ─── Área ──────────────────────────────────────────────────────────────────────
 
 class AreaRequest(BaseModel):
     pontos: List[PontoUTM]
 
 @router.post("/area")
-def calcular_area(payload: AreaRequest):
+@limiter.limit("30/minute")
+def calcular_area(request: Request, payload: AreaRequest):
     pts = payload.pontos
     if len(pts) < 3:
         raise HTTPException(422, "Mínimo de 3 pontos.")
@@ -185,7 +215,8 @@ class SubdivisaoRequest(BaseModel):
     area_alvo_m2: float
 
 @router.post("/subdivisao")
-def subdividir(payload: SubdivisaoRequest):  # noqa: C901
+@limiter.limit("15/minute")
+def subdividir(request: Request, payload: SubdivisaoRequest):  # noqa: C901
     verts = payload.vertices
     n = len(verts)
     if n < 3:

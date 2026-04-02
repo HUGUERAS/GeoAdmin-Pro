@@ -124,6 +124,21 @@ Rotas uteis na web:
 - `http://127.0.0.1:8081/calculos`
 - `http://127.0.0.1:8081/clientes`
 
+Para teste em outra maquina da mesma rede:
+
+```powershell
+# no backend
+cd backend
+python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# no frontend web
+cd mobile
+$env:EXPO_PUBLIC_API_BASE_URL="http://SEU_IP_LOCAL:8000"
+npm run web
+```
+
+Se abrir a versao web pelo IP da maquina que esta rodando o Expo, o app agora tenta usar esse mesmo host na porta `8000` automaticamente. A variavel `EXPO_PUBLIC_API_BASE_URL` continua sendo a forma recomendada para teste compartilhado e deploy.
+
 ### Android
 
 ```bash
@@ -156,6 +171,8 @@ npx eas-cli@latest build --platform android --profile preview
 cd mobile
 npm run build:web
 ```
+
+O build estatico e gerado em `mobile/dist/`.
 
 ### Backend
 

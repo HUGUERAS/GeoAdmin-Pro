@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View,
   Text,
@@ -61,6 +62,7 @@ function metaDashboard(projetos: any[]) {
 
 export default function ProjetosScreen() {
   const C = Colors.dark
+  const insets = useSafeAreaInsets()
   const router = useRouter()
   const [projetos, setProjetos]     = useState<any[]>([])
   const [loading, setLoading]       = useState(true)
@@ -126,7 +128,7 @@ export default function ProjetosScreen() {
         )}
         ListHeaderComponent={
           <>
-            <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+            <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
               <View style={s.topRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.titulo, { color: C.text }]}>Projetos</Text>
@@ -219,7 +221,7 @@ export default function ProjetosScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: 56, borderBottomWidth: 0.5, gap: 14, marginBottom: 8 },
+  header: { padding: 20, borderBottomWidth: 0.5, gap: 14, marginBottom: 8 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   titulo: { fontSize: 28, fontWeight: '700' },
   sub: { fontSize: 13, lineHeight: 20 },

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native'
 import { Colors } from '../../../constants/Colors'
-import { API_URL } from '../../../constants/Api'
+import { apiPost } from '../../../lib/api'
+import { ScreenHeader } from '../../../components/ScreenHeader'
 
 type PontoLinha = { norte: string; este: string }
 type Resultado = { area_m2: number; area_ha: number; perimetro_m: number }
@@ -39,15 +40,9 @@ export default function AreaScreen() {
     setLoading(true)
     setResultado(null)
     try {
-      const res = await fetch(`${API_URL}/geo/area`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pontos: parsed }),
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setResultado(await res.json())
-    } catch {
-      Alert.alert('Erro', 'Não foi possível calcular.\nVerifique a conexão com o backend.')
+      setResultado(await apiPost<Resultado>('/geo/area', { pontos: parsed }))
+    } catch (e: any) {
+      Alert.alert('Erro', e.message || 'Não foi possível calcular.\nVerifique a conexão com o backend.')
     } finally {
       setLoading(false)
     }
@@ -58,10 +53,7 @@ export default function AreaScreen() {
 
   return (
     <ScrollView style={[s.container, { backgroundColor: C.background }]} keyboardShouldPersistTaps="handled">
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
-        <Text style={[s.titulo, { color: C.text }]}>Área</Text>
-        <Text style={[s.sub, { color: C.muted }]}>Área e perímetro de polígono UTM</Text>
-      </View>
+      <ScreenHeader titulo="Área" subtitulo="Área e perímetro de polígono UTM" />
 
       <View style={s.body}>
         <Text style={[s.secao, { color: C.primary }]}>Vértices do Polígono</Text>
@@ -160,35 +152,35 @@ export default function AreaScreen() {
 }
 
 const s = StyleSheet.create({
-  container:   { flex: 1 },
-  header:      { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
-  titulo:      { fontSize: 24, fontWeight: '700' },
-  sub:         { fontSize: 13, marginTop: 2 },
-  body:        { padding: 16 },
-  secao:       { fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
-  card:        { borderRadius: 10, borderWidth: 0.5, padding: 14, marginBottom: 8 },
-  pontoLabel:  { fontSize: 11, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
-  campoRow:    { flexDirection: 'row', gap: 10 },
-  campoHalf:   { flex: 1 },
-  label:       { fontSize: 10, fontWeight: '600', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.3 },
-  input:       { borderWidth: 0.5, borderRadius: 8, padding: 12, fontSize: 15, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  btnsPonto:   { flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 4 },
-  btnPonto:    { flex: 1, padding: 10, borderRadius: 8, alignItems: 'center', borderWidth: 0.5 },
+  container: { flex: 1 },
+  header: { padding: 20, borderBottomWidth: 0.5 },
+  titulo: { fontSize: 24, fontWeight: '700' },
+  sub: { fontSize: 13, marginTop: 2 },
+  body: { padding: 16 },
+  secao: { fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  card: { borderRadius: 10, borderWidth: 0.5, padding: 14, marginBottom: 8 },
+  pontoLabel: { fontSize: 11, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  campoRow: { flexDirection: 'row', gap: 10 },
+  campoHalf: { flex: 1 },
+  label: { fontSize: 10, fontWeight: '600', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.3 },
+  input: { borderWidth: 0.5, borderRadius: 8, padding: 12, fontSize: 15, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  btnsPonto: { flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 4 },
+  btnPonto: { flex: 1, padding: 10, borderRadius: 8, alignItems: 'center', borderWidth: 0.5 },
   btnPontoTxt: { fontSize: 14, fontWeight: '600' },
-  btns:        { flexDirection: 'row', gap: 10, marginTop: 16 },
-  btnPri:      { flex: 2, padding: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
-  btnPriTxt:   { fontSize: 16, fontWeight: '700' },
-  btnSec:      { flex: 1, padding: 16, borderRadius: 10, alignItems: 'center', borderWidth: 0.5, minHeight: 52 },
-  btnSecTxt:   { fontSize: 16, fontWeight: '500' },
-  resultado:   { marginTop: 20, borderRadius: 12, borderWidth: 1, padding: 20 },
-  resLabel:    { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 },
-  resRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  resItem:     { flex: 1, alignItems: 'center' },
-  resValor:    { fontSize: 20, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  resValorSm:  { fontSize: 16, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  resSub:      { fontSize: 12, marginTop: 4 },
-  resDivider:  { height: 0.5, marginVertical: 14 },
+  btns: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  btnPri: { flex: 2, padding: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
+  btnPriTxt: { fontSize: 16, fontWeight: '700' },
+  btnSec: { flex: 1, padding: 16, borderRadius: 10, alignItems: 'center', borderWidth: 0.5, minHeight: 52 },
+  btnSecTxt: { fontSize: 16, fontWeight: '500' },
+  resultado: { marginTop: 20, borderRadius: 12, borderWidth: 1, padding: 20 },
+  resLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 },
+  resRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  resItem: { flex: 1, alignItems: 'center' },
+  resValor: { fontSize: 20, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  resValorSm: { fontSize: 16, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  resSub: { fontSize: 12, marginTop: 4 },
+  resDivider: { height: 0.5, marginVertical: 14 },
   resDividerV: { width: 0.5, height: 40, marginHorizontal: 10 },
-  gabarito:    { marginTop: 16, borderWidth: 0.5, borderRadius: 8, padding: 12, borderStyle: 'dashed' },
+  gabarito: { marginTop: 16, borderWidth: 0.5, borderRadius: 8, padding: 12, borderStyle: 'dashed' },
   gabaritoTxt: { fontSize: 12, textAlign: 'center' },
 })

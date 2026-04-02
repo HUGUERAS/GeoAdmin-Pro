@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View,
   Text,
@@ -377,6 +378,7 @@ async function anexarArquivoNoFormData(formData: FormData, asset: DocumentPicker
 
 export default function ClienteDetalheScreen() {
   const C = Colors.dark
+  const insets = useSafeAreaInsets()
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const [detalhe, setDetalhe] = useState<ClienteDetalheResponse | null>(null)
@@ -678,7 +680,7 @@ export default function ClienteDetalheScreen() {
 
   return (
     <ScrollView style={[s.container, { backgroundColor: C.background }]} contentContainerStyle={s.content}>
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar} accessibilityRole="button" accessibilityLabel="Voltar para a lista de clientes">
           <Feather name="arrow-left" size={20} color={C.text} />
         </TouchableOpacity>
@@ -993,7 +995,7 @@ const s = StyleSheet.create({
   content: { paddingBottom: 24 },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   msgErro: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
-  header: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 18, borderBottomWidth: 0.5, flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
+  header: { paddingTop: 0, paddingHorizontal: 20, paddingBottom: 18, borderBottomWidth: 0.5, flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
   voltar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   headerTexto: { flex: 1, gap: 4 },
   titulo: { fontSize: 22, fontWeight: '700' },

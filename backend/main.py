@@ -35,6 +35,15 @@ _origens_padrao = [
     "http://127.0.0.1:8000",
 ]
 _origens_permitidas = os.getenv("ALLOWED_ORIGINS", ",".join(_origens_padrao)).split(",")
+_origem_rede_local_regex = (
+    r"^https?://("
+    r"localhost|"
+    r"127\.0\.0\.1|"
+    r"10(?:\.\d{1,3}){3}|"
+    r"192\.168(?:\.\d{1,3}){2}|"
+    r"172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}"
+    r")(:\d+)?$"
+)
 
 # ── Rotas
 # Para proteger um endpoint com autenticação, adicione o seguinte ao seus handlers:
@@ -57,11 +66,15 @@ from routes.geo import router as geo_router
 from routes.importar import router as importar_router
 from routes.catalogo import router as catalogo_router
 
+from middleware.limiter import limiter
+
 app = FastAPI(title="GeoAdmin Pro - Backend MVP")
+app.state.limiter = limiter
 
 app.add_middleware(
   CORSMiddleware,
   allow_origins=[origem.strip() for origem in _origens_permitidas],
+  allow_origin_regex=_origem_rede_local_regex,
   allow_methods=["*"],
   allow_headers=["*"],
 )

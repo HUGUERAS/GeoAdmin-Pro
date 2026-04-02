@@ -11,6 +11,7 @@ type JsonValue =
 
 // Token de autenticação do Supabase — defina via definirToken()
 let _authToken: string | null = null;
+const API_PUBLICA_PADRAO = 'https://geoadmin-pro-production.up.railway.app';
 
 export function definirToken(token: string | null): void {
   _authToken = token;
@@ -30,6 +31,31 @@ function extractHostFromExpoConfig(): string | null {
   return expoConfigHost.split(':')[0] ?? null;
 }
 
+function getApiBaseUrlWeb(): string {
+  if (typeof window === 'undefined') {
+    return API_PUBLICA_PADRAO;
+  }
+
+  const { hostname, origin, port, protocol } = window.location;
+
+  const hostLocal =
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+
+  if (hostLocal && port === '8000') {
+    return origin.replace(/\/+$/, '');
+  }
+
+  if (hostLocal && hostname) {
+    return `${protocol}//${hostname}:8000`;
+  }
+
+  return API_PUBLICA_PADRAO;
+}
+
 export function getApiBaseUrl(): string {
   const explicitUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
   if (explicitUrl) {
@@ -37,7 +63,7 @@ export function getApiBaseUrl(): string {
   }
 
   if (Platform.OS === 'web') {
-    return 'http://127.0.0.1:8000';
+    return getApiBaseUrlWeb();
   }
 
   const host = extractHostFromExpoConfig();

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View,
   Text,
@@ -237,6 +238,7 @@ function rotuloStatusLote(valor: string | null | undefined, tipo: 'operacional' 
 
 export default function DetalheProjetoScreen() {
   const C = Colors.dark
+  const insets = useSafeAreaInsets()
   const { id } = useLocalSearchParams<{ id: string }>()
   const router  = useRouter()
   const [projeto, setProjeto]       = useState<any>(null)
@@ -593,7 +595,7 @@ export default function DetalheProjetoScreen() {
         </View>
       )}
 
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
         <View style={s.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={[s.titulo, { color: C.text }]} numberOfLines={2}>{projeto.projeto_nome}</Text>
@@ -1075,7 +1077,7 @@ export default function DetalheProjetoScreen() {
 const s = StyleSheet.create({
   container: { flex: 1 },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { padding: 20, paddingTop: 56, borderBottomWidth: 0.5, gap: 12 },
+  header: { padding: 20, borderBottomWidth: 0.5, gap: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   titulo: { fontSize: 24, fontWeight: '700' },
   subtitulo: { fontSize: 13, marginTop: 4 },

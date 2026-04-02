@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoAdmin Pro - Web Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Ionicons for modern icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <ion-icon name="earth-outline"></ion-icon>
+                </div>
+                <span class="logo-text">GeoAdmin <span>Pro</span></span>
+            </div>
+            
+            <ul class="nav-links">
+                <li class="active"><a href="#"><ion-icon name="grid-outline"></ion-icon> Projetos</a></li>
+                <li><a href="#"><ion-icon name="calculator-outline"></ion-icon> Cálculos Geodésicos</a></li>
+                <li><a href="#"><ion-icon name="map-outline"></ion-icon> Vista CAD</a></li>
+                <li><a href="#"><ion-icon name="people-outline"></ion-icon> Clientes</a></li>
+                <li><a href="#"><ion-icon name="document-text-outline"></ion-icon> Documentos GPRF</a></li>
+            </ul>
+
+            <div class="user-profile">
+                <div class="avatar">
+                    <img src="https://i.pravatar.cc/150?u=topografo" alt="User">
+                </div>
+                <div class="user-info">
+                    <p class="name">Topógrafo Chefe</p>
+                    <p class="status">Online 🟢</p>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="search-bar">
+                    <ion-icon name="search-outline"></ion-icon>
+                    <input type="text" placeholder="Buscar projetos, glebas, memoriais...">
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline"><ion-icon name="cloud-upload-outline"></ion-icon> Importar Métrica TOPO</button>
+                    <button class="btn btn-primary"><ion-icon name="add-outline"></ion-icon> Novo Projeto</button>
+                    <div class="notification">
+                        <ion-icon name="notifications-outline"></ion-icon>
+                        <span class="badge">3</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Grid Layout -->
+            <div class="dashboard-grid">
+                
+                <!-- Center Map Area (Simulated) -->
+                <div class="map-container glass-card">
+                    <div class="map-overlay">
+                        <h3>Vista CAD - Condomínio Piloto (120 Lotes)</h3>
+                        <p>Visualizando Gleba A-1 (Sistema UTM - SIRGAS 2000)</p>
+                    </div>
+                    <!-- Placeholder map background, dynamic SVG grid or image -->
+                    <div class="map-visual">
+                        <div class="plot-polygon"></div>
+                        <div class="crosshair"></div>
+                    </div>
+
+                    <!-- Mini Floating Widget on map -->
+                    <div class="floating-widget glass-dark">
+                        <div class="widget-row">
+                            <span>Área Total</span>
+                            <strong>14.500 m² (1.45 ha)</strong>
+                        </div>
+                        <div class="widget-row">
+                            <span>Perímetro</span>
+                            <strong>520.45 m</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side Panel (Calculations & Status) -->
+                <div class="side-panel">
+                    
+                    <div class="glass-card stat-card">
+                        <div class="stat-header">
+                            <ion-icon name="compass-outline" class="icon-accent-blue"></ion-icon>
+                            <h4>Cálculo Inverso Real-Time</h4>
+                        </div>
+                        <div class="stat-body">
+                            <div class="data-group">
+                                <label>Distância P1 → P2</label>
+                                <div class="value">45.23m</div>
+                            </div>
+                            <div class="data-group">
+                                <label>Azimute</label>
+                                <div class="value">124° 30' 15"</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-ghost w-100">Inserir Ponto no CAD <ion-icon name="arrow-forward-outline"></ion-icon></button>
+                    </div>
+
+                    <div class="glass-card active-projects">
+                        <h4>Projetos Recentes</h4>
+                        <ul class="project-list">
+                            <li>
+                                <div class="project-icon medicao"><ion-icon name="analytics-outline"></ion-icon></div>
+                                <div class="project-details">
+                                    <h5>Loteamento Horizonte</h5>
+                                    <span>Status: Medição</span>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="project-icon protocolado"><ion-icon name="checkmark-done-outline"></ion-icon></div>
+                                <div class="project-details">
+                                    <h5>Fazenda Boa Vista</h5>
+                                    <span>Status: Protocolado</span>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="project-icon montagem"><ion-icon name="build-outline"></ion-icon></div>
+                                <div class="project-details">
+                                    <h5>Sítio Recanto</h5>
+                                    <span>Status: Montagem</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+        </main>
+    </div>
+</body>
+</html>

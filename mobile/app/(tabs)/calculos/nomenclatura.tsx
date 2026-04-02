@@ -1,16 +1,19 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
+import { ScreenHeader } from '../../../components/ScreenHeader'
+import { ss } from '@/styles/ss'
+import { CampoInput } from '../../../components/CampoInput'
 
 type Tipo = 'M' | 'P' | 'E' | 'MM'
 
 const TIPOS: { id: Tipo; label: string; desc: string; cor: string }[] = [
-  { id: 'M',  label: 'Marco (M)',          desc: 'Vértice com marco físico implantado em campo',              cor: '#EF9F27' },
-  { id: 'P',  label: 'Ponto (P)',           desc: 'Vértice sem marco físico — identificado apenas em planta',  cor: '#4EA8DE' },
-  { id: 'E',  label: 'Estação (E)',         desc: 'Estação de apoio geodésico / RN auxiliar',                  cor: '#69DB7C' },
-  { id: 'MM', label: 'Marco-Mestre (MM)',   desc: 'Marco principal de implantação e referência do perímetro',  cor: '#DA77F2' },
+  { id: 'M', label: 'Marco (M)', desc: 'Vértice com marco físico implantado em campo', cor: '#EF9F27' },
+  { id: 'P', label: 'Ponto (P)', desc: 'Vértice sem marco físico — identificado apenas em planta', cor: '#4EA8DE' },
+  { id: 'E', label: 'Estação (E)', desc: 'Estação de apoio geodésico / RN auxiliar', cor: '#69DB7C' },
+  { id: 'MM', label: 'Marco-Mestre (MM)', desc: 'Marco principal de implantação e referência do perímetro', cor: '#DA77F2' },
 ]
 
 export default function NomenclaturaScreen() {
@@ -42,13 +45,10 @@ export default function NomenclaturaScreen() {
   const tipoAtual = TIPOS.find(t => t.id === tipo)!
 
   return (
-    <ScrollView style={[s.container, { backgroundColor: C.background }]} keyboardShouldPersistTaps="handled">
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
-        <Text style={[s.titulo, { color: C.text }]}>Nomenclatura</Text>
-        <Text style={[s.sub, { color: C.muted }]}>Gerador de nomes de vértices conforme padrão INCRA/SIGEF</Text>
-      </View>
+    <ScrollView style={[ss.container, { backgroundColor: C.background }]} keyboardShouldPersistTaps="handled">
+      <ScreenHeader titulo="Nomenclatura" subtitulo="Gerador de nomes de vértices conforme padrão INCRA/SIGEF" />
 
-      <View style={s.body}>
+      <View style={ss.body}>
         <Text style={[s.secao, { color: C.primary }]}>Tipo de vértice</Text>
         {TIPOS.map(t => (
           <TouchableOpacity
@@ -68,43 +68,35 @@ export default function NomenclaturaScreen() {
         ))}
 
         <Text style={[s.secao, { color: C.primary }]}>Parâmetros</Text>
-        <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
+        <View style={[ss.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
           <View style={s.paramRow}>
             <View style={s.paramHalf}>
-              <Text style={[s.label, { color: C.muted }]}>NÚMERO INICIAL</Text>
-              <TextInput
-                style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]}
+              <CampoInput
+                label="NÚMERO INICIAL"
                 value={inicio}
                 onChangeText={v => { setInicio(v); setNomes([]) }}
                 placeholder="1"
-                placeholderTextColor={C.muted}
-                keyboardType="numeric"
-                returnKeyType="next"
               />
             </View>
             <View style={s.paramHalf}>
-              <Text style={[s.label, { color: C.muted }]}>QUANTIDADE (máx 100)</Text>
-              <TextInput
-                style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]}
+              <CampoInput
+                label="QUANTIDADE (máx 100)"
                 value={quantidade}
                 onChangeText={v => { setQuantidade(v); setNomes([]) }}
                 placeholder="10"
-                placeholderTextColor={C.muted}
-                keyboardType="numeric"
-                returnKeyType="done"
               />
             </View>
           </View>
         </View>
 
-        <TouchableOpacity style={[s.btnPri, { backgroundColor: C.primary, marginTop: 16 }]} onPress={gerar}>
-          <Text style={[s.btnPriTxt, { color: C.primaryText }]}>Gerar nomenclatura</Text>
+        <TouchableOpacity style={[ss.btnPri, { backgroundColor: C.primary, marginTop: 16 }]} onPress={gerar}>
+          <Text style={[ss.btnPriTxt, { color: C.primaryText }]}>Gerar nomenclatura</Text>
         </TouchableOpacity>
 
         {nomes.length > 0 && (
-          <View style={[s.resultado, { backgroundColor: C.card, borderColor: tipoAtual.cor }]}>
+          <View style={[ss.resultado, { backgroundColor: C.card, borderColor: tipoAtual.cor }]}>
             <View style={s.resHeader}>
-              <Text style={[s.resLabel, { color: C.muted }]}>{nomes.length} nomes — prefixo {tipo}</Text>
+              <Text style={[ss.resLabel, { color: C.muted }]}>{nomes.length} nomes — prefixo {tipo}</Text>
               <TouchableOpacity style={[s.btnCopiar, { borderColor: copiado ? tipoAtual.cor : C.cardBorder }]} onPress={copiar}>
                 <Feather name={copiado ? 'check' : 'copy'} size={13} color={copiado ? tipoAtual.cor : C.muted} />
                 <Text style={[s.btnCopiarTxt, { color: copiado ? tipoAtual.cor : C.muted }]}>{copiado ? 'Copiado!' : 'Copiar'}</Text>
@@ -124,9 +116,9 @@ export default function NomenclaturaScreen() {
           <Text style={[s.refTitulo, { color: C.muted }]}>Referência INCRA/SIGEF</Text>
           {[
             { sigla: 'M-01', sig: 'Marco físico (vértice implantado)', cor: '#EF9F27' },
-            { sigla: 'P-01', sig: 'Ponto virtual (sem marco)',          cor: '#4EA8DE' },
-            { sigla: 'E-01', sig: 'Estação de apoio geodésico',         cor: '#69DB7C' },
-            { sigla: 'MM-01',sig: 'Marco-mestre do perímetro',          cor: '#DA77F2' },
+            { sigla: 'P-01', sig: 'Ponto virtual (sem marco)', cor: '#4EA8DE' },
+            { sigla: 'E-01', sig: 'Estação de apoio geodésico', cor: '#69DB7C' },
+            { sigla: 'MM-01', sig: 'Marco-mestre do perímetro', cor: '#DA77F2' },
           ].map(r => (
             <View key={r.sigla} style={s.refRow}>
               <View style={[s.refBadge, { backgroundColor: r.cor + '22' }]}>
@@ -142,37 +134,25 @@ export default function NomenclaturaScreen() {
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1 },
-  header:       { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
-  titulo:       { fontSize: 24, fontWeight: '700' },
-  sub:          { fontSize: 13, marginTop: 2 },
-  body:         { padding: 16 },
-  secao:        { fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tipoCard:     { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 10, padding: 14, marginBottom: 8 },
-  tipoBadge:    { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  secao: { fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  tipoCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 10, padding: 14, marginBottom: 8 },
+  tipoBadge: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   tipoBadgeTxt: { fontSize: 12, fontWeight: '700' },
-  tipoTexto:    { flex: 1 },
-  tipoLabel:    { fontSize: 14, fontWeight: '700' },
-  tipoDesc:     { fontSize: 12, marginTop: 2 },
-  card:         { borderRadius: 10, borderWidth: 0.5, padding: 14 },
-  paramRow:     { flexDirection: 'row', gap: 12 },
-  paramHalf:    { flex: 1 },
-  label:        { fontSize: 10, fontWeight: '600', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.3 },
-  input:        { borderWidth: 0.5, borderRadius: 8, padding: 12, fontSize: 15 },
-  btnPri:       { padding: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
-  btnPriTxt:    { fontSize: 16, fontWeight: '700' },
-  resultado:    { marginTop: 20, borderRadius: 12, borderWidth: 1, padding: 16 },
-  resHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  resLabel:     { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  btnCopiar:    { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 0.5, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5 },
+  tipoTexto: { flex: 1 },
+  tipoLabel: { fontSize: 14, fontWeight: '700' },
+  tipoDesc: { fontSize: 12, marginTop: 2 },
+  paramRow: { flexDirection: 'row', gap: 12 },
+  paramHalf: { flex: 1 },
+  resHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  btnCopiar: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 0.5, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5 },
   btnCopiarTxt: { fontSize: 12, fontWeight: '600' },
-  nomeGrid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  nomePill:     { borderWidth: 0.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 },
-  nomeTxt:      { fontSize: 13, fontWeight: '600', fontFamily: 'monospace' },
-  referencia:   { marginTop: 20, borderRadius: 10, borderWidth: 0.5, padding: 14, marginBottom: 16 },
-  refTitulo:    { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
-  refRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  refBadge:     { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, minWidth: 56, alignItems: 'center' },
-  refSigla:     { fontSize: 12, fontWeight: '700', fontFamily: 'monospace' },
-  refDesc:      { fontSize: 12, flex: 1 },
+  nomeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  nomePill: { borderWidth: 0.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 },
+  nomeTxt: { fontSize: 13, fontWeight: '600', fontFamily: 'monospace' },
+  referencia: { marginTop: 20, borderRadius: 10, borderWidth: 0.5, padding: 14, marginBottom: 16 },
+  refTitulo: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
+  refRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  refBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, minWidth: 56, alignItems: 'center' },
+  refSigla: { fontSize: 12, fontWeight: '700', fontFamily: 'monospace' },
+  refDesc: { fontSize: 12, flex: 1 },
 })

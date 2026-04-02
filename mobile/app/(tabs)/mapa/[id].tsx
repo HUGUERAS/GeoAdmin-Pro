@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput,
   ActivityIndicator, Alert, Dimensions, PanResponder, GestureResponderEvent, Platform,
 } from 'react-native'
-import { WebView } from 'react-native-webview'
+import WebViewCompat from '../../../components/WebViewCompat'
 import Svg, { G, Line, Text as SvgText, Polyline as SvgPolyline, Circle } from 'react-native-svg'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
@@ -283,20 +284,23 @@ window.addEventListener('message',function(e){try{var d=JSON.parse(e.data);updat
 // ── WebView satellite view ────────────────────────────────────────────────────
 
 function MapaWebView({ pontos, poligono, layers }: { pontos: Ponto[]; poligono: Vertice[]; layers: Layers }) {
-  const webRef  = useRef<WebView>(null)
+  const webRef  = useRef<any>(null)
   const ready   = useRef(false)
 
   const inject = useCallback((pts: Ponto[], poly: Vertice[], lyr: Layers) => {
     if (!ready.current || !webRef.current) return
-    webRef.current.injectJavaScript(
-      `updateMap(${JSON.stringify({ pontos: pts, poligono: poly, layers: lyr })});true;`
-    )
+    const msg = JSON.stringify({ pontos: pts, poligono: poly, layers: lyr })
+    if (Platform.OS === 'web') {
+      webRef.current.postMessage(msg)
+    } else {
+      webRef.current.injectJavaScript(`updateMap(${msg});true;`)
+    }
   }, [])
 
   useEffect(() => { inject(pontos, poligono, layers) }, [pontos, poligono, layers, inject])
 
   return (
-    <WebView
+    <WebViewCompat
       ref={webRef}
       style={StyleSheet.absoluteFillObject}
       source={{ html: MAP_HTML }}
@@ -487,6 +491,8 @@ function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVert
 
 export default function MapaProjetoScreen() {
   const C = Colors.dark
+  const insets = useSafeAreaInsets()
+  const headerPaddingTop = Math.max(insets.top + 12, 20)
   const { id, tool } = useLocalSearchParams<{ id: string; tool?: NomeFerramenta }>()
   const router  = useRouter()
 
@@ -1007,7 +1013,7 @@ export default function MapaProjetoScreen() {
   return (
     <View style={[s.fill, { backgroundColor: C.background }]}>
       {/* Header */}
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: headerPaddingTop }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Feather name="arrow-left" size={22} color={C.text} />
         </TouchableOpacity>
@@ -1142,7 +1148,7 @@ export default function MapaProjetoScreen() {
 
       {/* Layer panel */}
       {!editMode && showLayers && (
-        <View style={[s.layerPanel, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
+        <View style={[s.layerPanel, { backgroundColor: C.card, borderColor: C.cardBorder, top: headerPaddingTop + 50 + 12 }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <Text style={{ color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>CAMADAS</Text>
             <TouchableOpacity onPress={() => setShowLayers(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -1480,7 +1486,7 @@ export default function MapaProjetoScreen() {
 const s = StyleSheet.create({
   fill:        { flex: 1 },
   centro:      { alignItems: 'center', justifyContent: 'center' },
-  header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, borderBottomWidth: 0.5 },
+  header:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 0.5 },
   backBtn:     { marginRight: 12 },
   titulo:      { fontSize: 18, fontWeight: '700' },
   sub:         { fontSize: 12, marginTop: 1 },
@@ -1490,7 +1496,7 @@ const s = StyleSheet.create({
   layerBtn:    { padding: 8, borderRadius: 8 },
   editBtn:     { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   emptyMsg:    { marginTop: 12, fontSize: 15 },
-  layerPanel:  { position: 'absolute', right: 12, top: 56 + 50 + 12, borderWidth: 0.5, borderRadius: 10, padding: 12, gap: 10 },
+  layerPanel:  { position: 'absolute', right: 12, borderWidth: 0.5, borderRadius: 10, padding: 12, gap: 10 },
   layerRow:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
   check:       { width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: '#555', alignItems: 'center', justifyContent: 'center' },
   editToolbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderBottomWidth: 0.5, gap: 4 },

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert,
 import * as Clipboard from 'expo-clipboard'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
+import { ScreenHeader } from '../../../components/ScreenHeader'
 
 type Ponto = { id: string; nome: string; norte: string; este: string; cota: string }
 
@@ -54,10 +55,7 @@ export default function PontosScreen() {
 
   return (
     <ScrollView style={[s.container, { backgroundColor: C.background }]} keyboardShouldPersistTaps="handled">
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
-        <Text style={[s.titulo, { color: C.text }]}>Pontos</Text>
-        <Text style={[s.sub, { color: C.muted }]}>Lista de pontos UTM — bloco de notas de campo</Text>
-      </View>
+      <ScreenHeader titulo="Pontos" subtitulo="Lista de pontos UTM — bloco de notas de campo" />
 
       <View style={s.body}>
         <View style={s.topBar}>
@@ -145,26 +143,26 @@ export default function PontosScreen() {
 }
 
 const s = StyleSheet.create({
-  container:   { flex: 1 },
-  header:      { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
-  titulo:      { fontSize: 24, fontWeight: '700' },
-  sub:         { fontSize: 13, marginTop: 2 },
-  body:        { padding: 16 },
-  topBar:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  secao:       { fontSize: 12, fontWeight: '700', marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
-  btnCopiar:   { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 0.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
-  btnCopiarTxt:{ fontSize: 12, fontWeight: '600' },
-  pontoCard:   { borderRadius: 10, borderWidth: 0.5, padding: 14, marginBottom: 8 },
+  container: { flex: 1 },
+  header: { padding: 20, borderBottomWidth: 0.5 },
+  titulo: { fontSize: 24, fontWeight: '700' },
+  sub: { fontSize: 13, marginTop: 2 },
+  body: { padding: 16 },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  secao: { fontSize: 12, fontWeight: '700', marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  btnCopiar: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 0.5, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  btnCopiarTxt: { fontSize: 12, fontWeight: '600' },
+  pontoCard: { borderRadius: 10, borderWidth: 0.5, padding: 14, marginBottom: 8 },
   pontoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
-  pontoIdx:    { fontSize: 12, fontWeight: '700', width: 18, textAlign: 'center' },
-  nomeInput:   { flex: 1, borderWidth: 0.5, borderRadius: 6, padding: 8, fontSize: 14, fontWeight: '600', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  btnRemover:  { padding: 4 },
-  coordRow:    { flexDirection: 'row', gap: 8 },
-  coordThird:  { flex: 1 },
-  label:       { fontSize: 10, fontWeight: '600', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.3 },
-  input:       { borderWidth: 0.5, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  btnAdd:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 0.5, borderRadius: 8, padding: 12, borderStyle: 'dashed', marginTop: 4 },
-  btnAddTxt:   { fontSize: 14, fontWeight: '600' },
-  btnLimpar:   { marginTop: 12, borderWidth: 0.5, borderRadius: 8, padding: 12, alignItems: 'center' },
-  btnLimparTxt:{ fontSize: 14 },
+  pontoIdx: { fontSize: 12, fontWeight: '700', width: 18, textAlign: 'center' },
+  nomeInput: { flex: 1, borderWidth: 0.5, borderRadius: 6, padding: 8, fontSize: 14, fontWeight: '600', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  btnRemover: { padding: 4 },
+  coordRow: { flexDirection: 'row', gap: 8 },
+  coordThird: { flex: 1 },
+  label: { fontSize: 10, fontWeight: '600', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.3 },
+  input: { borderWidth: 0.5, borderRadius: 8, padding: 10, fontSize: 13, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  btnAdd: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 0.5, borderRadius: 8, padding: 12, borderStyle: 'dashed', marginTop: 4 },
+  btnAddTxt: { fontSize: 14, fontWeight: '600' },
+  btnLimpar: { marginTop: 12, borderWidth: 0.5, borderRadius: 8, padding: 12, alignItems: 'center' },
+  btnLimparTxt: { fontSize: 14 },
 })

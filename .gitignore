@@ -68,3 +68,4 @@ data/geometrias_referencia_cliente.json
 # Metadados locais do Supabase CLI
 infra/supabase/supabase/
 
+.vercel

@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View, Text, FlatList, TouchableOpacity, TextInput,
   StyleSheet, ActivityIndicator, Modal, ScrollView, Alert,
@@ -35,6 +36,7 @@ const PROJETO_PLACEHOLDER = ''
 
 export default function BluetoothScreen() {
   const C = Colors.dark
+  const insets = useSafeAreaInsets()
   const [dispositivos, setDispositivos]   = useState<BluetoothDevice[]>([])
   const [conectando, setConectando]       = useState(false)
   const [conectado, setConectado]         = useState(false)
@@ -162,7 +164,7 @@ export default function BluetoothScreen() {
   return (
     <View style={[s.container, { backgroundColor: C.background }]}>
       {/* Header */}
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
         <Text style={[s.titulo, { color: C.text }]}>GNSS Bluetooth</Text>
         <Text style={[s.sub, { color: C.muted }]}>CHC i73+  •  SPP Clássico</Text>
       </View>
@@ -322,7 +324,7 @@ export default function BluetoothScreen() {
 
 const s = StyleSheet.create({
   container:      { flex: 1 },
-  header:         { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
+  header:         { padding: 20, borderBottomWidth: 0.5 },
   titulo:         { fontSize: 24, fontWeight: '700' },
   sub:            { fontSize: 12, marginTop: 4 },
   secao:          { padding: 16 },

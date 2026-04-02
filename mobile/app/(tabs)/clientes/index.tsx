@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View,
   Text,
@@ -45,6 +46,7 @@ type ClientesResponse = {
 
 export default function ClientesScreen() {
   const C = Colors.dark
+  const insets = useSafeAreaInsets()
   const router = useRouter()
   const [clientes, setClientes] = useState<ClienteResumo[]>([])
   const [busca, setBusca] = useState('')
@@ -92,7 +94,7 @@ export default function ClientesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: C.background }]}>
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
         <Text style={[s.titulo, { color: C.text }]}>Clientes & Documentacao</Text>
         <Text style={[s.sub, { color: C.muted }]}>
           {totalVisiveis} de {clientes.length} clientes visiveis
@@ -209,7 +211,7 @@ export default function ClientesScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: 56, borderBottomWidth: 0.5, gap: 12 },
+  header: { padding: 20, borderBottomWidth: 0.5, gap: 12 },
   titulo: { fontSize: 24, fontWeight: '700' },
   sub: { fontSize: 13 },
   filtrosRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },

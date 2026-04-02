@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
+import { ScreenHeader } from '../../../components/ScreenHeader'
+import { ss } from '@/styles/ss'
+import { CampoInput } from '../../../components/CampoInput'
 
 type Ponto = { id: string; nome: string; norte: string; este: string }
 
@@ -79,13 +82,10 @@ export default function PolilinhaScreen() {
   const totalMetros = segmentos.reduce((acc, s) => acc + s.distancia, 0)
 
   return (
-    <ScrollView style={[s.container, { backgroundColor: C.background }]} keyboardShouldPersistTaps="handled">
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
-        <Text style={[s.titulo, { color: C.text }]}>Polilinha</Text>
-        <Text style={[s.sub, { color: C.muted }]}>Distância e azimute de cada segmento de uma sequência de pontos</Text>
-      </View>
+    <ScrollView style={[ss.container, { backgroundColor: C.background }]} keyboardShouldPersistTaps="handled">
+      <ScreenHeader titulo="Polilinha" subtitulo="Distância e azimute de cada segmento de uma sequência de pontos" />
 
-      <View style={s.body}>
+      <View style={ss.body}>
         <Text style={[s.secao, { color: C.primary }]}>Pontos</Text>
 
         {pontos.map((p, i) => (
@@ -108,27 +108,19 @@ export default function PolilinhaScreen() {
             </View>
             <View style={s.coordRow}>
               <View style={s.coordHalf}>
-                <Text style={[s.label, { color: C.muted }]}>NORTE (m)</Text>
-                <TextInput
-                  style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]}
+                <CampoInput
+                  label="NORTE (m)"
                   value={p.norte}
                   onChangeText={v => atualizarPonto(p.id, 'norte', v)}
                   placeholder="7395000.000"
-                  placeholderTextColor={C.muted}
-                  keyboardType="numeric"
-                  returnKeyType="next"
                 />
               </View>
               <View style={s.coordHalf}>
-                <Text style={[s.label, { color: C.muted }]}>ESTE (m)</Text>
-                <TextInput
-                  style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]}
+                <CampoInput
+                  label="ESTE (m)"
                   value={p.este}
                   onChangeText={v => atualizarPonto(p.id, 'este', v)}
                   placeholder="313500.000"
-                  placeholderTextColor={C.muted}
-                  keyboardType="numeric"
-                  returnKeyType="next"
                 />
               </View>
             </View>
@@ -140,18 +132,18 @@ export default function PolilinhaScreen() {
           <Text style={[s.btnAddTxt, { color: C.primary }]}>Adicionar ponto</Text>
         </TouchableOpacity>
 
-        <View style={s.btns}>
-          <TouchableOpacity style={[s.btnSec, { borderColor: C.cardBorder }]} onPress={limpar}>
-            <Text style={[s.btnSecTxt, { color: C.muted }]}>Limpar</Text>
+        <View style={ss.btns}>
+          <TouchableOpacity style={[ss.btnSec, { borderColor: C.cardBorder }]} onPress={limpar}>
+            <Text style={[ss.btnSecTxt, { color: C.muted }]}>Limpar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.btnPri, { backgroundColor: C.primary }]} onPress={calcular}>
-            <Text style={[s.btnPriTxt, { color: C.primaryText }]}>Calcular</Text>
+          <TouchableOpacity style={[ss.btnPri, { backgroundColor: C.primary }]} onPress={calcular}>
+            <Text style={[ss.btnPriTxt, { color: C.primaryText }]}>Calcular</Text>
           </TouchableOpacity>
         </View>
 
         {segmentos.length > 0 && (
-          <View style={[s.resultado, { backgroundColor: C.card, borderColor: C.primary }]}>
-            <Text style={[s.resLabel, { color: C.muted }]}>Segmentos</Text>
+          <View style={[ss.resultado, { backgroundColor: C.card, borderColor: C.primary }]}>
+            <Text style={[ss.resLabel, { color: C.muted }]}>Segmentos</Text>
 
             {segmentos.map((seg, i) => (
               <View key={i} style={[s.segRow, i < segmentos.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: C.cardBorder }]}>
@@ -177,36 +169,22 @@ export default function PolilinhaScreen() {
 }
 
 const s = StyleSheet.create({
-  container:   { flex: 1 },
-  header:      { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
-  titulo:      { fontSize: 24, fontWeight: '700' },
-  sub:         { fontSize: 13, marginTop: 2 },
-  body:        { padding: 16 },
-  secao:       { fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
-  pontoCard:   { borderRadius: 10, borderWidth: 0.5, padding: 14, marginBottom: 8 },
+  secao: { fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  pontoCard: { borderRadius: 10, borderWidth: 0.5, padding: 14, marginBottom: 8 },
   pontoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  nomeInput:   { flex: 1, borderWidth: 0.5, borderRadius: 6, padding: 8, fontSize: 14, fontWeight: '600', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  btnRemover:  { padding: 8, marginLeft: 8 },
-  coordRow:    { flexDirection: 'row', gap: 10 },
-  coordHalf:   { flex: 1 },
-  label:       { fontSize: 10, fontWeight: '600', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.3 },
-  input:       { borderWidth: 0.5, borderRadius: 8, padding: 12, fontSize: 14, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  btnAdd:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 0.5, borderRadius: 8, padding: 12, borderStyle: 'dashed', marginTop: 4 },
-  btnAddTxt:   { fontSize: 14, fontWeight: '600' },
-  btns:        { flexDirection: 'row', gap: 10, marginTop: 20 },
-  btnPri:      { flex: 2, padding: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center', minHeight: 52 },
-  btnPriTxt:   { fontSize: 16, fontWeight: '700' },
-  btnSec:      { flex: 1, padding: 16, borderRadius: 10, alignItems: 'center', borderWidth: 0.5, minHeight: 52 },
-  btnSecTxt:   { fontSize: 16, fontWeight: '500' },
-  resultado:   { marginTop: 20, borderRadius: 12, borderWidth: 1, padding: 20 },
-  resLabel:    { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 },
-  segRow:      { paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  segNomes:    { flex: 1 },
-  segNome:     { fontSize: 14, fontWeight: '600' },
-  segVals:     { alignItems: 'flex-end' },
-  segDist:     { fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  segAz:       { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
-  totalRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTopWidth: 1 },
-  totalLabel:  { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
-  totalValor:  { fontSize: 18, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  nomeInput: { flex: 1, borderWidth: 0.5, borderRadius: 6, padding: 8, fontSize: 14, fontWeight: '600', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  btnRemover: { padding: 8, marginLeft: 8 },
+  coordRow: { flexDirection: 'row', gap: 10 },
+  coordHalf: { flex: 1 },
+  btnAdd: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 0.5, borderRadius: 8, padding: 12, borderStyle: 'dashed', marginTop: 4 },
+  btnAddTxt: { fontSize: 14, fontWeight: '600' },
+  segRow: { paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  segNomes: { flex: 1 },
+  segNome: { fontSize: 14, fontWeight: '600' },
+  segVals: { alignItems: 'flex-end' },
+  segDist: { fontSize: 15, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  segAz: { fontSize: 12, marginTop: 2, fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTopWidth: 1 },
+  totalLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
+  totalValor: { fontSize: 18, fontWeight: '700', fontFamily: Platform.OS === 'android' ? 'monospace' : 'Courier' },
 })

@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform,
@@ -19,6 +20,7 @@ interface ConsultaResponse {
 
 export default function RagScreen() {
   const C = Colors.dark
+  const insets = useSafeAreaInsets()
   const [pergunta, setPergunta]   = useState('')
   const [resultado, setResultado] = useState<ConsultaResponse | null>(null)
   const [loading, setLoading]     = useState(false)
@@ -44,7 +46,7 @@ export default function RagScreen() {
       style={[s.flex, { backgroundColor: C.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
         <Text style={[s.titulo, { color: C.text }]}>Normas INCRA</Text>
         <Text style={[s.sub, { color: C.muted }]}>Consulta por IA — Norma Técnica 3ª Ed., Lei 13.465/2017, SIGEF</Text>
       </View>
@@ -102,7 +104,7 @@ export default function RagScreen() {
 
 const s = StyleSheet.create({
   flex:       { flex: 1 },
-  header:     { padding: 20, paddingTop: 56, borderBottomWidth: 0.5 },
+  header:     { padding: 20, borderBottomWidth: 0.5 },
   titulo:     { fontSize: 24, fontWeight: '700' },
   sub:        { fontSize: 12, marginTop: 4 },
   body:       { padding: 16, gap: 12 },
