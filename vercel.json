@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "installCommand": "cd mobile && npm ci",
-  "buildCommand": "cd mobile && npx expo export --platform web && cd .. && node scripts/patch-fonts.js",
   "outputDirectory": "mobile/dist",
   "framework": null,
   "rewrites": [

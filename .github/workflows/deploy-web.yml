@@ -1,0 +1,40 @@
+name: Deploy Web (Vercel)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Build Expo web
+        working-directory: mobile
+        run: npx expo export --platform web
+
+      - name: Patch fonts (move TTFs out of node_modules path)
+        run: node scripts/patch-fonts.js
+
+      - name: Prepare Vercel output
+        run: |
+          mkdir -p .vercel/output/static
+          cp -r mobile/dist/. .vercel/output/static/
+          cp scripts/vercel-output-config.json .vercel/output/config.json
+
+      - name: Deploy to Vercel
+        run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: team_oaCykP4pfWw7HegnYgYuGBE9
+          VERCEL_PROJECT_ID: prj_DKKk6gazT6StFTMYe5Bgvj1DwFYg
