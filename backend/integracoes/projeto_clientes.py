@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 PAPEIS_VALIDOS = {
     'principal',
@@ -235,8 +238,7 @@ def listar_participantes_projeto(sb, projeto_id: str, cliente_principal: dict[st
         if participantes:
             return participantes
     except Exception as exc:
-        if 'projeto_clientes' not in str(exc).lower():
-            raise
+        logger.warning("Falha ao listar participantes do projeto %s: %s", projeto_id, exc)
 
     if cliente_principal:
         return [{

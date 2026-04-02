@@ -823,8 +823,19 @@ def criar_projeto(payload: ProjetoCreate):
 
 @router.get("/{projeto_id}", summary="Buscar projeto com dados operacionais")
 def buscar_projeto(projeto_id: str):
+    import logging as _log
+    _logger = _log.getLogger(__name__)
     sb = _get_supabase()
-    return _enriquecer_projeto(sb, projeto_id)
+    try:
+        return _enriquecer_projeto(sb, projeto_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _logger.error("Erro ao buscar projeto %s: %s", projeto_id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"erro": f"Erro interno ao processar projeto: {str(exc)}", "codigo": 500},
+        )
 
 
 @router.patch("/{projeto_id}", summary="Atualizar metadados do projeto")

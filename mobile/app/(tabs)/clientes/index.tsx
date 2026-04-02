@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View,
@@ -47,6 +47,8 @@ type ClientesResponse = {
 export default function ClientesScreen() {
   const C = Colors.dark
   const insets = useSafeAreaInsets()
+  const [topInset, setTopInset] = useState(0)
+  useEffect(() => { setTopInset(insets.top) }, [insets.top])
   const router = useRouter()
   const [clientes, setClientes] = useState<ClienteResumo[]>([])
   const [busca, setBusca] = useState('')
@@ -94,7 +96,7 @@ export default function ClientesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: C.background }]}>
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(topInset + 12, 20) }]}>
         <Text style={[s.titulo, { color: C.text }]}>Clientes & Documentacao</Text>
         <Text style={[s.sub, { color: C.muted }]}>
           {totalVisiveis} de {clientes.length} clientes visiveis

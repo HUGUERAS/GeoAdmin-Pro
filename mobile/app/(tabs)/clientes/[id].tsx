@@ -379,6 +379,8 @@ async function anexarArquivoNoFormData(formData: FormData, asset: DocumentPicker
 export default function ClienteDetalheScreen() {
   const C = Colors.dark
   const insets = useSafeAreaInsets()
+  const [topInset, setTopInset] = useState(0)
+  useEffect(() => { setTopInset(insets.top) }, [insets.top])
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const [detalhe, setDetalhe] = useState<ClienteDetalheResponse | null>(null)
@@ -680,7 +682,7 @@ export default function ClienteDetalheScreen() {
 
   return (
     <ScrollView style={[s.container, { backgroundColor: C.background }]} contentContainerStyle={s.content}>
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(topInset + 12, 20) }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar} accessibilityRole="button" accessibilityLabel="Voltar para a lista de clientes">
           <Feather name="arrow-left" size={20} color={C.text} />
         </TouchableOpacity>

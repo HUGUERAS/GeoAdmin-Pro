@@ -492,7 +492,9 @@ function CadView({ pontos, polygonVerts, layers, C, editMode, editTool, editVert
 export default function MapaProjetoScreen() {
   const C = Colors.dark
   const insets = useSafeAreaInsets()
-  const headerPaddingTop = Math.max(insets.top + 12, 20)
+  const [topInset, setTopInset] = useState(0)
+  useEffect(() => { setTopInset(insets.top) }, [insets.top])
+  const headerPaddingTop = Math.max(topInset + 12, 20)
   const { id, tool } = useLocalSearchParams<{ id: string; tool?: NomeFerramenta }>()
   const router  = useRouter()
 

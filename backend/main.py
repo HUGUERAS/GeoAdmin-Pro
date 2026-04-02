@@ -11,9 +11,10 @@ if _proj_data_dir and os.path.isdir(_proj_data_dir):
     os.environ["PROJ_DATA"] = _proj_data_dir
 # ──────────────────────────────────────────────────────────────────────────────
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from typing import Dict, Any
 
 from dotenv import load_dotenv
@@ -97,6 +98,22 @@ app.include_router(perimetros_router)
 app.include_router(geo_router)
 app.include_router(importar_router)
 app.include_router(catalogo_router)
+
+
+import logging as _logging
+_logger_main = _logging.getLogger("geoadmin.main")
+
+
+@app.exception_handler(Exception)
+async def _handler_erro_global(request: Request, exc: Exception) -> JSONResponse:
+    """Garante que exceções não capturadas retornem JSON (não text/plain do Starlette)."""
+    if isinstance(exc, HTTPException):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    _logger_main.error("Exceção não tratada em %s: %s", request.url.path, exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"erro": f"Erro interno: {str(exc)}", "codigo": 500},
+    )
 
 
 @app.get("/health")

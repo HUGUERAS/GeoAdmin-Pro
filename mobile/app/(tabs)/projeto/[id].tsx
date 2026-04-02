@@ -239,6 +239,8 @@ function rotuloStatusLote(valor: string | null | undefined, tipo: 'operacional' 
 export default function DetalheProjetoScreen() {
   const C = Colors.dark
   const insets = useSafeAreaInsets()
+  const [topInset, setTopInset] = useState(0)
+  useEffect(() => { setTopInset(insets.top) }, [insets.top])
   const { id } = useLocalSearchParams<{ id: string }>()
   const router  = useRouter()
   const [projeto, setProjeto]       = useState<any>(null)
@@ -595,7 +597,7 @@ export default function DetalheProjetoScreen() {
         </View>
       )}
 
-      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(insets.top + 12, 20) }]}>
+      <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(topInset + 12, 20) }]}>
         <View style={s.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={[s.titulo, { color: C.text }]} numberOfLines={2}>{projeto.projeto_nome}</Text>
