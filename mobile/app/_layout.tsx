@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { Analytics } from '@vercel/analytics/react'
 import { Colors } from '../constants/Colors'
 import { initDB } from '../lib/db'
 
@@ -24,6 +25,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
+      <Analytics />
     </>
   )
 }
