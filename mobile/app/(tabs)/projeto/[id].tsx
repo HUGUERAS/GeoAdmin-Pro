@@ -8,10 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   Clipboard,
-  Platform,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import * as DocumentPicker from 'expo-document-picker'
 import * as Linking from 'expo-linking'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
@@ -20,7 +18,6 @@ import { StatusBadge } from '../../../components/StatusBadge'
 import { SyncBadge } from '../../../components/SyncBadge'
 import { contarPendentes, initDB, cacheProjetoDetalhe, getCachedProjetoDetalhe, contarErros, resetarErros, salvarUltimoProjetoMapa } from '../../../lib/db'
 import { sincronizar } from '../../../lib/sync'
-import { apiPost, apiPostFormData } from '../../../lib/api'
 
 type ProximaEtapa = {
   titulo: string
@@ -38,37 +35,6 @@ const SECOES: { id: SecaoProjeto; label: string; icone: keyof typeof Feather.gly
   { id: 'confrontacoes', label: 'Confrontações', icone: 'git-merge' },
   { id: 'documentos', label: 'Documentos', icone: 'file-text' },
 ]
-
-function inferirMimeTypeArquivo(nome: string, mimeType?: string | null) {
-  if (mimeType) return mimeType
-  const extensao = nome.split('.').pop()?.toLowerCase()
-  if (extensao === 'geojson' || extensao === 'json') return 'application/json'
-  if (extensao === 'kml') return 'application/vnd.google-earth.kml+xml'
-  if (extensao === 'kmz') return 'application/vnd.google-earth.kmz'
-  if (extensao === 'csv') return 'text/csv'
-  if (extensao === 'txt') return 'text/plain'
-  if (extensao === 'zip') return 'application/zip'
-  return 'application/octet-stream'
-}
-
-async function anexarArquivoNoFormData(formData: FormData, asset: DocumentPicker.DocumentPickerAsset) {
-  if (Platform.OS === 'web') {
-    if ((asset as any).file) {
-      formData.append('arquivo', (asset as any).file, asset.name)
-      return
-    }
-    const response = await fetch(asset.uri)
-    const blob = await response.blob()
-    formData.append('arquivo', blob, asset.name)
-    return
-  }
-
-  formData.append('arquivo', {
-    uri: asset.uri,
-    name: asset.name,
-    type: inferirMimeTypeArquivo(asset.name, asset.mimeType),
-  } as any)
-}
 
 function formatarData(valor?: string | null, comHora = true) {
   if (!valor) return 'Sem registro'
@@ -102,26 +68,6 @@ function rotuloConfrontacao(item: any) {
     return { texto: 'Sobreposição', cor: Colors.dark.danger }
   }
   return { texto: 'Divisa detectada', cor: Colors.dark.success }
-}
-
-function rotuloRevisaoConfrontacao(item: any) {
-  const status = normalizarStatus(item.status_revisao || item.status)
-  if (status === 'confirmada') return { texto: 'Confirmada', cor: Colors.dark.success }
-  if (status === 'descartada') return { texto: 'Descartada', cor: Colors.dark.muted }
-  return { texto: 'Pendente de revisão', cor: Colors.dark.warning }
-}
-
-function rotuloTipoRelacaoConfrontacao(item: any) {
-  const tipo = normalizarStatus(item.tipo_relacao)
-  if (tipo === 'externa') return { texto: 'Externa', cor: Colors.dark.info }
-  return { texto: 'Interna', cor: Colors.dark.primary }
-}
-
-function rotuloProntidaoPiloto(prontidao: any) {
-  const status = normalizarStatus(prontidao?.status)
-  if (status === 'pronto_para_piloto') return { texto: 'Pronto para piloto', cor: Colors.dark.success }
-  if (status === 'operacao_assistida') return { texto: 'Operação assistida', cor: Colors.dark.primary }
-  return { texto: 'Preparação', cor: Colors.dark.warning }
 }
 
 function normalizarStatus(valor?: string | null) {
@@ -248,43 +194,12 @@ export default function DetalheProjetoScreen() {
   const [offline, setOffline]       = useState(false)
   const [semCache, setSemCache]     = useState(false)
   const [secao, setSecao]           = useState<SecaoProjeto>('visao')
-  const [gerandoLinksLote, setGerandoLinksLote] = useState(false)
-  const [importandoLotes, setImportandoLotes] = useState(false)
-  const [migrandoArquivos, setMigrandoArquivos] = useState(false)
-  const [revisandoConfrontoId, setRevisandoConfrontoId] = useState<string | null>(null)
 
   const atualizarPendentes = useCallback(async () => {
     const n = await contarPendentes(id)
     setPendentes(n)
     const e = await contarErros(id)
     setErros(e)
-  }, [id])
-
-  const carregarProjeto = useCallback(async () => {
-    try {
-      await initDB()
-      setOffline(false)
-      setSemCache(false)
-      const res = await fetch(`${API_URL}/projetos/${id}`)
-      if (!res.ok) throw new Error('Falha ao carregar projeto')
-      const data = await res.json()
-      await cacheProjetoDetalhe(id, data)
-      setProjeto(data)
-    } catch {
-      try {
-        const cached = await getCachedProjetoDetalhe(id)
-        if (cached) {
-          setProjeto(cached)
-          setOffline(true)
-        } else {
-          setSemCache(true)
-        }
-      } catch {
-        setSemCache(true)
-      }
-    } finally {
-      setLoading(false)
-    }
   }, [id])
 
   const handleSync = async () => {
@@ -308,9 +223,34 @@ export default function DetalheProjetoScreen() {
   }
 
   useEffect(() => {
-    carregarProjeto()
+    const iniciar = async () => {
+      try {
+        await initDB()
+        setOffline(false)
+        setSemCache(false)
+        const res = await fetch(`${API_URL}/projetos/${id}`)
+        const data = await res.json()
+        await cacheProjetoDetalhe(id, data)
+        setProjeto(data)
+      } catch {
+        try {
+          const cached = await getCachedProjetoDetalhe(id)
+          if (cached) {
+            setProjeto(cached)
+            setOffline(true)
+          } else {
+            setSemCache(true)
+          }
+        } catch {
+          setSemCache(true)
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    iniciar()
     atualizarPendentes()
-  }, [carregarProjeto, atualizarPendentes])
+  }, [id, atualizarPendentes])
 
   const gerarMagicLink = async () => {
     try {
@@ -368,111 +308,6 @@ export default function DetalheProjetoScreen() {
     await abrirUrlOperacional(`${API_URL}/projetos/${id}/confrontacoes/cartas`, 'O ZIP com as cartas de confrontação foi aberto no navegador.')
   }
 
-  const importarArquivoLotes = async () => {
-    try {
-      const resultado = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, base64: false })
-      if (resultado.canceled || !resultado.assets?.length) return
-      const asset = resultado.assets[0]
-      setImportandoLotes(true)
-      const formData = new FormData()
-      await anexarArquivoNoFormData(formData, asset)
-      formData.append('formato', (asset.name?.split('.').pop() || '').toLowerCase())
-      formData.append('atualizar_existentes', 'true')
-      formData.append('salvar_na_bandeja', 'true')
-      formData.append('autor', 'Topógrafo')
-      const resposta = await apiPostFormData<any>(`/projetos/${id}/areas/importar-arquivo`, formData)
-      await carregarProjeto()
-      Alert.alert(
-        'Importação concluída',
-        `${resposta.criadas || 0} lote(s) criado(s), ${resposta.atualizadas || 0} atualizado(s) e ${resposta.ignoradas || 0} ignorado(s).${resposta.mensagem ? ` ${resposta.mensagem}` : ''}`,
-      )
-    } catch (error: any) {
-      Alert.alert('Falha ao importar lotes', error?.message || 'Não foi possível importar o arquivo agora.')
-    } finally {
-      setImportandoLotes(false)
-    }
-  }
-
-  const gerarLinksLoteEmMassa = async () => {
-    try {
-      const elegiveis = (projeto?.areas || []).filter((area: any) => {
-        const participantesArea = participantesDaArea(area, projeto?.participantes || [])
-        const recebeLink = participantesArea.some((item: any) => item?.recebe_magic_link)
-        const formularioRecebido = participantesArea.some((item: any) => item?.formulario_ok)
-        return recebeLink && !formularioRecebido
-      })
-      if (elegiveis.length === 0) {
-        Alert.alert('Sem pendências', 'Nenhum lote elegível para geração em massa de magic links neste momento.')
-        return
-      }
-      setGerandoLinksLote(true)
-      const resposta = await apiPost<any>(`/projetos/${id}/magic-links/lote`, {
-        area_ids: elegiveis.map((item: any) => item.id),
-        dias: 7,
-        canal: 'whatsapp',
-        autor: 'Topógrafo',
-        somente_habilitados: true,
-      })
-      if (resposta?.links?.length) {
-        Clipboard.setString(resposta.links[0].mensagem_whatsapp || resposta.links[0].link)
-      }
-      await carregarProjeto()
-      Alert.alert('Links gerados', `${resposta.total || 0} magic link(s) preparados. A primeira mensagem foi copiada para o clipboard.`)
-    } catch (error: any) {
-      Alert.alert('Falha ao gerar links', error?.message || 'Não foi possível gerar os links em lote agora.')
-    } finally {
-      setGerandoLinksLote(false)
-    }
-  }
-
-  const promoverArquivoBaseOficial = async (arquivoId: string) => {
-    try {
-      await apiPost(`/projetos/${id}/arquivos/${arquivoId}/promover`, {
-        autor: 'Topógrafo',
-        observacao: 'Promoção manual a partir do painel do projeto',
-        classificacao_destino: 'perimetro_tecnico',
-      })
-      await carregarProjeto()
-      Alert.alert('Base oficial atualizada', 'O arquivo foi promovido manualmente para base oficial do projeto.')
-    } catch (error: any) {
-      Alert.alert('Falha ao promover arquivo', error?.message || 'Não foi possível promover o arquivo agora.')
-    }
-  }
-
-  const migrarArquivosLegadosProjeto = async () => {
-    try {
-      setMigrandoArquivos(true)
-      const res = await fetch(`${API_URL}/projetos/${id}/arquivos/migrar-legado?limite=100&autor=Top%C3%B3grafo`, { method: 'POST' })
-      const data = await res.json()
-      await carregarProjeto()
-      Alert.alert('Migração concluída', `${data.migrados || 0} arquivo(s) migrado(s) para o Supabase Storage.`)
-    } catch {
-      Alert.alert('Falha na migração', 'Não foi possível migrar os arquivos legados agora.')
-    } finally {
-      setMigrandoArquivos(false)
-    }
-  }
-
-  const revisarConfrontacao = async (confrontoId: string, statusRevisao: 'confirmada' | 'descartada', tipoRelacao?: 'interna' | 'externa') => {
-    try {
-      setRevisandoConfrontoId(confrontoId)
-      await apiPost(`/projetos/${id}/confrontacoes/revisar`, {
-        revisoes: [{
-          confronto_id: confrontoId,
-          status_revisao: statusRevisao,
-          tipo_relacao: tipoRelacao || 'interna',
-          autor: 'Topógrafo',
-          observacao: statusRevisao === 'confirmada' ? 'Confrontação revisada no painel do projeto' : 'Confrontação descartada após revisão manual',
-        }],
-      })
-      await carregarProjeto()
-    } catch (error: any) {
-      Alert.alert('Falha ao revisar confrontação', error?.message || 'Não foi possível atualizar a revisão agora.')
-    } finally {
-      setRevisandoConfrontoId(null)
-    }
-  }
-
   const abrirMapaProjeto = async () => {
     try {
       await salvarUltimoProjetoMapa(id)
@@ -511,14 +346,6 @@ export default function DetalheProjetoScreen() {
   const participantes = projeto.participantes || projeto.clientes || []
   const resumoGeo = projeto.resumo_geo || {}
   const resumoLotes = resumoLotesProjeto(projeto, areas, participantes)
-  const arquivosCartograficos = projeto.arquivos_cartograficos || []
-  const arquivosEventos = projeto.arquivos_eventos || []
-  const arquivosResumo = projeto.arquivos_resumo || {}
-  const magicLinksHistorico = projeto.magic_links_historico || []
-  const magicLinksResumo = projeto.magic_links_resumo || {}
-  const confrontacoesResumo = projeto.confrontacoes_resumo || {}
-  const prontidaoPiloto = projeto.prontidao_piloto || {}
-  const prontidaoPilotoChip = rotuloProntidaoPiloto(prontidaoPiloto)
 
   const proximaEtapa: ProximaEtapa = (() => {
     if (erros > 0) {
@@ -711,15 +538,7 @@ export default function DetalheProjetoScreen() {
 
             {resumoLotes.total > 0 ? (
               <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
-                <View style={s.cardHeaderRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.cardTitle, { color: C.text }]}>Leitura por lote</Text>
-                    <Text style={[s.cardSubtitle, { color: C.muted }]}>Operação condominial já ativa. Agora você consegue importar lotes, gerar links em massa e acompanhar o recorte por unidade.</Text>
-                  </View>
-                  <View style={[s.inlineStatus, { backgroundColor: `${prontidaoPilotoChip.cor}16`, borderColor: prontidaoPilotoChip.cor }]}>
-                    <Text style={[s.inlineStatusTxt, { color: prontidaoPilotoChip.cor }]}>{prontidaoPilotoChip.texto}</Text>
-                  </View>
-                </View>
+                <Text style={[s.cardTitle, { color: C.text }]}>Leitura por lote</Text>
                 <View style={s.infoGrid}>
                   <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
                     <Text style={[s.infoMiniLabel, { color: C.muted }]}>Total</Text>
@@ -733,32 +552,8 @@ export default function DetalheProjetoScreen() {
                     <Text style={[s.infoMiniLabel, { color: C.muted }]}>Pendentes</Text>
                     <Text style={[s.infoMiniValue, { color: resumoLotes.pendentes > 0 ? C.danger : C.success }]}>{resumoLotes.pendentes}</Text>
                   </View>
-                  <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-                    <Text style={[s.infoMiniLabel, { color: C.muted }]}>Formulários</Text>
-                    <Text style={[s.infoMiniValue, { color: C.text }]}>{prontidaoPiloto.formularios_recebidos || 0}</Text>
-                  </View>
-                  <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-                    <Text style={[s.infoMiniLabel, { color: C.muted }]}>Base oficial</Text>
-                    <Text style={[s.infoMiniValue, { color: C.text }]}>{prontidaoPiloto.base_oficial_total || 0}</Text>
-                  </View>
-                  <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-                    <Text style={[s.infoMiniLabel, { color: C.muted }]}>Prontidão</Text>
-                    <Text style={[s.infoMiniValue, { color: C.text }]}>{prontidaoPiloto.percentual || 0}%</Text>
-                  </View>
                 </View>
-                <View style={s.actionsGrid}>
-                  <TouchableOpacity style={[s.actionCard, { backgroundColor: C.background, borderColor: C.cardBorder }]} onPress={importarArquivoLotes} disabled={importandoLotes}>
-                    {importandoLotes ? <ActivityIndicator color={C.primary} /> : <Feather name="upload" size={18} color={C.primary} />}
-                    <Text style={[s.actionTitle, { color: C.text }]}>Importar lotes</Text>
-                    <Text style={[s.actionDesc, { color: C.muted }]}>GeoJSON, CSV, KML ou ZIP estruturado</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[s.actionCard, { backgroundColor: C.background, borderColor: C.cardBorder }]} onPress={gerarLinksLoteEmMassa} disabled={gerandoLinksLote}>
-                    {gerandoLinksLote ? <ActivityIndicator color={C.primary} /> : <Feather name="send" size={18} color={C.primary} />}
-                    <Text style={[s.actionTitle, { color: C.text }]}>Gerar links em lote</Text>
-                    <Text style={[s.actionDesc, { color: C.muted }]}>Dispara os lotes pendentes e copia a primeira mensagem</Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={[s.cardSubtitle, { color: C.muted }]}>Histórico de links: {magicLinksResumo.total_eventos || 0} evento(s) · consumidos: {magicLinksResumo.consumidos || 0} · confrontações confirmadas: {prontidaoPiloto.confrontacoes_confirmadas || 0}</Text>
+                <Text style={[s.cardSubtitle, { color: C.muted }]}>Esta é a base da operação em lote da Sprint 1. A Sprint 2 entra com importação inicial e ações em massa.</Text>
               </View>
             ) : null}
 
@@ -900,72 +695,33 @@ export default function DetalheProjetoScreen() {
               <View style={s.cardHeaderRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.cardTitle, { color: C.text }]}>Confrontações detectadas</Text>
-                  <Text style={[s.cardSubtitle, { color: C.muted }]}>Relações automáticas entre áreas do projeto, agora com revisão explícita antes da carta final.</Text>
+                  <Text style={[s.cardSubtitle, { color: C.muted }]}>Relações automáticas entre áreas do projeto e base para as cartas.</Text>
                 </View>
                 <TouchableOpacity style={[s.inlineBtn, { borderColor: C.primary }]} onPress={baixarCartasConfrontacao}>
                   <Text style={[s.inlineBtnTxt, { color: C.primary }]}>Gerar cartas ZIP</Text>
                 </TouchableOpacity>
               </View>
 
-              <View style={s.infoGrid}>
-                <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-                  <Text style={[s.infoMiniLabel, { color: C.muted }]}>Totais</Text>
-                  <Text style={[s.infoMiniValue, { color: C.text }]}>{confrontacoesResumo.total || confrontacoes.length}</Text>
-                </View>
-                <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-                  <Text style={[s.infoMiniLabel, { color: C.muted }]}>Confirmadas</Text>
-                  <Text style={[s.infoMiniValue, { color: C.success }]}>{confrontacoesResumo.confirmadas || 0}</Text>
-                </View>
-                <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-                  <Text style={[s.infoMiniLabel, { color: C.muted }]}>Pendentes</Text>
-                  <Text style={[s.infoMiniValue, { color: (confrontacoesResumo.pendentes || 0) > 0 ? C.warning : C.success }]}>{confrontacoesResumo.pendentes || 0}</Text>
-                </View>
-                <View style={[s.infoMiniCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
-                  <Text style={[s.infoMiniLabel, { color: C.muted }]}>Externas</Text>
-                  <Text style={[s.infoMiniValue, { color: C.info }]}>{confrontacoesResumo.externas || projeto.confrontantes?.length || 0}</Text>
-                </View>
-              </View>
-
               {confrontacoes.length === 0 ? (
                 <Text style={[s.emptyTxt, { color: C.muted }]}>Nenhuma confrontação geométrica foi detectada ainda. Isso aparece quando existem áreas suficientes com esboço ou geometria final.</Text>
               ) : confrontacoes.map((item: any) => {
                 const status = rotuloConfrontacao(item)
-                const revisao = rotuloRevisaoConfrontacao(item)
-                const relacao = rotuloTipoRelacaoConfrontacao(item)
-                const revisando = revisandoConfrontoId === String(item.id)
                 return (
                   <View key={item.id} style={[s.confCard, { borderColor: C.cardBorder }]}>
                     <View style={s.cardHeaderRow}>
                       <Text style={[s.confTitle, { color: C.text }]}>{item.area_a?.nome} ↔ {item.area_b?.nome}</Text>
-                      <View style={s.inlineStatusStack}>
-                        <View style={[s.inlineStatus, { backgroundColor: `${status.cor}16`, borderColor: status.cor }]}>
-                          <Text style={[s.inlineStatusTxt, { color: status.cor }]}>{status.texto}</Text>
-                        </View>
-                        <View style={[s.inlineStatus, { backgroundColor: `${revisao.cor}16`, borderColor: revisao.cor }]}>
-                          <Text style={[s.inlineStatusTxt, { color: revisao.cor }]}>{revisao.texto}</Text>
-                        </View>
-                        <View style={[s.inlineStatus, { backgroundColor: `${relacao.cor}16`, borderColor: relacao.cor }]}>
-                          <Text style={[s.inlineStatusTxt, { color: relacao.cor }]}>{relacao.texto}</Text>
-                        </View>
+                      <View style={[s.inlineStatus, { backgroundColor: `${status.cor}16`, borderColor: status.cor }]}>
+                        <Text style={[s.inlineStatusTxt, { color: status.cor }]}>{status.texto}</Text>
                       </View>
                     </View>
                     <Text style={[s.confMeta, { color: C.muted }]}>Contato aproximado: {item.contato_m ?? 0} m · Interseção: {item.area_intersecao_ha ?? 0} ha</Text>
-                    {item.observacao ? <Text style={[s.confMeta, { color: C.muted }]}>Observação: {item.observacao}</Text> : null}
-                    <View style={s.actionsGrid}>
-                      <TouchableOpacity style={[s.inlineBtn, { borderColor: C.success, opacity: revisando ? 0.6 : 1 }]} onPress={() => revisarConfrontacao(String(item.id), 'confirmada', (item.tipo_relacao || 'interna') as any)} disabled={revisando}>
-                        <Text style={[s.inlineBtnTxt, { color: C.success }]}>{revisando ? 'Salvando...' : 'Confirmar'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[s.inlineBtn, { borderColor: C.muted, opacity: revisando ? 0.6 : 1 }]} onPress={() => revisarConfrontacao(String(item.id), 'descartada', (item.tipo_relacao || 'interna') as any)} disabled={revisando}>
-                        <Text style={[s.inlineBtnTxt, { color: C.muted }]}>{revisando ? 'Salvando...' : 'Descartar'}</Text>
-                      </TouchableOpacity>
-                    </View>
                   </View>
                 )
               })}
 
               <View style={[s.manualBlock, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
                 <Text style={[s.manualBlockTitle, { color: C.text }]}>Confrontantes cadastrais</Text>
-                <Text style={[s.emptyTxt, { color: C.muted }]}>Há {projeto.confrontantes?.length ?? 0} confrontante(s) cadastrados manualmente para a parte declaratória. Eles continuam separados das confrontações internas detectadas.</Text>
+                <Text style={[s.emptyTxt, { color: C.muted }]}>Há {projeto.confrontantes?.length ?? 0} confrontante(s) cadastrados manualmente para a parte declaratória.</Text>
               </View>
             </View>
           </View>
@@ -996,62 +752,6 @@ export default function DetalheProjetoScreen() {
               >
                 {gerando ? <ActivityIndicator color={C.primaryText} /> : <Text style={[s.btnPrincipalTxt, { color: C.primaryText }]}>Gerar documentos GPRF</Text>}
               </TouchableOpacity>
-            </View>
-
-            <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
-              <View style={s.cardHeaderRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.cardTitle, { color: C.text }]}>Base cartográfica</Text>
-                  <Text style={[s.cardSubtitle, { color: C.muted }]}>Nenhum arquivo vira base oficial sem promoção manual do topógrafo.</Text>
-                </View>
-                <TouchableOpacity style={[s.inlineBtn, { borderColor: C.primary }]} onPress={migrarArquivosLegadosProjeto}>
-                  {migrandoArquivos ? <ActivityIndicator color={C.primary} /> : <Text style={[s.inlineBtnTxt, { color: C.primary }]}>Migrar legado</Text>}
-                </TouchableOpacity>
-              </View>
-              <Text style={[s.clientMeta, { color: C.muted }]}>Arquivos: {arquivosResumo.total || 0} · base oficial: {arquivosResumo.base_oficial_total || 0} · eventos: {arquivosResumo.eventos_total || 0}</Text>
-              {arquivosCartograficos.length === 0 ? (
-                <Text style={[s.emptyTxt, { color: C.muted }]}>Nenhum arquivo cartográfico enviado ainda.</Text>
-              ) : arquivosCartograficos.slice(0, 6).map((arquivo: any) => (
-                <View key={arquivo.id} style={[s.participanteCard, { borderColor: C.cardBorder }]}> 
-                  <View style={s.cardHeaderRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.clientName, { color: C.text }]} numberOfLines={1}>{arquivo.nome_original || arquivo.nome_arquivo || 'Arquivo'}</Text>
-                      <Text style={[s.clientMeta, { color: C.muted }]}>{arquivo.classificacao || 'sem classificação'} · {arquivo.origem || 'origem pendente'}</Text>
-                    </View>
-                    {arquivo.base_oficial ? (
-                      <View style={[s.inlineStatus, { backgroundColor: `${C.success}16`, borderColor: C.success }]}>
-                        <Text style={[s.inlineStatusTxt, { color: C.success }]}>Base oficial</Text>
-                      </View>
-                    ) : (
-                      <TouchableOpacity style={[s.inlineBtn, { borderColor: C.primary }]} onPress={() => promoverArquivoBaseOficial(String(arquivo.id))}>
-                        <Text style={[s.inlineBtnTxt, { color: C.primary }]}>Promover</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
-              <Text style={[s.cardTitle, { color: C.text }]}>Histórico de links e auditoria</Text>
-              {magicLinksHistorico.length === 0 && arquivosEventos.length === 0 ? (
-                <Text style={[s.emptyTxt, { color: C.muted }]}>Ainda não existem eventos de links ou auditoria cartográfica para este projeto.</Text>
-              ) : (
-                <View style={s.sectionWrap}>
-                  {magicLinksHistorico.slice(0, 5).map((evento: any, indice: number) => (
-                    <View key={`ml-${evento.id || indice}`} style={[s.docItem, { borderBottomColor: C.cardBorder }]}> 
-                      <Text style={[s.docNome, { color: C.text }]}>{String(evento.tipo_evento || 'evento').replace(/_/g, ' ')}</Text>
-                      <Text style={[s.docData, { color: C.muted }]}>{formatarData(evento.criado_em)} · canal {evento.canal || 'interno'} · participante {evento.projeto_cliente_id || 'legado'}</Text>
-                    </View>
-                  ))}
-                  {arquivosEventos.slice(0, 5).map((evento: any, indice: number) => (
-                    <View key={`arq-${evento.id || indice}`} style={[s.docItem, { borderBottomColor: C.cardBorder }]}> 
-                      <Text style={[s.docNome, { color: C.text }]}>{String(evento.tipo_evento || 'evento').replace(/_/g, ' ')}</Text>
-                      <Text style={[s.docData, { color: C.muted }]}>{formatarData(evento.criado_em)} · arquivo {evento.arquivo_id || 'n/a'} · {evento.observacao || 'sem observação'}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
             </View>
 
             <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
@@ -1126,7 +826,6 @@ const s = StyleSheet.create({
   clientMeta: { fontSize: 13, lineHeight: 20 },
   participanteCard: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 10 },
   inlineBtn: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, alignSelf: 'flex-start' },
-  inlineActionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   inlineBtnTxt: { fontSize: 13, fontWeight: '700' },
   confCard: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
   confTitle: { flex: 1, fontSize: 14, fontWeight: '700', marginRight: 10 },

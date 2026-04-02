@@ -8,7 +8,6 @@ import os
 import re
 import uuid
 import zipfile
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -31,21 +30,10 @@ CLASSIFICACOES_VALIDAS = {
     "documento_croqui",
     "exportacao",
 }
-EVENTOS_CARTOGRAFICOS_VALIDOS = {
-    "upload",
-    "migracao_storage",
-    "promocao_base_oficial",
-    "reclassificacao",
-    "exportacao",
-}
 
 
 def _dados(resposta: Any) -> list[dict[str, Any]]:
     return getattr(resposta, "data", None) or []
-
-
-def _agora_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def _normalizar_origem(valor: str | None) -> str:
@@ -56,11 +44,6 @@ def _normalizar_origem(valor: str | None) -> str:
 def _normalizar_classificacao(valor: str | None) -> str:
     classificacao = (valor or "referencia_visual").strip().lower()
     return classificacao if classificacao in CLASSIFICACOES_VALIDAS else "referencia_visual"
-
-
-def _normalizar_tipo_evento(valor: str | None) -> str:
-    chave = (valor or "upload").strip().lower()
-    return chave if chave in EVENTOS_CARTOGRAFICOS_VALIDOS else "upload"
 
 
 def _slug_nome(nome: str) -> str:
@@ -150,67 +133,6 @@ def _ler_bytes_arquivo(sb, item: dict[str, Any]) -> bytes | None:
     return caminho.read_bytes()
 
 
-def registrar_evento_cartografico(
-    sb,
-    *,
-    projeto_id: str,
-    arquivo_id: str | None,
-    tipo_evento: str,
-    area_id: str | None = None,
-    cliente_id: str | None = None,
-    origem: str | None = None,
-    classificacao_anterior: str | None = None,
-    classificacao_nova: str | None = None,
-    storage_path_anterior: str | None = None,
-    storage_path_novo: str | None = None,
-    autor: str | None = None,
-    observacao: str | None = None,
-    payload: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    registro = {
-        "projeto_id": projeto_id,
-        "arquivo_id": arquivo_id,
-        "area_id": area_id,
-        "cliente_id": cliente_id,
-        "tipo_evento": _normalizar_tipo_evento(tipo_evento),
-        "origem": _normalizar_origem(origem) if origem else None,
-        "classificacao_anterior": classificacao_anterior,
-        "classificacao_nova": classificacao_nova,
-        "storage_path_anterior": storage_path_anterior,
-        "storage_path_novo": storage_path_novo,
-        "autor": autor,
-        "observacao": observacao,
-        "payload_json": payload or {},
-        "deleted_at": None,
-    }
-    try:
-        resposta = sb.table("eventos_cartograficos").insert(registro).execute()
-        dados = _dados(resposta)
-        return dados[0] if dados else registro
-    except Exception as exc:
-        if "eventos_cartograficos" in str(exc).lower():
-            return registro
-        raise
-
-
-def listar_eventos_cartograficos(sb, projeto_id: str, *, limite: int = 100) -> list[dict[str, Any]]:
-    try:
-        resposta = (
-            sb.table("eventos_cartograficos")
-            .select("*")
-            .eq("projeto_id", projeto_id)
-            .is_("deleted_at", "null")
-            .order("criado_em", desc=True)
-            .limit(limite)
-            .execute()
-        )
-        return _dados(resposta)
-    except Exception as exc:
-        if "eventos_cartograficos" in str(exc).lower():
-            return []
-        raise
-
-
 def salvar_arquivo_projeto(
     sb,
     *,
@@ -222,7 +144,6 @@ def salvar_arquivo_projeto(
     cliente_id: str | None = None,
     area_id: str | None = None,
     mime_type: str | None = None,
-    autor: str | None = None,
 ) -> dict[str, Any]:
     arquivo_id = str(uuid.uuid4())
     nome_original = nome_arquivo or "arquivo"
@@ -252,29 +173,11 @@ def salvar_arquivo_projeto(
         "storage_path": storage_path,
         "hash_arquivo": None,
         "metadados_json": {"storage_provider": provider},
-        "base_oficial": False,
-        "promovido_em": None,
-        "promovido_por": None,
-        "promocao_observacao": None,
         "deleted_at": None,
     }
     resposta = sb.table("arquivos_projeto").insert(payload).execute()
     dados = _dados(resposta)
-    registro = dados[0] if dados else payload
-    registrar_evento_cartografico(
-        sb,
-        projeto_id=projeto_id,
-        arquivo_id=registro.get("id"),
-        area_id=area_id,
-        cliente_id=cliente_id,
-        tipo_evento="upload",
-        origem=registro.get("origem"),
-        classificacao_nova=registro.get("classificacao"),
-        storage_path_novo=registro.get("storage_path"),
-        autor=autor,
-        payload={"storage_provider": provider, "nome_original": nome_original},
-    )
-    return registro
+    return dados[0] if dados else payload
 
 
 def listar_arquivos_projeto(sb, projeto_id: str) -> list[dict[str, Any]]:
@@ -313,124 +216,6 @@ def obter_arquivo_projeto(sb, projeto_id: str, arquivo_id: str) -> dict[str, Any
     return dados[0] if dados else None
 
 
-def promover_arquivo_base_oficial(
-    sb,
-    *,
-    projeto_id: str,
-    arquivo_id: str,
-    autor: str | None = None,
-    observacao: str | None = None,
-    classificacao_destino: str | None = None,
-) -> dict[str, Any]:
-    arquivo = obter_arquivo_projeto(sb, projeto_id, arquivo_id)
-    if not arquivo:
-        raise ValueError("Arquivo cartografico nao encontrado.")
-
-    classificacao_nova = _normalizar_classificacao(classificacao_destino or arquivo.get("classificacao"))
-    atualizado = {
-        "base_oficial": True,
-        "promovido_em": _agora_iso(),
-        "promovido_por": autor,
-        "promocao_observacao": observacao,
-        "classificacao": classificacao_nova,
-    }
-    resposta = (
-        sb.table("arquivos_projeto")
-        .update(atualizado)
-        .eq("id", arquivo_id)
-        .eq("projeto_id", projeto_id)
-        .execute()
-    )
-    dados = _dados(resposta)
-    registro = dados[0] if dados else {**arquivo, **atualizado}
-    registrar_evento_cartografico(
-        sb,
-        projeto_id=projeto_id,
-        arquivo_id=arquivo_id,
-        area_id=arquivo.get("area_id"),
-        cliente_id=arquivo.get("cliente_id"),
-        tipo_evento="promocao_base_oficial",
-        origem=arquivo.get("origem"),
-        classificacao_anterior=arquivo.get("classificacao"),
-        classificacao_nova=classificacao_nova,
-        storage_path_anterior=arquivo.get("storage_path"),
-        storage_path_novo=registro.get("storage_path"),
-        autor=autor,
-        observacao=observacao,
-        payload={"base_oficial": True},
-    )
-    return registro
-
-
-def migrar_arquivos_locais_para_storage(
-    sb,
-    *,
-    projeto_id: str | None = None,
-    limite: int = 100,
-    autor: str | None = None,
-) -> dict[str, Any]:
-    try:
-        consulta = sb.table("arquivos_projeto").select("*").is_("deleted_at", "null")
-        if projeto_id:
-            consulta = consulta.eq("projeto_id", projeto_id)
-        consulta = consulta.order("criado_em", desc=False).limit(limite)
-        arquivos = _dados(consulta.execute())
-    except Exception as exc:
-        if "arquivos_projeto" in str(exc).lower():
-            return {"total": 0, "migrados": 0, "falhas": []}
-        raise
-
-    migrados = 0
-    falhas: list[dict[str, Any]] = []
-    for arquivo in arquivos:
-        storage_path = str(arquivo.get("storage_path") or "")
-        if not storage_path.startswith(LOCAL_STORAGE_PREFIX):
-            continue
-        conteudo = _ler_bytes_arquivo(sb, arquivo)
-        if conteudo is None:
-            falhas.append({"arquivo_id": arquivo.get("id"), "erro": "arquivo_local_indisponivel"})
-            continue
-        try:
-            novo_storage_path = _salvar_supabase(
-                sb,
-                str(arquivo.get("projeto_id")),
-                str(arquivo.get("id")),
-                str(arquivo.get("nome_original") or arquivo.get("nome_arquivo") or "arquivo"),
-                conteudo,
-                str(arquivo.get("mime_type") or "application/octet-stream"),
-            )
-            metadados = dict(arquivo.get("metadados_json") or {})
-            metadados["storage_provider"] = "supabase"
-            metadados["migrado_de_fallback_local_em"] = _agora_iso()
-            (
-                sb.table("arquivos_projeto")
-                .update({"storage_path": novo_storage_path, "metadados_json": metadados})
-                .eq("id", arquivo.get("id"))
-                .execute()
-            )
-            registrar_evento_cartografico(
-                sb,
-                projeto_id=str(arquivo.get("projeto_id")),
-                arquivo_id=str(arquivo.get("id")),
-                area_id=arquivo.get("area_id"),
-                cliente_id=arquivo.get("cliente_id"),
-                tipo_evento="migracao_storage",
-                origem=arquivo.get("origem"),
-                classificacao_anterior=arquivo.get("classificacao"),
-                classificacao_nova=arquivo.get("classificacao"),
-                storage_path_anterior=storage_path,
-                storage_path_novo=novo_storage_path,
-                autor=autor,
-                observacao="Migração de fallback local para Supabase Storage",
-                payload={"bucket": _bucket_nome()},
-            )
-            migrados += 1
-        except Exception as exc:
-            falhas.append({"arquivo_id": arquivo.get("id"), "erro": str(exc)})
-
-    return {"total": len(arquivos), "migrados": migrados, "falhas": falhas}
-
-
 def exportar_arquivos_projeto_zip(sb, projeto_id: str) -> bytes:
     arquivos = listar_arquivos_projeto(sb, projeto_id)
     zip_buffer = io.BytesIO()
@@ -451,7 +236,6 @@ def exportar_arquivos_projeto_zip(sb, projeto_id: str) -> bytes:
                 "cliente_id": item.get("cliente_id"),
                 "area_id": item.get("area_id"),
                 "storage_path": item.get("storage_path"),
-                "base_oficial": bool(item.get("base_oficial")),
             })
         zf.writestr(
             "manifesto_arquivos_projeto.json",

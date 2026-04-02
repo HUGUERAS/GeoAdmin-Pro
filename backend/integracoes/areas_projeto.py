@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import csv
 import io
 import json
 import logging
@@ -11,11 +10,11 @@ from uuid import uuid4
 import zipfile
 
 from pyproj import Transformer
-from shapely.geometry import MultiPolygon, Polygon, shape
+from shapely.geometry import Polygon
 from shapely.ops import transform
 
 from integracoes.projeto_clientes import listar_participantes_area, salvar_participantes_area
-from integracoes.referencia_cliente import importar_vertices_por_formato, resumir_vertices
+from integracoes.referencia_cliente import resumir_vertices
 
 try:
     from docx import Document
@@ -245,288 +244,6 @@ def _status_geometria(area: dict[str, Any]) -> str:
     if _vertices_validos(area.get("geometria_esboco")):
         return "apenas_esboco"
     return "sem_geometria"
-
-
-def _slug_lote(valor: str | None) -> str:
-    return (valor or '').strip().lower()
-
-
-def _chave_lote(area: dict[str, Any]) -> str | None:
-    codigo = _slug_lote(area.get('codigo_lote'))
-    quadra = _slug_lote(area.get('quadra'))
-    setor = _slug_lote(area.get('setor'))
-    if not any((codigo, quadra, setor)):
-        return None
-    return f'{quadra}::{codigo}::{setor}'
-
-
-def _bool_input(valor: Any, default: bool = False) -> bool:
-    if valor is None:
-        return default
-    if isinstance(valor, bool):
-        return valor
-    texto = str(valor).strip().lower()
-    if texto in {'1', 'true', 'sim', 's', 'yes', 'y'}:
-        return True
-    if texto in {'0', 'false', 'nao', 'não', 'n', 'no'}:
-        return False
-    return default
-
-
-def _vertices_geojson_geometry(geometry: dict[str, Any] | None) -> list[dict[str, float]]:
-    if not geometry:
-        return []
-    geom = shape(geometry)
-    candidatos: list[Polygon] = []
-    if isinstance(geom, Polygon):
-        candidatos = [geom]
-    elif isinstance(geom, MultiPolygon):
-        candidatos = [item for item in geom.geoms if not item.is_empty]
-    if not candidatos:
-        return []
-    maior = max(candidatos, key=lambda item: item.area)
-    coords = list(maior.exterior.coords)
-    if len(coords) > 1 and coords[0] == coords[-1]:
-        coords = coords[:-1]
-    return [{'lon': float(lon), 'lat': float(lat)} for lon, lat in coords]
-
-
-def _participantes_importacao(bruto: dict[str, Any]) -> list[dict[str, Any]]:
-    participantes = bruto.get('participantes_area') or bruto.get('participantes') or []
-    if participantes:
-        return participantes
-
-    nome = bruto.get('participante_nome') or bruto.get('cliente_nome') or bruto.get('proprietario_nome')
-    cpf = bruto.get('participante_cpf') or bruto.get('cliente_cpf')
-    telefone = bruto.get('participante_telefone') or bruto.get('cliente_telefone')
-    cliente_id = bruto.get('participante_cliente_id') or bruto.get('cliente_id')
-    if not any((nome, cpf, telefone, cliente_id)):
-        return []
-    return [{
-        'cliente_id': cliente_id,
-        'nome': nome,
-        'cpf': cpf,
-        'telefone': telefone,
-        'papel': bruto.get('papel') or 'principal',
-        'principal': _bool_input(bruto.get('principal'), True),
-        'recebe_magic_link': _bool_input(bruto.get('recebe_magic_link'), True),
-        'ordem': 0,
-    }]
-
-
-def _normalizar_lote_importado(bruto: dict[str, Any], indice: int) -> dict[str, Any]:
-    vertices_final = _vertices_validos(bruto.get('geometria_final') or bruto.get('vertices') or bruto.get('vertices_json'))
-    vertices_esboco = _vertices_validos(bruto.get('geometria_esboco'))
-    nome = (bruto.get('nome') or '').strip() or None
-    codigo_lote = (bruto.get('codigo_lote') or bruto.get('lote') or '').strip() or None
-    quadra = (bruto.get('quadra') or '').strip() or None
-    setor = (bruto.get('setor') or '').strip() or None
-    identificador = ' / '.join([item for item in (quadra and f'Qd. {quadra}', codigo_lote and f'Lt. {codigo_lote}', setor) if item])
-    if not nome:
-        nome = identificador or f'Lote {indice + 1}'
-
-    participantes_area = _participantes_importacao(bruto)
-    cliente_id = bruto.get('cliente_id') or next((item.get('cliente_id') for item in participantes_area if item.get('cliente_id')), None)
-    proprietario = bruto.get('proprietario_nome') or next((item.get('nome') for item in participantes_area if item.get('nome')), None)
-    return {
-        'area_id': bruto.get('area_id') or bruto.get('id'),
-        'nome': nome,
-        'cliente_id': cliente_id,
-        'proprietario_nome': proprietario,
-        'municipio': bruto.get('municipio'),
-        'estado': bruto.get('estado'),
-        'comarca': bruto.get('comarca'),
-        'matricula': bruto.get('matricula'),
-        'ccir': bruto.get('ccir'),
-        'car': bruto.get('car'),
-        'observacoes': bruto.get('observacoes'),
-        'codigo_lote': codigo_lote,
-        'quadra': quadra,
-        'setor': setor,
-        'status_operacional': bruto.get('status_operacional'),
-        'status_documental': bruto.get('status_documental'),
-        'origem_tipo': bruto.get('origem_tipo') or 'importacao',
-        'geometria_esboco': vertices_esboco,
-        'geometria_final': vertices_final,
-        'participantes_area': participantes_area,
-    }
-
-
-def parse_lotes_geojson(conteudo: str | dict[str, Any]) -> list[dict[str, Any]]:
-    payload = json.loads(conteudo) if isinstance(conteudo, str) else conteudo
-    if not isinstance(payload, dict):
-        raise ValueError('GeoJSON invalido para importacao de lotes.')
-
-    tipo = payload.get('type')
-    if tipo == 'FeatureCollection':
-        features = payload.get('features', [])
-    elif tipo == 'Feature':
-        features = [payload]
-    else:
-        features = [{'type': 'Feature', 'properties': {}, 'geometry': payload}]
-
-    lotes: list[dict[str, Any]] = []
-    for indice, feature in enumerate(features):
-        geometry = feature.get('geometry')
-        vertices = _vertices_geojson_geometry(geometry)
-        if not vertices:
-            continue
-        props = feature.get('properties') or {}
-        lotes.append(_normalizar_lote_importado({
-            **props,
-            'geometria_final': vertices,
-        }, indice))
-
-    if not lotes:
-        raise ValueError('Nenhum lote valido encontrado no GeoJSON.')
-    return lotes
-
-
-def parse_lotes_csv(conteudo: str) -> list[dict[str, Any]]:
-    amostra = '\n'.join(conteudo.splitlines()[:5])
-    try:
-        dialect = csv.Sniffer().sniff(amostra or 'codigo_lote,nome')
-    except Exception:
-        dialect = csv.excel
-
-    reader = csv.DictReader(io.StringIO(conteudo), dialect=dialect)
-    if not reader.fieldnames:
-        raise ValueError('CSV sem cabeçalho para importacao de lotes.')
-
-    lotes: list[dict[str, Any]] = []
-    for indice, row in enumerate(reader):
-        bruto = {
-            chave.strip(): (valor.strip() if isinstance(valor, str) else valor)
-            for chave, valor in row.items() if chave
-        }
-        vertices_json = bruto.get('vertices_json') or bruto.get('geometria_json') or bruto.get('geometria_final')
-        if isinstance(vertices_json, str) and vertices_json.strip():
-            try:
-                bruto['geometria_final'] = json.loads(vertices_json)
-            except Exception:
-                bruto['geometria_final'] = []
-        lotes.append(_normalizar_lote_importado(bruto, indice))
-
-    if not lotes:
-        raise ValueError('Nenhuma linha valida encontrada no CSV de lotes.')
-    return lotes
-
-
-def importar_lotes_por_formato(formato: str, conteudo: str | bytes) -> dict[str, Any]:
-    chave = (formato or '').strip().lower()
-    if chave in {'geojson', 'json'}:
-        lotes = parse_lotes_geojson(conteudo.decode('utf-8') if isinstance(conteudo, bytes) else conteudo)
-        return {'lotes': lotes, 'parcial': False, 'mensagem': None}
-    if chave == 'csv':
-        lotes = parse_lotes_csv(conteudo.decode('utf-8') if isinstance(conteudo, bytes) else conteudo)
-        return {'lotes': lotes, 'parcial': False, 'mensagem': None}
-    if chave in {'kml', 'zip', 'shpzip', 'txt'}:
-        vertices = importar_vertices_por_formato(chave, conteudo)
-        lote = _normalizar_lote_importado({'geometria_final': vertices, 'origem_tipo': 'importacao'}, 0)
-        return {
-            'lotes': [lote],
-            'parcial': True,
-            'mensagem': 'O parser atual reaproveitou apenas a geometria principal do arquivo. Para importacao massiva de lotes, prefira GeoJSON ou CSV estruturado.',
-        }
-    raise ValueError(f'Formato de importacao de lotes nao suportado: {formato}')
-
-
-def importar_areas_projeto_em_lote(
-    *,
-    projeto_id: str,
-    lotes: list[dict[str, Any]],
-    atualizar_existentes: bool = True,
-    sb=None,
-) -> dict[str, Any]:
-    cliente = sb or _get_supabase()
-    existentes = listar_areas_projeto(projeto_id, sb=cliente)
-    por_id = {str(area.get('id')): area for area in existentes if area.get('id')}
-    por_chave = {chave: area for area in existentes if (chave := _chave_lote(area))}
-
-    criadas = 0
-    atualizadas = 0
-    ignoradas = 0
-    areas_salvas: list[dict[str, Any]] = []
-
-    for indice, bruto in enumerate(lotes):
-        lote = _normalizar_lote_importado(bruto, indice)
-        existente = None
-        if lote.get('area_id') and str(lote['area_id']) in por_id:
-            existente = por_id[str(lote['area_id'])]
-        elif (chave := _chave_lote(lote)) and chave in por_chave:
-            existente = por_chave[chave]
-
-        if existente and not atualizar_existentes:
-            ignoradas += 1
-            continue
-
-        area_salva = salvar_area_projeto(
-            projeto_id=projeto_id,
-            cliente_id=lote.get('cliente_id'),
-            nome=lote.get('nome') or 'Area sem nome',
-            proprietario_nome=lote.get('proprietario_nome'),
-            municipio=lote.get('municipio'),
-            estado=lote.get('estado'),
-            comarca=lote.get('comarca'),
-            matricula=lote.get('matricula'),
-            ccir=lote.get('ccir'),
-            car=lote.get('car'),
-            observacoes=lote.get('observacoes'),
-            codigo_lote=lote.get('codigo_lote'),
-            quadra=lote.get('quadra'),
-            setor=lote.get('setor'),
-            status_operacional=lote.get('status_operacional'),
-            status_documental=lote.get('status_documental'),
-            origem_tipo=lote.get('origem_tipo') or 'importacao',
-            geometria_esboco=lote.get('geometria_esboco') or [],
-            geometria_final=lote.get('geometria_final') or [],
-            participantes_area=lote.get('participantes_area') or [],
-            area_id=(existente or {}).get('id') or lote.get('area_id'),
-            sb=cliente,
-        )
-        if existente:
-            atualizadas += 1
-        else:
-            criadas += 1
-        areas_salvas.append(area_salva)
-
-    painel = montar_painel_lotes(areas_salvas)
-    return {
-        'total_recebido': len(lotes),
-        'criadas': criadas,
-        'atualizadas': atualizadas,
-        'ignoradas': ignoradas,
-        'areas': areas_salvas,
-        'painel_lotes': painel,
-    }
-
-
-def montar_painel_lotes(areas: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    painel: list[dict[str, Any]] = []
-    for area in areas:
-        participantes = area.get('participantes_area') or []
-        principal = next((item for item in participantes if item.get('principal')), None) or (participantes[0] if participantes else None)
-        formulario_ok = any(bool(item.get('formulario_ok')) for item in participantes)
-        formulario_em = next((item.get('formulario_em') for item in participantes if item.get('formulario_em')), None)
-        painel.append({
-            'area_id': area.get('id'),
-            'nome': area.get('nome'),
-            'codigo_lote': area.get('codigo_lote'),
-            'quadra': area.get('quadra'),
-            'setor': area.get('setor'),
-            'identificacao_lote': area.get('identificacao_lote') or _identificacao_lote(area) or area.get('nome'),
-            'status_operacional': area.get('status_operacional') or 'aguardando_cliente',
-            'status_documental': area.get('status_documental') or 'pendente',
-            'status_geometria': area.get('status_geometria') or _status_geometria(area),
-            'participantes_total': len(participantes),
-            'principal_nome': (principal or {}).get('nome') or area.get('proprietario_nome'),
-            'principal_cpf': (principal or {}).get('cpf'),
-            'recebe_magic_link_total': sum(1 for item in participantes if item.get('recebe_magic_link')),
-            'formulario_ok': formulario_ok,
-            'formulario_em': formulario_em,
-        })
-    painel.sort(key=lambda item: ((item.get('quadra') or ''), (item.get('codigo_lote') or ''), (item.get('nome') or '')))
-    return painel
 
 
 def _row_para_area(raw: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -962,10 +679,7 @@ def detectar_confrontacoes(areas: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "id": f"{area_a['id']}::{area_b['id']}",
                     "tipo": tipo,
                     "status": "detectada",
-                    "status_revisao": "detectada",
-                    "tipo_relacao": "interna",
                     "origem": "geometria",
-                    "revisao_pendente": True,
                     "area_a": {
                         "id": area_a.get("id"),
                         "nome": area_a.get("nome"),
@@ -983,79 +697,6 @@ def detectar_confrontacoes(areas: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     confrontacoes.sort(key=lambda item: (item["tipo"] != "sobreposicao", item["area_a"]["nome"] or ""))
     return confrontacoes
-
-
-def listar_revisoes_confrontacao(sb, projeto_id: str) -> dict[str, dict[str, Any]]:
-    try:
-        resposta = (
-            sb.table("confrontacoes_revisadas")
-            .select("*")
-            .eq("projeto_id", projeto_id)
-            .is_("deleted_at", "null")
-            .execute()
-        )
-        itens = getattr(resposta, "data", None) or []
-    except Exception as exc:
-        if "confrontacoes_revisadas" in str(exc).lower():
-            return {}
-        raise
-    return {str(item.get("confronto_id")): item for item in itens if item.get("confronto_id")}
-
-
-def aplicar_revisoes_confrontacao(confrontacoes: list[dict[str, Any]], revisoes: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    enriquecidas: list[dict[str, Any]] = []
-    for confronto in confrontacoes:
-        revisao = revisoes.get(str(confronto.get("id"))) or {}
-        status_revisao = revisao.get("status_revisao") or confronto.get("status_revisao") or confronto.get("status") or "detectada"
-        tipo_relacao = revisao.get("tipo_relacao") or confronto.get("tipo_relacao") or "interna"
-        enriquecidas.append({
-            **confronto,
-            "status": status_revisao,
-            "status_revisao": status_revisao,
-            "tipo_relacao": tipo_relacao,
-            "observacao": revisao.get("observacao"),
-            "autor_revisao": revisao.get("autor"),
-            "revisado_em": revisao.get("atualizado_em") or revisao.get("criado_em"),
-            "revisao_pendente": status_revisao == "detectada",
-        })
-    return enriquecidas
-
-
-def salvar_revisoes_confrontacao(sb, projeto_id: str, revisoes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    salvas: list[dict[str, Any]] = []
-    existentes = listar_revisoes_confrontacao(sb, projeto_id)
-    for revisao in revisoes:
-        confronto_id = str(revisao.get("confronto_id") or "").strip()
-        if not confronto_id:
-            continue
-        payload = {
-            "projeto_id": projeto_id,
-            "confronto_id": confronto_id,
-            "tipo_relacao": revisao.get("tipo_relacao") or "interna",
-            "status_revisao": revisao.get("status_revisao") or "detectada",
-            "observacao": revisao.get("observacao"),
-            "autor": revisao.get("autor"),
-            "deleted_at": None,
-        }
-        existente = existentes.get(confronto_id)
-        try:
-            if existente and existente.get("id"):
-                resposta = (
-                    sb.table("confrontacoes_revisadas")
-                    .update(payload)
-                    .eq("id", existente.get("id"))
-                    .execute()
-                )
-            else:
-                resposta = sb.table("confrontacoes_revisadas").insert(payload).execute()
-            dados = getattr(resposta, "data", None) or []
-            salvas.append(dados[0] if dados else {**payload, **({"id": (existente or {}).get("id")} if existente else {})})
-        except Exception as exc:
-            if "confrontacoes_revisadas" in str(exc).lower():
-                salvas.append(payload)
-                continue
-            raise
-    return salvas
 
 
 def gerar_cartas_confrontacao_zip(
