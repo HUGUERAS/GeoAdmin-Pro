@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd mobile && npm install --legacy-peer-deps && npx expo export --platform web",
   "outputDirectory": "mobile/dist",
   "framework": null,
   "headers": [
@@ -17,12 +16,6 @@
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/:path*",
-      "destination": "/:path*"
     }
   ]
 }

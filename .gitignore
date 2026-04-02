@@ -45,7 +45,7 @@ ENV/
 node_modules/
 .expo/
 .expo-shared/
-dist/
+mobile/node_modules/
 npm-debug.*
 
 # Sistema operacional
