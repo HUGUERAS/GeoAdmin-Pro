@@ -35,13 +35,7 @@ class FakeQuery:
     def order(self, *_args, **_kwargs):
         return self
 
-    def limit(self, *_args, **_kwargs):
-        return self
-
     def maybe_single(self):
-        return self
-
-    def single(self):
         return self
 
     def execute(self):
@@ -143,46 +137,3 @@ def test_token_legado_ambiguo_pede_novo_link(monkeypatch):
 
     assert excinfo.value.status_code == 409
     assert excinfo.value.detail["codigo"] == 603
-
-
-def test_gerar_magic_link_participante_registra_evento(monkeypatch):
-    eventos = []
-
-    monkeypatch.setattr(documentos_mod, "listar_participantes_projeto", lambda _sb, _projeto_id: [{
-        "id": "pc-1",
-        "cliente_id": "cli-1",
-        "nome": "Hugo Henrique",
-        "papel": "principal",
-        "principal": True,
-        "recebe_magic_link": True,
-        "area_id": "area-1",
-        "magic_link_token": None,
-    }])
-    monkeypatch.setattr(documentos_mod, "gerar_magic_link_participante", lambda _sb, _projeto_id, **_kwargs: {
-        "id": "pc-1",
-        "cliente_id": "cli-1",
-        "nome": "Hugo Henrique",
-        "papel": "principal",
-        "principal": True,
-        "recebe_magic_link": True,
-        "area_id": "area-1",
-        "magic_link_token": "token-pc-1",
-        "magic_link_expira": "2099-01-01T00:00:00+00:00",
-    })
-    monkeypatch.setattr(documentos_mod, "registrar_evento_magic_link", lambda _sb, **payload: eventos.append(payload) or payload)
-
-    def resolver(query: FakeQuery):
-        filtros = {(op, campo): valor for op, campo, valor in query.filters}
-        if query.table == "vw_projetos_completo":
-            return {"id": "proj-1", "projeto_nome": "Projeto Boa Vista", "cliente_id": "cli-1", "cliente_nome": "Hugo Henrique"}
-        if query.table == "clientes" and filtros.get(("eq", "id")) == "cli-1":
-            return {"id": "cli-1", "nome": "Hugo Henrique"}
-        raise AssertionError(f"Consulta inesperada: {query.table} {query.filters}")
-
-    resposta = documentos_mod.gerar_magic_link("proj-1", projeto_cliente_id="pc-1", supabase=FakeSupabase(resolver))
-
-    assert resposta["projeto_cliente_id"] == "pc-1"
-    assert resposta["area_id"] == "area-1"
-    assert eventos
-    assert eventos[0]["tipo_evento"] == "gerado"
-    assert eventos[0]["projeto_cliente_id"] == "pc-1"

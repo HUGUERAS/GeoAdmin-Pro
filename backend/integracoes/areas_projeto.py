@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import csv
 import io
 import json
 import logging
@@ -11,11 +10,10 @@ from uuid import uuid4
 import zipfile
 
 from pyproj import Transformer
-from shapely.geometry import MultiPolygon, Polygon, shape
+from shapely.geometry import Polygon
 from shapely.ops import transform
 
-from integracoes.projeto_clientes import listar_participantes_area, salvar_participantes_area
-from integracoes.referencia_cliente import importar_vertices_por_formato, resumir_vertices
+from integracoes.referencia_cliente import resumir_vertices
 
 try:
     from docx import Document
@@ -32,22 +30,6 @@ AREAS_STORE_PATH = DATA_DIR / "areas_projeto.json"
 
 logger = logging.getLogger("geoadmin.areas_projeto")
 
-STATUS_OPERACIONAL_VALIDOS = {
-    "aguardando_cliente",
-    "cliente_vinculado",
-    "croqui_recebido",
-    "geometria_final",
-    "peca_pronta",
-}
-STATUS_DOCUMENTAL_VALIDOS = {
-    "pendente",
-    "formulario_ok",
-    "confrontantes_ok",
-    "documentacao_ok",
-    "peca_pronta",
-}
-
-
 
 def _get_supabase():
     from main import get_supabase
@@ -56,37 +38,6 @@ def _get_supabase():
 
 def _agora_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _normalizar_status_operacional(valor: str | None, *, possui_participante: bool = False, status_geometria: str | None = None) -> str:
-    chave = (valor or '').strip().lower()
-    if chave in STATUS_OPERACIONAL_VALIDOS:
-        return chave
-    if status_geometria == 'geometria_final':
-        return 'geometria_final'
-    if status_geometria == 'apenas_esboco':
-        return 'croqui_recebido'
-    if possui_participante:
-        return 'cliente_vinculado'
-    return 'aguardando_cliente'
-
-
-def _normalizar_status_documental(valor: str | None, *, possui_participante: bool = False) -> str:
-    chave = (valor or '').strip().lower()
-    if chave in STATUS_DOCUMENTAL_VALIDOS:
-        return chave
-    return 'formulario_ok' if possui_participante else 'pendente'
-
-
-def _identificacao_lote(area: dict[str, Any]) -> str:
-    partes = []
-    if area.get('quadra'):
-        partes.append(f"Qd. {area['quadra']}")
-    if area.get('codigo_lote'):
-        partes.append(f"Lt. {area['codigo_lote']}")
-    if area.get('setor'):
-        partes.append(str(area['setor']))
-    return ' · '.join(partes)
 
 
 def _deve_usar_fallback_local(exc: Exception, *identificadores: str) -> bool:
@@ -247,288 +198,6 @@ def _status_geometria(area: dict[str, Any]) -> str:
     return "sem_geometria"
 
 
-def _slug_lote(valor: str | None) -> str:
-    return (valor or '').strip().lower()
-
-
-def _chave_lote(area: dict[str, Any]) -> str | None:
-    codigo = _slug_lote(area.get('codigo_lote'))
-    quadra = _slug_lote(area.get('quadra'))
-    setor = _slug_lote(area.get('setor'))
-    if not any((codigo, quadra, setor)):
-        return None
-    return f'{quadra}::{codigo}::{setor}'
-
-
-def _bool_input(valor: Any, default: bool = False) -> bool:
-    if valor is None:
-        return default
-    if isinstance(valor, bool):
-        return valor
-    texto = str(valor).strip().lower()
-    if texto in {'1', 'true', 'sim', 's', 'yes', 'y'}:
-        return True
-    if texto in {'0', 'false', 'nao', 'não', 'n', 'no'}:
-        return False
-    return default
-
-
-def _vertices_geojson_geometry(geometry: dict[str, Any] | None) -> list[dict[str, float]]:
-    if not geometry:
-        return []
-    geom = shape(geometry)
-    candidatos: list[Polygon] = []
-    if isinstance(geom, Polygon):
-        candidatos = [geom]
-    elif isinstance(geom, MultiPolygon):
-        candidatos = [item for item in geom.geoms if not item.is_empty]
-    if not candidatos:
-        return []
-    maior = max(candidatos, key=lambda item: item.area)
-    coords = list(maior.exterior.coords)
-    if len(coords) > 1 and coords[0] == coords[-1]:
-        coords = coords[:-1]
-    return [{'lon': float(lon), 'lat': float(lat)} for lon, lat in coords]
-
-
-def _participantes_importacao(bruto: dict[str, Any]) -> list[dict[str, Any]]:
-    participantes = bruto.get('participantes_area') or bruto.get('participantes') or []
-    if participantes:
-        return participantes
-
-    nome = bruto.get('participante_nome') or bruto.get('cliente_nome') or bruto.get('proprietario_nome')
-    cpf = bruto.get('participante_cpf') or bruto.get('cliente_cpf')
-    telefone = bruto.get('participante_telefone') or bruto.get('cliente_telefone')
-    cliente_id = bruto.get('participante_cliente_id') or bruto.get('cliente_id')
-    if not any((nome, cpf, telefone, cliente_id)):
-        return []
-    return [{
-        'cliente_id': cliente_id,
-        'nome': nome,
-        'cpf': cpf,
-        'telefone': telefone,
-        'papel': bruto.get('papel') or 'principal',
-        'principal': _bool_input(bruto.get('principal'), True),
-        'recebe_magic_link': _bool_input(bruto.get('recebe_magic_link'), True),
-        'ordem': 0,
-    }]
-
-
-def _normalizar_lote_importado(bruto: dict[str, Any], indice: int) -> dict[str, Any]:
-    vertices_final = _vertices_validos(bruto.get('geometria_final') or bruto.get('vertices') or bruto.get('vertices_json'))
-    vertices_esboco = _vertices_validos(bruto.get('geometria_esboco'))
-    nome = (bruto.get('nome') or '').strip() or None
-    codigo_lote = (bruto.get('codigo_lote') or bruto.get('lote') or '').strip() or None
-    quadra = (bruto.get('quadra') or '').strip() or None
-    setor = (bruto.get('setor') or '').strip() or None
-    identificador = ' / '.join([item for item in (quadra and f'Qd. {quadra}', codigo_lote and f'Lt. {codigo_lote}', setor) if item])
-    if not nome:
-        nome = identificador or f'Lote {indice + 1}'
-
-    participantes_area = _participantes_importacao(bruto)
-    cliente_id = bruto.get('cliente_id') or next((item.get('cliente_id') for item in participantes_area if item.get('cliente_id')), None)
-    proprietario = bruto.get('proprietario_nome') or next((item.get('nome') for item in participantes_area if item.get('nome')), None)
-    return {
-        'area_id': bruto.get('area_id') or bruto.get('id'),
-        'nome': nome,
-        'cliente_id': cliente_id,
-        'proprietario_nome': proprietario,
-        'municipio': bruto.get('municipio'),
-        'estado': bruto.get('estado'),
-        'comarca': bruto.get('comarca'),
-        'matricula': bruto.get('matricula'),
-        'ccir': bruto.get('ccir'),
-        'car': bruto.get('car'),
-        'observacoes': bruto.get('observacoes'),
-        'codigo_lote': codigo_lote,
-        'quadra': quadra,
-        'setor': setor,
-        'status_operacional': bruto.get('status_operacional'),
-        'status_documental': bruto.get('status_documental'),
-        'origem_tipo': bruto.get('origem_tipo') or 'importacao',
-        'geometria_esboco': vertices_esboco,
-        'geometria_final': vertices_final,
-        'participantes_area': participantes_area,
-    }
-
-
-def parse_lotes_geojson(conteudo: str | dict[str, Any]) -> list[dict[str, Any]]:
-    payload = json.loads(conteudo) if isinstance(conteudo, str) else conteudo
-    if not isinstance(payload, dict):
-        raise ValueError('GeoJSON invalido para importacao de lotes.')
-
-    tipo = payload.get('type')
-    if tipo == 'FeatureCollection':
-        features = payload.get('features', [])
-    elif tipo == 'Feature':
-        features = [payload]
-    else:
-        features = [{'type': 'Feature', 'properties': {}, 'geometry': payload}]
-
-    lotes: list[dict[str, Any]] = []
-    for indice, feature in enumerate(features):
-        geometry = feature.get('geometry')
-        vertices = _vertices_geojson_geometry(geometry)
-        if not vertices:
-            continue
-        props = feature.get('properties') or {}
-        lotes.append(_normalizar_lote_importado({
-            **props,
-            'geometria_final': vertices,
-        }, indice))
-
-    if not lotes:
-        raise ValueError('Nenhum lote valido encontrado no GeoJSON.')
-    return lotes
-
-
-def parse_lotes_csv(conteudo: str) -> list[dict[str, Any]]:
-    amostra = '\n'.join(conteudo.splitlines()[:5])
-    try:
-        dialect = csv.Sniffer().sniff(amostra or 'codigo_lote,nome')
-    except Exception:
-        dialect = csv.excel
-
-    reader = csv.DictReader(io.StringIO(conteudo), dialect=dialect)
-    if not reader.fieldnames:
-        raise ValueError('CSV sem cabeçalho para importacao de lotes.')
-
-    lotes: list[dict[str, Any]] = []
-    for indice, row in enumerate(reader):
-        bruto = {
-            chave.strip(): (valor.strip() if isinstance(valor, str) else valor)
-            for chave, valor in row.items() if chave
-        }
-        vertices_json = bruto.get('vertices_json') or bruto.get('geometria_json') or bruto.get('geometria_final')
-        if isinstance(vertices_json, str) and vertices_json.strip():
-            try:
-                bruto['geometria_final'] = json.loads(vertices_json)
-            except Exception:
-                bruto['geometria_final'] = []
-        lotes.append(_normalizar_lote_importado(bruto, indice))
-
-    if not lotes:
-        raise ValueError('Nenhuma linha valida encontrada no CSV de lotes.')
-    return lotes
-
-
-def importar_lotes_por_formato(formato: str, conteudo: str | bytes) -> dict[str, Any]:
-    chave = (formato or '').strip().lower()
-    if chave in {'geojson', 'json'}:
-        lotes = parse_lotes_geojson(conteudo.decode('utf-8') if isinstance(conteudo, bytes) else conteudo)
-        return {'lotes': lotes, 'parcial': False, 'mensagem': None}
-    if chave == 'csv':
-        lotes = parse_lotes_csv(conteudo.decode('utf-8') if isinstance(conteudo, bytes) else conteudo)
-        return {'lotes': lotes, 'parcial': False, 'mensagem': None}
-    if chave in {'kml', 'zip', 'shpzip', 'txt'}:
-        vertices = importar_vertices_por_formato(chave, conteudo)
-        lote = _normalizar_lote_importado({'geometria_final': vertices, 'origem_tipo': 'importacao'}, 0)
-        return {
-            'lotes': [lote],
-            'parcial': True,
-            'mensagem': 'O parser atual reaproveitou apenas a geometria principal do arquivo. Para importacao massiva de lotes, prefira GeoJSON ou CSV estruturado.',
-        }
-    raise ValueError(f'Formato de importacao de lotes nao suportado: {formato}')
-
-
-def importar_areas_projeto_em_lote(
-    *,
-    projeto_id: str,
-    lotes: list[dict[str, Any]],
-    atualizar_existentes: bool = True,
-    sb=None,
-) -> dict[str, Any]:
-    cliente = sb or _get_supabase()
-    existentes = listar_areas_projeto(projeto_id, sb=cliente)
-    por_id = {str(area.get('id')): area for area in existentes if area.get('id')}
-    por_chave = {chave: area for area in existentes if (chave := _chave_lote(area))}
-
-    criadas = 0
-    atualizadas = 0
-    ignoradas = 0
-    areas_salvas: list[dict[str, Any]] = []
-
-    for indice, bruto in enumerate(lotes):
-        lote = _normalizar_lote_importado(bruto, indice)
-        existente = None
-        if lote.get('area_id') and str(lote['area_id']) in por_id:
-            existente = por_id[str(lote['area_id'])]
-        elif (chave := _chave_lote(lote)) and chave in por_chave:
-            existente = por_chave[chave]
-
-        if existente and not atualizar_existentes:
-            ignoradas += 1
-            continue
-
-        area_salva = salvar_area_projeto(
-            projeto_id=projeto_id,
-            cliente_id=lote.get('cliente_id'),
-            nome=lote.get('nome') or 'Area sem nome',
-            proprietario_nome=lote.get('proprietario_nome'),
-            municipio=lote.get('municipio'),
-            estado=lote.get('estado'),
-            comarca=lote.get('comarca'),
-            matricula=lote.get('matricula'),
-            ccir=lote.get('ccir'),
-            car=lote.get('car'),
-            observacoes=lote.get('observacoes'),
-            codigo_lote=lote.get('codigo_lote'),
-            quadra=lote.get('quadra'),
-            setor=lote.get('setor'),
-            status_operacional=lote.get('status_operacional'),
-            status_documental=lote.get('status_documental'),
-            origem_tipo=lote.get('origem_tipo') or 'importacao',
-            geometria_esboco=lote.get('geometria_esboco') or [],
-            geometria_final=lote.get('geometria_final') or [],
-            participantes_area=lote.get('participantes_area') or [],
-            area_id=(existente or {}).get('id') or lote.get('area_id'),
-            sb=cliente,
-        )
-        if existente:
-            atualizadas += 1
-        else:
-            criadas += 1
-        areas_salvas.append(area_salva)
-
-    painel = montar_painel_lotes(areas_salvas)
-    return {
-        'total_recebido': len(lotes),
-        'criadas': criadas,
-        'atualizadas': atualizadas,
-        'ignoradas': ignoradas,
-        'areas': areas_salvas,
-        'painel_lotes': painel,
-    }
-
-
-def montar_painel_lotes(areas: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    painel: list[dict[str, Any]] = []
-    for area in areas:
-        participantes = area.get('participantes_area') or []
-        principal = next((item for item in participantes if item.get('principal')), None) or (participantes[0] if participantes else None)
-        formulario_ok = any(bool(item.get('formulario_ok')) for item in participantes)
-        formulario_em = next((item.get('formulario_em') for item in participantes if item.get('formulario_em')), None)
-        painel.append({
-            'area_id': area.get('id'),
-            'nome': area.get('nome'),
-            'codigo_lote': area.get('codigo_lote'),
-            'quadra': area.get('quadra'),
-            'setor': area.get('setor'),
-            'identificacao_lote': area.get('identificacao_lote') or _identificacao_lote(area) or area.get('nome'),
-            'status_operacional': area.get('status_operacional') or 'aguardando_cliente',
-            'status_documental': area.get('status_documental') or 'pendente',
-            'status_geometria': area.get('status_geometria') or _status_geometria(area),
-            'participantes_total': len(participantes),
-            'principal_nome': (principal or {}).get('nome') or area.get('proprietario_nome'),
-            'principal_cpf': (principal or {}).get('cpf'),
-            'recebe_magic_link_total': sum(1 for item in participantes if item.get('recebe_magic_link')),
-            'formulario_ok': formulario_ok,
-            'formulario_em': formulario_em,
-        })
-    painel.sort(key=lambda item: ((item.get('quadra') or ''), (item.get('codigo_lote') or ''), (item.get('nome') or '')))
-    return painel
-
-
 def _row_para_area(raw: dict[str, Any] | None) -> dict[str, Any] | None:
     if not raw:
         return None
@@ -545,11 +214,6 @@ def _row_para_area(raw: dict[str, Any] | None) -> dict[str, Any] | None:
         "ccir": raw.get("ccir"),
         "car": raw.get("car"),
         "observacoes": raw.get("observacoes"),
-        "codigo_lote": raw.get("codigo_lote"),
-        "quadra": raw.get("quadra"),
-        "setor": raw.get("setor"),
-        "status_operacional": raw.get("status_operacional"),
-        "status_documental": raw.get("status_documental"),
         "origem_tipo": raw.get("origem_tipo") or "manual",
         "geometria_esboco": raw.get("geometria_esboco") or [],
         "geometria_final": raw.get("geometria_final") or [],
@@ -568,44 +232,17 @@ def _normalizar_area(area: dict[str, Any]) -> dict[str, Any]:
     resumo_esboco = area.get("resumo_esboco") or _resumo_vertices(area.get("geometria_esboco"))
     resumo_final = area.get("resumo_final") or _resumo_vertices(area.get("geometria_final"))
     resumo_ativo = resumo_final if tipo_geometria == "final" else resumo_esboco
-    status_geometria = _status_geometria(area)
-    participantes = area.get("participantes_area") or area.get("participantes") or []
 
     return {
         **area,
-        "status_geometria": status_geometria,
+        "status_geometria": _status_geometria(area),
         "tipo_geometria_ativa": tipo_geometria if geometria_ativa else None,
         "geometria_ativa": geometria_ativa,
         "resumo_esboco": resumo_esboco,
         "resumo_final": resumo_final,
         "resumo_ativo": resumo_ativo,
         "anexos": area.get("anexos") or [],
-        "codigo_lote": area.get("codigo_lote"),
-        "quadra": area.get("quadra"),
-        "setor": area.get("setor"),
-        "identificacao_lote": _identificacao_lote(area),
-        "participantes_area": participantes,
-        "participantes_total": len(participantes),
-        "status_operacional": _normalizar_status_operacional(area.get("status_operacional"), possui_participante=bool(participantes or area.get("cliente_id")), status_geometria=status_geometria),
-        "status_documental": _normalizar_status_documental(area.get("status_documental"), possui_participante=bool(participantes or area.get("cliente_id"))),
     }
-
-
-def _enriquecer_areas_com_participantes(areas: list[dict[str, Any]], sb=None, participantes_projeto: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
-    if not areas:
-        return []
-    cliente = sb or _get_supabase()
-    try:
-        mapa = listar_participantes_area(cliente, areas, participantes_projeto=participantes_projeto)
-    except Exception as exc:
-        logger.warning("Falha ao listar participantes por area: %s", exc)
-        mapa = {}
-
-    enriquecidas: list[dict[str, Any]] = []
-    for area in areas:
-        participantes = mapa.get(str(area.get("id")), [])
-        enriquecidas.append(_normalizar_area({**area, "participantes_area": participantes, "participantes": participantes}))
-    return enriquecidas
 
 
 def _substituir_placeholders_texto(texto: str, campos: dict[str, Any]) -> str:
@@ -674,7 +311,7 @@ def _gerar_carta_confrontacao_docx(
     return buffer.getvalue()
 
 
-def listar_areas_projeto(projeto_id: str, sb=None, participantes_projeto: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+def listar_areas_projeto(projeto_id: str, sb=None) -> list[dict[str, Any]]:
     cliente = sb or _get_supabase()
     try:
         res = (
@@ -685,14 +322,13 @@ def listar_areas_projeto(projeto_id: str, sb=None, participantes_projeto: list[d
             .order("atualizado_em", desc=True)
             .execute()
         )
-        areas = [_row_para_area(area) or {} for area in (res.data or [])]
-        return _enriquecer_areas_com_participantes(areas, sb=cliente, participantes_projeto=participantes_projeto)
+        return [_normalizar_area(_row_para_area(area) or {}) for area in (res.data or [])]
     except Exception as exc:
         logger.warning("Falha ao listar areas_projeto no Supabase: %s", exc)
-        return _enriquecer_areas_com_participantes(_listar_areas_local(projeto_id), sb=cliente, participantes_projeto=participantes_projeto)
+        return _listar_areas_local(projeto_id)
 
 
-def obter_area(area_id: str, sb=None, participantes_projeto: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
+def obter_area(area_id: str, sb=None) -> dict[str, Any] | None:
     cliente = sb or _get_supabase()
     try:
         res = (
@@ -706,13 +342,10 @@ def obter_area(area_id: str, sb=None, participantes_projeto: list[dict[str, Any]
         area = _row_para_area(res.data)
         if not area:
             return None
-        return _enriquecer_areas_com_participantes([area], sb=cliente, participantes_projeto=participantes_projeto)[0]
+        return _normalizar_area(area)
     except Exception as exc:
         logger.warning("Falha ao obter area no Supabase: %s", exc)
-        local = _obter_area_local(area_id)
-        if not local:
-            return None
-        return _enriquecer_areas_com_participantes([local], sb=cliente, participantes_projeto=participantes_projeto)[0]
+        return _obter_area_local(area_id)
 
 
 def salvar_area_projeto(
@@ -728,16 +361,10 @@ def salvar_area_projeto(
     ccir: str | None = None,
     car: str | None = None,
     observacoes: str | None = None,
-    codigo_lote: str | None = None,
-    quadra: str | None = None,
-    setor: str | None = None,
-    status_operacional: str | None = None,
-    status_documental: str | None = None,
     origem_tipo: str = "formulario",
     geometria_esboco: list[dict[str, Any]] | None = None,
     geometria_final: list[dict[str, Any]] | None = None,
     anexos: list[dict[str, Any]] | None = None,
-    participantes_area: list[dict[str, Any]] | None = None,
     area_id: str | None = None,
     sb=None,
 ) -> dict[str, Any]:
@@ -755,14 +382,10 @@ def salvar_area_projeto(
         else _vertices_validos((existente or {}).get("geometria_final"))
     )
 
-    cliente_participante = next((item.get("cliente_id") for item in (participantes_area or []) if item.get("cliente_id")), None)
-    cliente_id_efetivo = cliente_id or cliente_participante or (existente or {}).get("cliente_id")
-    possui_participante = bool(participantes_area or (existente or {}).get("participantes_area") or cliente_id_efetivo)
-    status_geometria = "geometria_final" if vertices_final else ("apenas_esboco" if vertices_esboco else None)
     payload = {
         "id": area_id or (existente or {}).get("id") or str(uuid4()),
         "projeto_id": projeto_id,
-        "cliente_id": cliente_id_efetivo,
+        "cliente_id": cliente_id,
         "nome": (nome or "").strip() or "Area sem nome",
         "proprietario_nome": proprietario_nome,
         "municipio": municipio,
@@ -772,11 +395,6 @@ def salvar_area_projeto(
         "ccir": ccir,
         "car": car,
         "observacoes": observacoes,
-        "codigo_lote": codigo_lote if codigo_lote is not None else (existente or {}).get("codigo_lote"),
-        "quadra": quadra if quadra is not None else (existente or {}).get("quadra"),
-        "setor": setor if setor is not None else (existente or {}).get("setor"),
-        "status_operacional": _normalizar_status_operacional(status_operacional if status_operacional is not None else (existente or {}).get("status_operacional"), possui_participante=possui_participante, status_geometria=status_geometria),
-        "status_documental": _normalizar_status_documental(status_documental if status_documental is not None else (existente or {}).get("status_documental"), possui_participante=possui_participante),
         "origem_tipo": origem_tipo,
         "geometria_esboco": vertices_esboco,
         "geometria_final": vertices_final,
@@ -801,17 +419,10 @@ def salvar_area_projeto(
             )
         if not registro:
             raise RuntimeError("Falha ao persistir area do projeto no Supabase.")
-        if participantes_area is not None:
-            try:
-                participantes_salvos = salvar_participantes_area(cliente, registro["id"], participantes_area)
-                registro["participantes_area"] = participantes_salvos
-            except Exception as exc:
-                logger.warning("Falha ao persistir participantes da area: %s", exc)
-        return _enriquecer_areas_com_participantes([registro], sb=cliente)[0]
+        return _normalizar_area(registro)
     except Exception as exc:
         logger.warning("Falha ao persistir area do projeto no Supabase: %s", exc)
-        area_local = _salvar_area_local(payload)
-        return _enriquecer_areas_com_participantes([area_local], sb=cliente)[0]
+        return _salvar_area_local(payload)
 
 
 def anexar_arquivos_area(
@@ -868,9 +479,8 @@ def sintetizar_areas_do_projeto(
     perimetro_ativo: dict[str, Any] | None,
     geometria_referencia: dict[str, Any] | None,
     sb=None,
-    participantes_projeto: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    areas = listar_areas_projeto(projeto.get("id"), sb=sb, participantes_projeto=participantes_projeto)
+    areas = listar_areas_projeto(projeto.get("id"), sb=sb)
     if areas:
         return areas
 
@@ -893,8 +503,6 @@ def sintetizar_areas_do_projeto(
                     "estado": projeto.get("estado"),
                     "comarca": projeto.get("comarca"),
                     "matricula": projeto.get("matricula"),
-                    "status_operacional": "croqui_recebido",
-                    "status_documental": "formulario_ok" if cliente_id else "pendente",
                     "origem_tipo": geometria_referencia.get("origem_tipo") or "referencia_cliente",
                     "geometria_esboco": geometria_referencia.get("vertices") or [],
                     "geometria_final": [],
@@ -928,7 +536,7 @@ def sintetizar_areas_do_projeto(
             )
         )
 
-    return _enriquecer_areas_com_participantes(sinteticas, sb=sb, participantes_projeto=participantes_projeto)
+    return sinteticas
 
 
 def detectar_confrontacoes(areas: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -962,10 +570,7 @@ def detectar_confrontacoes(areas: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "id": f"{area_a['id']}::{area_b['id']}",
                     "tipo": tipo,
                     "status": "detectada",
-                    "status_revisao": "detectada",
-                    "tipo_relacao": "interna",
                     "origem": "geometria",
-                    "revisao_pendente": True,
                     "area_a": {
                         "id": area_a.get("id"),
                         "nome": area_a.get("nome"),
@@ -983,79 +588,6 @@ def detectar_confrontacoes(areas: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     confrontacoes.sort(key=lambda item: (item["tipo"] != "sobreposicao", item["area_a"]["nome"] or ""))
     return confrontacoes
-
-
-def listar_revisoes_confrontacao(sb, projeto_id: str) -> dict[str, dict[str, Any]]:
-    try:
-        resposta = (
-            sb.table("confrontacoes_revisadas")
-            .select("*")
-            .eq("projeto_id", projeto_id)
-            .is_("deleted_at", "null")
-            .execute()
-        )
-        itens = getattr(resposta, "data", None) or []
-    except Exception as exc:
-        if "confrontacoes_revisadas" in str(exc).lower():
-            return {}
-        raise
-    return {str(item.get("confronto_id")): item for item in itens if item.get("confronto_id")}
-
-
-def aplicar_revisoes_confrontacao(confrontacoes: list[dict[str, Any]], revisoes: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    enriquecidas: list[dict[str, Any]] = []
-    for confronto in confrontacoes:
-        revisao = revisoes.get(str(confronto.get("id"))) or {}
-        status_revisao = revisao.get("status_revisao") or confronto.get("status_revisao") or confronto.get("status") or "detectada"
-        tipo_relacao = revisao.get("tipo_relacao") or confronto.get("tipo_relacao") or "interna"
-        enriquecidas.append({
-            **confronto,
-            "status": status_revisao,
-            "status_revisao": status_revisao,
-            "tipo_relacao": tipo_relacao,
-            "observacao": revisao.get("observacao"),
-            "autor_revisao": revisao.get("autor"),
-            "revisado_em": revisao.get("atualizado_em") or revisao.get("criado_em"),
-            "revisao_pendente": status_revisao == "detectada",
-        })
-    return enriquecidas
-
-
-def salvar_revisoes_confrontacao(sb, projeto_id: str, revisoes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    salvas: list[dict[str, Any]] = []
-    existentes = listar_revisoes_confrontacao(sb, projeto_id)
-    for revisao in revisoes:
-        confronto_id = str(revisao.get("confronto_id") or "").strip()
-        if not confronto_id:
-            continue
-        payload = {
-            "projeto_id": projeto_id,
-            "confronto_id": confronto_id,
-            "tipo_relacao": revisao.get("tipo_relacao") or "interna",
-            "status_revisao": revisao.get("status_revisao") or "detectada",
-            "observacao": revisao.get("observacao"),
-            "autor": revisao.get("autor"),
-            "deleted_at": None,
-        }
-        existente = existentes.get(confronto_id)
-        try:
-            if existente and existente.get("id"):
-                resposta = (
-                    sb.table("confrontacoes_revisadas")
-                    .update(payload)
-                    .eq("id", existente.get("id"))
-                    .execute()
-                )
-            else:
-                resposta = sb.table("confrontacoes_revisadas").insert(payload).execute()
-            dados = getattr(resposta, "data", None) or []
-            salvas.append(dados[0] if dados else {**payload, **({"id": (existente or {}).get("id")} if existente else {})})
-        except Exception as exc:
-            if "confrontacoes_revisadas" in str(exc).lower():
-                salvas.append(payload)
-                continue
-            raise
-    return salvas
 
 
 def gerar_cartas_confrontacao_zip(

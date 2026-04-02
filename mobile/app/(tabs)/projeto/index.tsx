@@ -28,33 +28,17 @@ const CHIPS: { label: string; value: string | null }[] = [
 ]
 
 function metaDashboard(projetos: any[]) {
-  const resumoLotes = projetos.reduce((acc, item) => {
-    const resumo = item.resumo_lotes || {}
-    acc.total += Number(resumo.total || item.areas_total || 0)
-    acc.prontos += Number(resumo.prontos || item.lotes_prontos || 0)
-    acc.pendentes += Number(resumo.pendentes || item.lotes_pendentes || 0)
-    acc.semParticipante += Number(resumo.sem_participante || 0)
-    acc.comGeometria += Number(resumo.com_geometria || 0)
-    return acc
-  }, { total: 0, prontos: 0, pendentes: 0, semParticipante: 0, comGeometria: 0 })
-
-  const aguardandoCliente = resumoLotes.total > 0
-    ? resumoLotes.semParticipante
-    : projetos.filter((item) => !item.cliente_nome).length
-  const emCampo = resumoLotes.total > 0
-    ? Math.max(resumoLotes.total - resumoLotes.comGeometria, 0)
-    : projetos.filter((item) => !item.total_pontos || item.status === 'medicao').length
-  const prontosDocumental = resumoLotes.total > 0
-    ? resumoLotes.prontos
-    : projetos.filter((item) => (item.total_pontos ?? 0) > 0 && Boolean(item.cliente_nome)).length
+  const aguardandoCliente = projetos.filter((item) => !item.cliente_nome).length
+  const emCampo = projetos.filter((item) => !item.total_pontos || item.status === 'medicao').length
+  const prontosDocumental = projetos.filter((item) => (item.total_pontos ?? 0) > 0 && Boolean(item.cliente_nome)).length
   const concluidos = projetos.filter((item) => {
     const status = String(item.status || '').toLowerCase()
     return status.includes('aprovado') || status.includes('final') || status.includes('certificado')
   }).length
   return [
-    { label: resumoLotes.total > 0 ? 'Lotes em campo' : 'Em campo', valor: emCampo, cor: Colors.dark.info, icone: 'map-pin' },
-    { label: resumoLotes.total > 0 ? 'Sem participante' : 'Sem cliente', valor: aguardandoCliente, cor: Colors.dark.danger, icone: 'alert-circle' },
-    { label: resumoLotes.total > 0 ? 'Lotes prontos' : 'Prontos p/ docs', valor: prontosDocumental, cor: Colors.dark.success, icone: 'file-text' },
+    { label: 'Em campo', valor: emCampo, cor: Colors.dark.info, icone: 'map-pin' },
+    { label: 'Sem cliente', valor: aguardandoCliente, cor: Colors.dark.danger, icone: 'alert-circle' },
+    { label: 'Prontos p/ docs', valor: prontosDocumental, cor: Colors.dark.success, icone: 'file-text' },
     { label: 'Concluídos', valor: concluidos, cor: Colors.dark.primary, icone: 'check-circle' },
   ]
 }
@@ -126,11 +110,11 @@ export default function ProjetosScreen() {
         )}
         ListHeaderComponent={
           <>
-            <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}>
+            <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder }]}> 
               <View style={s.topRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={[s.titulo, { color: C.text }]}>Projetos</Text>
-                  <Text style={[s.sub, { color: C.muted }]}>Painel de campo, documentação e operação por lote</Text>
+                  <Text style={[s.sub, { color: C.muted }]}>Painel de campo, documentação e regularização</Text>
                 </View>
                 <TouchableOpacity style={[s.novoBtn, { borderColor: C.primary }]} onPress={() => router.push('/projeto/novo' as any)} accessibilityRole="button" accessibilityLabel="Criar novo projeto">
                   <Feather name="plus" size={16} color={C.primary} />
@@ -140,7 +124,7 @@ export default function ProjetosScreen() {
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.metricasRow}>
                 {cardsMeta.map((item) => (
-                  <View key={item.label} style={[s.metaCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
+                  <View key={item.label} style={[s.metaCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}> 
                     <View style={s.metaIconRow}>
                       <View style={[s.metaIcon, { backgroundColor: `${item.cor}18` }]}>
                         <Feather name={item.icone as any} size={16} color={item.cor} />
@@ -174,7 +158,7 @@ export default function ProjetosScreen() {
                 })}
               </ScrollView>
 
-              <View style={[s.buscaBox, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
+              <View style={[s.buscaBox, { backgroundColor: C.background, borderColor: C.cardBorder }]}> 
                 <Feather name="search" size={16} color={C.muted} />
                 <TextInput
                   style={[s.buscaInput, { color: C.text }]}
