@@ -14,27 +14,38 @@ load_dotenv()
 class Settings:
     """Configurações da aplicação."""
     
-    # Supabase
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
-    
-    # CORS
-    ALLOWED_ORIGINS_DEFAULT: List[str] = [
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-        "http://localhost:8082",
-        "http://127.0.0.1:8082",
-        "http://localhost:19006",
-        "http://127.0.0.1:19006",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
+    # Ambiente e URLs oficiais (Contrato de Arquitetura Vertex)
+    APP_ENV: str = os.getenv("APP_ENV", "development")
+    ALLOWED_ORIGINS: List[str] = [
+        origem.strip() for origem in 
+        os.getenv("ALLOWED_ORIGINS", ",".join([
+            "http://localhost:8081",
+            "http://127.0.0.1:8081",
+            "http://localhost:8082",
+            "http://127.0.0.1:8082",
+            "http://localhost:19006",
+            "http://127.0.0.1:19006",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ])).split(",")
     ]
+    PUBLIC_APP_URL: str = os.getenv("PUBLIC_APP_URL", "http://localhost:8000")
+    
+    # Supabase - Nomes oficiais (SUPABASE_KEY legado não é mais usado)
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
+    
+    # Bucket de Storage
+    SUPABASE_BUCKET_ARQUIVOS_PROJETO: str = os.getenv(
+        "SUPABASE_BUCKET_ARQUIVOS_PROJETO", "arquivos-projeto"
+    )
     
     @property
     def allowed_origins(self) -> List[str]:
         """Retorna lista de origens CORS permitidas."""
-        origins = os.getenv("ALLOWED_ORIGINS", ",".join(self.ALLOWED_ORIGINS_DEFAULT))
-        return [origem.strip() for origem in origins.split(",")]
+        return self.ALLOWED_ORIGINS
     
     @property
     def cors_origin_regex(self) -> str:
@@ -57,11 +68,22 @@ class Settings:
     
     def validate(self) -> None:
         """Valida configurações críticas."""
-        if not self.SUPABASE_URL or not self.SUPABASE_KEY:
+        if not self.SUPABASE_URL or not self.SUPABASE_ANON_KEY:
             raise ValueError(
-                "Supabase não configurado. Defina SUPABASE_URL e SUPABASE_KEY "
+                "Supabase não configurado. Defina SUPABASE_URL e SUPABASE_ANON_KEY "
                 "no arquivo .env ou no ambiente do servidor."
             )
+        
+        # Validação de ambiente - impede uso de configuração local em produção
+        if self.APP_ENV == "production":
+            if not self.SUPABASE_SERVICE_ROLE_KEY:
+                raise ValueError(
+                    "SUPABASE_SERVICE_ROLE_KEY é obrigatório em produção."
+                )
+            if not self.SUPABASE_JWT_SECRET:
+                raise ValueError(
+                    "SUPABASE_JWT_SECRET é obrigatório em produção."
+                )
 
 
 settings = Settings()
