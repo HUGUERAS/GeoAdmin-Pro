@@ -24,20 +24,13 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field, ValidationError
 
 from integracoes.areas_projeto import anexar_arquivos_area, salvar_area_projeto
-from integracoes.projeto_clientes import (
-    gerar_magic_link_participante,
-    listar_eventos_magic_link,
-    listar_participantes_projeto,
-    obter_vinculo_por_token,
-    registrar_evento_magic_link,
-    salvar_participantes_projeto,
-)
 from integracoes.referencia_cliente import (
     comparar_com_perimetro_referencia,
     importar_vertices_por_formato,
     salvar_geometria_referencia,
 )
 from routes.perimetros import buscar_perimetro_ativo
+from services.magic_link import MagicLinkService
 
 logger = logging.getLogger("geoadmin.documentos")
 router = APIRouter(tags=["Documentos GPRF"], dependencies=[Depends(verificar_token)])
@@ -455,48 +448,13 @@ def _garantir_vinculo_legacy_cliente(
     vinculo["magic_link_expira"] = expira
     return projeto_id, vinculo
 def _validar_token(sb, token: str) -> tuple[dict[str, Any], str | None, dict[str, Any] | None]:
-    vinculo = obter_vinculo_por_token(sb, token)
-    if vinculo:
-        expira = vinculo.get("magic_link_expira")
-        if expira and datetime.fromisoformat(str(expira).replace("Z", "+00:00")) < datetime.now(timezone.utc):
-            raise HTTPException(401, {"erro": "[ERRO-602] Link expirado. Solicite um novo link.", "codigo": 602})
-
-        cliente_res = (
-            sb.table("clientes")
-            .select("id, nome, magic_link_expira, magic_link_token, formulario_ok, formulario_em")
-            .eq("id", vinculo.get("cliente_id"))
-            .maybe_single()
-            .execute()
-        )
-        cliente = cliente_res.data
-        if not cliente:
-            raise HTTPException(401, {"erro": "[ERRO-601] Token inválido.", "codigo": 601})
-        return cliente, vinculo.get("projeto_id"), vinculo
-
-    cliente_res = (
-        sb.table("clientes")
-        .select("id, nome, magic_link_expira, magic_link_token, formulario_ok, formulario_em")
-        .eq("magic_link_token", token)
-        .maybe_single()
-        .execute()
-    )
-    cliente = cliente_res.data
-    if not cliente:
-        raise HTTPException(401, {"erro": "[ERRO-601] Token inválido.", "codigo": 601})
-
-    expira = cliente.get("magic_link_expira")
-    if expira and datetime.fromisoformat(str(expira).replace("Z", "+00:00")) < datetime.now(timezone.utc):
-        raise HTTPException(401, {"erro": "[ERRO-602] Link expirado. Solicite um novo link.", "codigo": 602})
-
-    projeto_id, vinculo_legacy = _resolver_contexto_legacy_cliente(sb, cliente["id"])
-    projeto_id, vinculo_legacy = _garantir_vinculo_legacy_cliente(
-        sb,
-        cliente=cliente,
-        projeto_id=projeto_id,
-        vinculo=vinculo_legacy,
-        token=token,
-    )
-    return cliente, projeto_id, vinculo_legacy
+    """
+    Valida token Magic Link usando o serviço centralizado.
+    
+    Mantido para compatibilidade com fluxos existentes.
+    """
+    service = MagicLinkService(sb)
+    return service.validar_token(token)
 
 
 def _carregar_area_contexto(sb, area_id: str | None) -> dict[str, Any] | None:
@@ -729,102 +687,22 @@ def gerar_magic_link(
     autor: str | None = None,
     supabase=None,
 ):
+    """
+    Endpoint interno para gerar Magic Link.
+    
+    Utiliza o serviço MagicLinkService para centralizar a lógica de geração.
+    """
     sb = supabase or _get_supabase()
-
-    try:
-        res = sb.table("vw_projetos_completo").select("id, projeto_nome, cliente_id, cliente_nome").eq("id", projeto_id).single().execute()
-    except Exception:
-        raise HTTPException(404, {"erro": "[ERRO-401] Projeto não encontrado.", "codigo": 401})
-
-    projeto = res.data
-    participantes = listar_participantes_projeto(sb, projeto_id)
-    participante_base = _participante_base(participantes, projeto_cliente_id=projeto_cliente_id, cliente_id=cliente_id)
-    usa_fluxo_participante = bool(participante_base) or bool(participantes) or bool(projeto_cliente_id)
-
-    participante = None
-    token: str | None = None
-    expira = datetime.now(timezone.utc) + timedelta(days=max(dias, 1))
-    cliente_destino_id = cliente_id or projeto.get("cliente_id")
-    cliente_nome = projeto.get("cliente_nome")
-    tipo_evento = "gerado"
-
-    if usa_fluxo_participante:
-        participante = gerar_magic_link_participante(
-            sb,
-            projeto_id,
-            projeto_cliente_id=projeto_cliente_id,
-            cliente_id=cliente_id,
-            dias=dias,
-            espelhar_token_cliente_legacy=False,
-        )
-        if not participante:
-            raise HTTPException(422, {"erro": "[ERRO-102] Nenhum participante elegível foi encontrado para gerar o link.", "codigo": 102})
-        token = participante.get("magic_link_token")
-        cliente_destino_id = participante.get("cliente_id") or cliente_destino_id
-        cliente_nome = participante.get("nome") or cliente_nome
-        tipo_evento = "reenviado" if (participante_base or {}).get("magic_link_token") else "gerado"
-        if participante.get("magic_link_expira"):
-            expira = datetime.fromisoformat(str(participante["magic_link_expira"]).replace("Z", "+00:00"))
-    else:
-        if not cliente_destino_id:
-            raise HTTPException(422, {"erro": "[ERRO-102] Projeto sem cliente vinculado.", "codigo": 102})
-        token = str(uuid.uuid4())
-        expira = datetime.now(timezone.utc) + timedelta(days=7)
-        sb.table("clientes").update({
-            "magic_link_token": token,
-            "magic_link_expira": expira.isoformat(),
-        }).eq("id", cliente_destino_id).execute()
-        tipo_evento = "legado"
-
-    if cliente_destino_id:
-        cliente_info = (
-            sb.table("clientes")
-            .select("id, nome")
-            .eq("id", cliente_destino_id)
-            .maybe_single()
-            .execute()
-            .data
-        )
-        if cliente_info:
-            cliente_nome = cliente_info.get("nome") or cliente_nome
-
-    base_url = _resolver_app_url()
-    link = f"{base_url}/formulario/cliente?token={token}"
-    area_id = participante.get("area_id") if participante else None
-    registrar_evento_magic_link(
-        sb,
+    service = MagicLinkService(sb)
+    
+    return service.gerar_token(
         projeto_id=projeto_id,
-        projeto_cliente_id=participante.get("id") if participante else projeto_cliente_id,
-        cliente_id=cliente_destino_id,
-        area_id=area_id,
-        token=token,
-        tipo_evento=tipo_evento,
+        cliente_id=cliente_id,
+        projeto_cliente_id=projeto_cliente_id,
+        dias=dias,
         canal=canal,
-        autor=autor or "sistema",
-        expira_em=expira.isoformat(),
-        payload={"link": link, "modo": "participante" if participante else "legado"},
+        autor=autor,
     )
-
-    logger.info("Magic Link gerado para projeto '%s'", projeto["projeto_nome"])
-
-    return {
-        "link": link,
-        "expira_em": expira.strftime("%d/%m/%Y às %H:%M"),
-        "cliente_nome": cliente_nome,
-        "cliente_id": cliente_destino_id,
-        "projeto_cliente_id": participante.get("id") if participante else projeto_cliente_id,
-        "papel": participante.get("papel") if participante else "principal",
-        "area_id": area_id,
-        "projeto_nome": projeto.get("projeto_nome"),
-        "mensagem_whatsapp": (
-            f"Olá {cliente_nome or ''}!\n\n"
-            f"Para darmos andamento ao processo de regularização do imóvel *{projeto.get('projeto_nome', '')}*, "
-            "preciso que você preencha um formulário com seus dados e um esboço simples da área.\n\n"
-            f"Acesse pelo celular: {link}\n\n"
-            "O link expira em 7 dias.\n\n"
-            "Qualquer dúvida é só chamar!"
-        ),
-    }
 
 
 
@@ -892,8 +770,17 @@ def gerar_magic_links_lote(projeto_id: str, payload: GerarMagicLinksLotePayload,
 
 @router.get("/projetos/{projeto_id}/magic-links/eventos", summary="Listar histórico de envio de magic links")
 def listar_historico_magic_links(projeto_id: str, projeto_cliente_id: str | None = None, area_id: str | None = None, limite: int = 100, supabase=None):
+    """
+    Lista eventos de Magic Link usando o serviço centralizado.
+    """
     sb = supabase or _get_supabase()
-    eventos = listar_eventos_magic_link(sb, projeto_id, projeto_cliente_id=projeto_cliente_id, area_id=area_id, limite=limite)
+    service = MagicLinkService(sb)
+    eventos = service.listar_eventos(
+        projeto_id,
+        projeto_cliente_id=projeto_cliente_id,
+        area_id=area_id,
+        limite=limite,
+    )
     return {"total": len(eventos), "eventos": eventos}
 
 

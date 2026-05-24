@@ -1,4 +1,7 @@
-import sys, os
+import sys
+import os
+
+# Adiciona o diretório backend ao path para imports relativos
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # ── Banco de dados PROJ local (operação offline / sem internet) ────────────────
@@ -18,36 +21,15 @@ from fastapi.responses import JSONResponse
 from typing import Dict, Any
 
 from dotenv import load_dotenv
-from supabase import create_client, Client
+
+# Importa configurações e dependências do core
+from core import settings, get_supabase
 
 # Importa o middleware de autenticação
-from middleware.auth import verificar_token
+from middleware import verificar_token, limiter
 
-# Carrega origens CORS permitidas do ambiente
+# Carrega variáveis de ambiente
 load_dotenv()
-_origens_padrao = [
-    "http://localhost:8081",
-    "http://127.0.0.1:8081",
-    "http://localhost:8082",
-    "http://127.0.0.1:8082",
-    "http://localhost:19006",
-    "http://127.0.0.1:19006",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
-_origens_permitidas = os.getenv("ALLOWED_ORIGINS", ",".join(_origens_padrao)).split(",")
-_origem_permitida_regex = (
-    r"^https?://("
-    # Rede local (dev)
-    r"localhost|"
-    r"127\.0\.0\.1|"
-    r"10(?:\.\d{1,3}){3}|"
-    r"192\.168(?:\.\d{1,3}){2}|"
-    r"172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}|"
-    # Vercel (preview + production)
-    r"[a-z0-9\-]+\.vercel\.app"
-    r")(:\d+)?$"
-)
 
 # ── Rotas
 # Para proteger um endpoint com autenticação, adicione o seguinte ao seus handlers:
@@ -70,15 +52,13 @@ from routes.geo import router as geo_router
 from routes.importar import router as importar_router
 from routes.catalogo import router as catalogo_router
 
-from middleware.limiter import limiter
-
 app = FastAPI(title="GeoAdmin Pro - Backend MVP")
 app.state.limiter = limiter
 
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=[origem.strip() for origem in _origens_permitidas],
-  allow_origin_regex=_origem_permitida_regex,
+  allow_origins=settings.allowed_origins,
+  allow_origin_regex=settings.cors_origin_regex,
   allow_methods=["*"],
   allow_headers=["*"],
 )
@@ -118,46 +98,6 @@ async def _handler_erro_global(request: Request, exc: Exception) -> JSONResponse
 
 @app.get("/health")
 def health() -> Dict[str, str]:
-  return {"status": "ok"}
-
-
-_supabase_client: Client | None = None
-
-
-def get_supabase() -> Client:
-  """
-  Retorna um cliente Supabase configurado via variáveis de ambiente.
-
-  Espera encontrar:
-  - SUPABASE_URL
-  - SUPABASE_KEY  (use a anon key ou service key conforme o caso)
-
-  Você pode definir essas variáveis em um arquivo `.env` dentro de `backend/`
-  (carregado automaticamente pelo python-dotenv) ou diretamente no ambiente.
-  """
-  global _supabase_client
-
-  if _supabase_client is not None:
-    return _supabase_client
-
-  # Carrega variáveis de ambiente de backend/.env, se existir
-  load_dotenv()
-
-  url = os.getenv("SUPABASE_URL")
-  key = os.getenv("SUPABASE_KEY")
-
-  if not url or not key:
-    raise HTTPException(
-      status_code=500,
-      detail={
-        "erro": (
-          "Supabase não configurado. Defina SUPABASE_URL e SUPABASE_KEY "
-          "no arquivo backend/.env ou no ambiente do servidor."
-        ),
-        "codigo": 500,
-      },
-    )
-
-  _supabase_client = create_client(url, key)
-  return _supabase_client
+    """Endpoint de health check."""
+    return {"status": "ok"}
 
