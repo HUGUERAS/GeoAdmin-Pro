@@ -1,17 +1,8 @@
-# Variáveis de ambiente
-*.env
-.env
-.env.*
-backend/.env
-!backend/.env.example
-
-# Credenciais
-mobile/credentials.json
-credentials.json
-
-# Artefatos de Python
+```
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
 .Python
 build/
@@ -30,49 +21,34 @@ wheels/
 .installed.cfg
 *.egg
 
-# Não ignorar os diretórios mobile que coincidem com padrões Python acima
-!mobile/dist/
-!mobile/dist/**
-!mobile/lib/
-!mobile/lib/**
-
-# Ambientes virtuais
+# Virtual environments
 venv/
 env/
 ENV/
+.venv/
+.env/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# Node / Expo
-node_modules/
-.expo/
-.expo-shared/
-mobile/node_modules/
-npm-debug.*
+# Logs
+*.log
 
-# Sistema operacional
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
+# Environment variables
+.env
+.env.local
+*.env.*
 
-# Dados locais
-data/geometrias_referencia_cliente.json
-
-# Cache local
-.pytest_cache/
+# Coverage
 .coverage
+coverage/
+htmlcov/
 
-# Configurações locais de ferramentas de desenvolvimento
-.claude/settings.local.json
-# Metadados locais do Supabase CLI
-infra/supabase/supabase/
-
-.vercel
+# Temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+```
