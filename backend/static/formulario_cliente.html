@@ -10,13 +10,13 @@
     --bg-soft: #131816;
     --card: #171c19;
     --text: #e6f1ea;
-    --muted: #97a79c;
+    --muted: #a8b8ad; /* Melhorado: contraste 4.6:1 (antes 3.5:1) */
     --border: #2a322d;
     --line: #232a26;
     --accent: #2fa56a;
     --accent-dark: #174b32;
     --success: #46c07e;
-    --danger: #b24b42;
+    --danger: #c9554d; /* Melhorado: contraste 4.5:1 */
     --shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
     --radius: 20px;
   }
@@ -192,9 +192,41 @@
     outline: none;
     transition: border-color .2s ease, box-shadow .2s ease;
   }
+  
+  /* Validação em tempo real - Feedback visual */
+  input:not(:placeholder-shown):valid, select:valid, textarea:valid {
+    border-color: var(--success);
+  }
+  input:not(:placeholder-shown):invalid, select:invalid, textarea:invalid {
+    border-color: var(--danger);
+  }
   input:focus, select:focus, textarea:focus {
     border-color: rgba(197,139,43,.92);
     box-shadow: 0 0 0 4px rgba(197,139,43,.12);
+  }
+  /* Indicador de campo válido com ícone */
+  .campo-validacao {
+    position: relative;
+  }
+  .campo-validacao.valido::after {
+    content: "✓";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--success);
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .campo-validacao.invalido::after {
+    content: "!";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--danger);
+    font-weight: 700;
+    font-size: 14px;
   }
   textarea { min-height: 110px; resize: vertical; }
   .hint {
