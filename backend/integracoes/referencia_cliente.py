@@ -359,11 +359,16 @@ def parse_shp_zip(conteudo: bytes) -> list[dict[str, float]]:
             import shapefile  # type: ignore
 
             reader = shapefile.Reader(str(shp_path))
-            candidatos: list[Polygon] = []
-            for shape_record in reader.shapes():
-                if len(shape_record.points) < 3:
-                    continue
-                candidatos.append(_normalizar_poligono(Polygon(shape_record.points)))
+            try:
+                candidatos: list[Polygon] = []
+                for shape_record in reader.shapes():
+                    if len(shape_record.points) < 3:
+                        continue
+                    candidatos.append(_normalizar_poligono(Polygon(shape_record.points)))
+            finally:
+                close = getattr(reader, "close", None)
+                if close:
+                    close()
             poligono = _selecionar_maior_poligono(candidatos)
             if not poligono:
                 raise ValueError("Nenhum poligono valido encontrado no shapefile.")

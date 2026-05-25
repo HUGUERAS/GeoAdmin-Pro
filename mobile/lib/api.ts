@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-type JsonValue =
+export type JsonValue =
   | string
   | number
   | boolean

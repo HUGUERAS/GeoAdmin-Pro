@@ -24,12 +24,20 @@ from dotenv import load_dotenv
 
 # Importa configurações e dependências do core
 from core import settings, get_supabase
+from core.observabilidade import (
+    setup_logging,
+    ObservabilityMiddleware,
+    create_health_check_details,
+)
 
 # Importa o middleware de autenticação
 from middleware import verificar_token, limiter
 
 # Carrega variáveis de ambiente
 load_dotenv()
+
+# Configura logging estruturado
+setup_logging(json_logs=settings.APP_ENV == "production")
 
 # ── Rotas
 # Para proteger um endpoint com autenticação, adicione o seguinte ao seus handlers:
@@ -54,6 +62,9 @@ from routes.catalogo import router as catalogo_router
 
 app = FastAPI(title="GeoAdmin Pro - Backend MVP")
 app.state.limiter = limiter
+
+# Adiciona middleware de observabilidade (logging estruturado, correlation_id, métricas)
+app.add_middleware(ObservabilityMiddleware)
 
 app.add_middleware(
   CORSMiddleware,
@@ -92,12 +103,21 @@ async def _handler_erro_global(request: Request, exc: Exception) -> JSONResponse
     _logger_main.error("Exceção não tratada em %s: %s", request.url.path, exc, exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"erro": f"Erro interno: {str(exc)}", "codigo": 500},
+            content={"erro": "Erro interno", "codigo": 500},
     )
 
 
 @app.get("/health")
-def health() -> Dict[str, str]:
-    """Endpoint de health check."""
-    return {"status": "ok"}
+def health() -> Dict[str, Any]:
+    """
+    Endpoint de health check profundo.
 
+    Retorna status da aplicação, banco de dados e métricas básicas.
+    Inclui correlation_id para rastreamento.
+    """
+    from core.observabilidade import get_correlation_id
+
+    health_details = create_health_check_details()
+    health_details["correlation_id"] = get_correlation_id()
+
+    return health_details

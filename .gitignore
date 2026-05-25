@@ -1,6 +1,30 @@
-```
-# Python
+# Dependencies
+node_modules/
+mobile/node_modules/
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.local
+.env.*
+!.env.example
+!backend/.env.example
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Python specific
 *.py[cod]
 *$py.class
 *.so
@@ -21,34 +45,8 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
-venv/
-env/
-ENV/
-.venv/
-.env/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Logs
-*.log
-
-# Environment variables
-.env
-.env.local
-*.env.*
-
-# Coverage
+# Coverage reports
 .coverage
-coverage/
 htmlcov/
-
-# Temporary files
-*.tmp
-.DS_Store
-Thumbs.db
-```
+.coverage.*
+.coverage.xml

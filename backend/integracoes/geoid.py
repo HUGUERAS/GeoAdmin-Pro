@@ -235,6 +235,12 @@ def corrigir_altitude(
     }
 
 
+def calcular_geoid(lat: float, lon: float, modelo: ModeloGeoide = "hnor2020") -> float:
+    """Compatibilidade para chamadas antigas que esperam apenas a ondulacao N."""
+    grade = _obter_grade(modelo)
+    return round(grade.interpolar(lat, lon), 4)
+
+
 def listar_modelos() -> list[dict]:
     """Retorna metadados dos modelos de geoide disponíveis."""
     resultado = []

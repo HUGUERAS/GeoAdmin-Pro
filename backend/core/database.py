@@ -14,24 +14,49 @@ _supabase_client: Client | None = None
 def get_supabase() -> Client:
     """
     Retorna um cliente Supabase configurado via variáveis de ambiente.
-    
+
     Utiliza singleton para reutilizar a conexão.
-    
+
     Returns:
         Client: Instância do cliente Supabase.
-        
+
     Raises:
-        ValueError: Se SUPABASE_URL ou SUPABASE_KEY não estiverem configurados.
+        ValueError: Se SUPABASE_URL ou SUPABASE_ANON_KEY não estiverem configurados.
     """
     global _supabase_client
-    
+
     if _supabase_client is not None:
         return _supabase_client
-    
+
     settings.validate()
-    
-    _supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+
+    # Usa SUPABASE_ANON_KEY para operações do lado do cliente
+    # Para operações administrativas, use SUPABASE_SERVICE_ROLE_KEY diretamente
+    _supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
     return _supabase_client
+
+
+def get_supabase_admin() -> Client:
+    """
+    Retorna um cliente Supabase com chave de serviço (admin).
+
+    Use apenas para operações administrativas que exigem bypass de RLS.
+
+    Returns:
+        Client: Instância do cliente Supabase com service_role_key.
+
+    Raises:
+        ValueError: Se SUPABASE_SERVICE_ROLE_KEY não estiver configurado.
+    """
+    settings.validate()
+
+    if not settings.SUPABASE_SERVICE_ROLE_KEY:
+        raise ValueError(
+            "SUPABASE_SERVICE_ROLE_KEY não configurado. "
+            "Necessário para operações administrativas."
+        )
+
+    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
 def reset_supabase_client() -> None:

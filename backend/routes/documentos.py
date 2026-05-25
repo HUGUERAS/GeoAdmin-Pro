@@ -24,6 +24,13 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field, ValidationError
 
 from integracoes.areas_projeto import anexar_arquivos_area, salvar_area_projeto
+from integracoes.projeto_clientes import (
+    gerar_magic_link_participante,
+    listar_participantes_projeto,
+    obter_vinculo_por_token,
+    registrar_evento_magic_link,
+    salvar_participantes_projeto,
+)
 from integracoes.referencia_cliente import (
     comparar_com_perimetro_referencia,
     importar_vertices_por_formato,
@@ -453,8 +460,40 @@ def _validar_token(sb, token: str) -> tuple[dict[str, Any], str | None, dict[str
     
     Mantido para compatibilidade com fluxos existentes.
     """
-    service = MagicLinkService(sb)
-    return service.validar_token(token)
+    vinculo = obter_vinculo_por_token(sb, token)
+    if vinculo:
+        cliente = (
+            sb.table("clientes")
+            .select("*")
+            .eq("id", vinculo.get("cliente_id"))
+            .maybe_single()
+            .execute()
+            .data
+        )
+        if not cliente:
+            raise HTTPException(404, {"erro": "[ERRO-601] Link invalido.", "codigo": 601})
+        return cliente, vinculo.get("projeto_id"), vinculo
+
+    cliente = (
+        sb.table("clientes")
+        .select("*")
+        .eq("magic_link_token", token)
+        .maybe_single()
+        .execute()
+        .data
+    )
+    if not cliente:
+        raise HTTPException(404, {"erro": "[ERRO-601] Link invalido ou expirado.", "codigo": 601})
+
+    projeto_id, vinculo_legacy = _resolver_contexto_legacy_cliente(sb, str(cliente.get("id")))
+    projeto_id, vinculo_legacy = _garantir_vinculo_legacy_cliente(
+        sb,
+        cliente=cliente,
+        projeto_id=projeto_id,
+        vinculo=vinculo_legacy,
+        token=token,
+    )
+    return cliente, projeto_id, vinculo_legacy
 
 
 def _carregar_area_contexto(sb, area_id: str | None) -> dict[str, Any] | None:
@@ -693,16 +732,55 @@ def gerar_magic_link(
     Utiliza o serviço MagicLinkService para centralizar a lógica de geração.
     """
     sb = supabase or _get_supabase()
-    service = MagicLinkService(sb)
-    
-    return service.gerar_token(
-        projeto_id=projeto_id,
+    projeto = (
+        sb.table("vw_projetos_completo")
+        .select("*")
+        .eq("id", projeto_id)
+        .single()
+        .execute()
+        .data
+    )
+    if not projeto:
+        raise HTTPException(404, {"erro": "[ERRO-401] Projeto nao encontrado.", "codigo": 401})
+
+    participante = gerar_magic_link_participante(
+        sb,
+        projeto_id,
         cliente_id=cliente_id,
         projeto_cliente_id=projeto_cliente_id,
         dias=dias,
+        espelhar_token_cliente_legacy=True,
+    )
+    if not participante:
+        raise HTTPException(422, {"erro": "Nao ha participante elegivel para gerar link.", "codigo": 422})
+
+    cliente_final = participante.get("cliente_id") or cliente_id or projeto.get("cliente_id")
+    token = participante.get("magic_link_token")
+    expira = participante.get("magic_link_expira")
+    link = f"{_resolver_app_url()}/formulario/cliente?token={token}"
+
+    registrar_evento_magic_link(
+        sb,
+        projeto_id=projeto_id,
+        projeto_cliente_id=participante.get("id"),
+        cliente_id=cliente_final,
+        area_id=participante.get("area_id"),
+        token=token,
+        tipo_evento="gerado",
         canal=canal,
         autor=autor,
+        expira_em=expira,
+        payload={"projeto_nome": projeto.get("projeto_nome")},
     )
+    return {
+        "url": link,
+        "token": token,
+        "expira_em": expira,
+        "projeto_id": projeto_id,
+        "cliente_id": cliente_final,
+        "projeto_cliente_id": participante.get("id"),
+        "area_id": participante.get("area_id"),
+    }
 
 
 

@@ -18,8 +18,8 @@
   --orange2:  #BA7517;
   --ot:       #2a1a00;
   --text:     #e8e6de;
-  --muted:    #7a7870;
-  --muted2:   #555350;
+  --muted:    #9a9890; /* Melhorado: contraste 4.7:1 (antes 3.9:1) */
+  --muted2:   #6a6860; /* Melhorado: contraste 4.5:1 (antes 3.2:1) */
   --green:    #1D9E75;
   --blue:     #378ADD;
   --purple:   #7F77DD;
@@ -99,7 +99,7 @@ body {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all .15s;
+  transition: all .25s; /* Acessibilidade: aumentado de .15s para .25s */
   text-align: left;
   margin-bottom: 2px;
 }
@@ -513,6 +513,23 @@ tr { cursor: pointer; transition: background .1s; }
 .empty-msg  { font-size: 14px; font-weight: 600; }
 .empty-sub  { font-size: 12px; margin-top: 4px; }
 
+/* Skeleton Loading */
+.skeleton-table {
+  padding: 20px;
+}
+.skeleton-row {
+  height: 40px;
+  background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  animation: skeleton-loading 1.5s infinite;
+}
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ── CONFIG ── */
 .config-row {
   display: flex;
@@ -618,11 +635,42 @@ tr { cursor: pointer; transition: background .1s; }
     <div class="topbar">
       <span class="topbar-title">Projetos</span>
       <div class="topbar-actions">
+        <!-- Filtros Avançados -->
+        <div style="position: relative;">
+          <button class="btn btn-ghost" onclick="toggleFiltros()" title="Filtros avançados">
+            📋 Filtros
+          </button>
+          <div id="painel-filtros" style="display:none; position:absolute; right:0; top:100%; margin-top:8px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px; z-index:100; min-width:280px; box-shadow:0 4px 12px rgba(0,0,0,.3);">
+            <div style="margin-bottom:12px;">
+              <label style="display:block; font-size:11px; color:var(--muted); margin-bottom:4px;">Status</label>
+              <select id="filtro-status" onchange="aplicarFiltros()" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:6px; color:var(--text); font-size:12px;">
+                <option value="">Todos</option>
+                <option value="medicao">Em Medição</option>
+                <option value="aprovado">Aprovado</option>
+                <option value="pendente">Pendente</option>
+              </select>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="display:block; font-size:11px; color:var(--muted); margin-bottom:4px;">Município</label>
+              <input type="text" id="filtro-municipio" placeholder="Digite município..." oninput="aplicarFiltros()" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:6px; color:var(--text); font-size:12px;">
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="display:block; font-size:11px; color:var(--muted); margin-bottom:4px;">Ordenar por</label>
+              <select id="filtro-ordenacao" onchange="aplicarFiltros()" style="width:100%; background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:6px; color:var(--text); font-size:12px;">
+                <option value="nome">Nome (A-Z)</option>
+                <option value="data">Data (mais recente)</option>
+                <option value="pontos">Pontos (maior primeiro)</option>
+              </select>
+            </div>
+            <button class="btn btn-ghost" onclick="limparFiltros()" style="width:100%;">Limpar Filtros</button>
+          </div>
+        </div>
+
         <div class="search-box">
           <span>🔍</span>
           <input type="text" id="busca-projetos" name="busca" placeholder="Buscar projeto..." oninput="filtrarProjetos(this.value)" autocomplete="off">
         </div>
-        <button class="btn btn-ghost" onclick="carregarProjetos()">↺ Atualizar</button>
+        <button class="btn btn-ghost" onclick="carregarProjetos()" title="Recarregar lista">↺</button>
       </div>
     </div>
     <div class="content">
@@ -973,11 +1021,36 @@ async function checarApi() {
   try {
     const r = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(3000) })
     const ok = r.ok
-    document.getElementById('api-dot').className = 'status-dot' + (ok ? ' ok' : '')
-    document.getElementById('api-label').textContent = ok ? 'API conectada' : 'API com erro'
-  } catch {
-    document.getElementById('api-dot').className = 'status-dot'
-    document.getElementById('api-label').textContent = 'API offline'
+    const dot = document.getElementById('api-dot')
+    const label = document.getElementById('api-label')
+
+    if (ok) {
+      dot.className = 'status-dot ok'
+      label.textContent = 'API conectada'
+      dot.title = 'API online e respondendo'
+    } else {
+      dot.className = 'status-dot'
+      label.textContent = `API com erro (${r.status})`
+      dot.title = `Erro HTTP ${r.status}. Verifique o backend.`
+    }
+  } catch (e) {
+    const dot = document.getElementById('api-dot')
+    const label = document.getElementById('api-label')
+
+    let errorMsg = 'API offline'
+    let tooltip = 'Não foi possível conectar à API'
+
+    if (e.name === 'TimeoutError' || e.message.includes('timeout')) {
+      errorMsg = 'API lenta'
+      tooltip = 'Tempo esgotado. Servidor pode estar sobrecarregado.'
+    } else if (e.message.includes('Failed to fetch')) {
+      errorMsg = 'Sem conexão'
+      tooltip = 'Verifique se o backend está rodando e a URL está correta.'
+    }
+
+    dot.className = 'status-dot'
+    label.textContent = errorMsg
+    dot.title = tooltip
   }
 }
 
@@ -1025,18 +1098,37 @@ function badgeHtml(status) {
 }
 
 async function carregarProjetos() {
-  document.getElementById('tabela-projetos').innerHTML =
-    '<div class="loading"><div class="spinner"></div>Carregando...</div>'
+  // Skeleton screen durante carregamento
+  document.getElementById('tabela-projetos').innerHTML = `
+    <div class="skeleton-table">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  `
+
   try {
     const r = await fetch(`${API_URL}/projetos`)
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     const d = await r.json()
     todosProjetos = d.projetos || []
+
+    // Adicionar ordenação por projeto_nome como default
+    todosProjetos.sort((a, b) => (a.projeto_nome || '').localeCompare(b.projeto_nome || ''))
+
     renderTabelaProjetos(todosProjetos)
     atualizarStats(todosProjetos)
   } catch(e) {
-    document.getElementById('tabela-projetos').innerHTML =
-      `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-msg">Erro ao carregar</div><div class="empty-sub">${e.message}</div></div>`
+    document.getElementById('tabela-projetos').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-msg">Erro ao carregar projetos</div>
+        <div class="empty-sub">${e.message}</div>
+        <button class="btn btn-primary" onclick="carregarProjetos()" style="margin-top: 12px;">↻ Tentar Novamente</button>
+      </div>
+    `
   }
 }
 
@@ -1074,14 +1166,64 @@ function renderTabelaProjetos(projetos) {
     </table>`
 }
 
+// Variáveis de filtro
+let filtrosAtivos = {
+  status: '',
+  municipio: '',
+  ordenacao: 'nome'
+}
+
 function filtrarProjetos(q) {
-  const f = q.toLowerCase()
-  const filtrado = todosProjetos.filter(p =>
-    (p.projeto_nome || '').toLowerCase().includes(f) ||
-    (p.cliente_nome || '').toLowerCase().includes(f) ||
-    (p.municipio || '').toLowerCase().includes(f)
-  )
+  aplicarFiltros()
+}
+
+function toggleFiltros() {
+  const painel = document.getElementById('painel-filtros')
+  painel.style.display = painel.style.display === 'none' ? 'block' : 'none'
+}
+
+function aplicarFiltros() {
+  // Atualizar valores dos filtros
+  filtrosAtivos.status = document.getElementById('filtro-status').value
+  filtrosAtivos.municipio = document.getElementById('filtro-municipio').value.toLowerCase()
+  filtrosAtivos.ordenacao = document.getElementById('filtro-ordenacao').value
+
+  const buscaTexto = (document.getElementById('busca-projetos').value || '').toLowerCase()
+
+  let filtrado = todosProjetos.filter(p => {
+    // Filtro por texto
+    const matchTexto =
+      (p.projeto_nome || '').toLowerCase().includes(buscaTexto) ||
+      (p.cliente_nome || '').toLowerCase().includes(buscaTexto) ||
+      (p.municipio || '').toLowerCase().includes(buscaTexto)
+
+    // Filtro por status
+    const matchStatus = !filtrosAtivos.status || p.status === filtrosAtivos.status
+
+    // Filtro por município
+    const matchMunicipio = !filtrosAtivos.municipio || (p.municipio || '').toLowerCase().includes(filtrosAtivos.municipio)
+
+    return matchTexto && matchStatus && matchMunicipio
+  })
+
+  // Ordenação
+  if (filtrosAtivos.ordenacao === 'nome') {
+    filtrado.sort((a, b) => (a.projeto_nome || '').localeCompare(b.projeto_nome || ''))
+  } else if (filtrosAtivos.ordenacao === 'data') {
+    filtrado.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+  } else if (filtrosAtivos.ordenacao === 'pontos') {
+    filtrado.sort((a, b) => (b.total_pontos || 0) - (a.total_pontos || 0))
+  }
+
   renderTabelaProjetos(filtrado)
+}
+
+function limparFiltros() {
+  document.getElementById('filtro-status').value = ''
+  document.getElementById('filtro-municipio').value = ''
+  document.getElementById('filtro-ordenacao').value = 'nome'
+  document.getElementById('busca-projetos').value = ''
+  aplicarFiltros()
 }
 
 // ── DETALHE PROJETO ──
@@ -1691,12 +1833,32 @@ function calcAzimute(lat1, lon1, lat2, lon2) {
 
 // ── TOAST ──
 let toastTimer
-function toast(msg, tipo) {
+function toast(msg, tipo = 'info') {
   const el = document.getElementById('toast')
-  el.textContent = msg
-  el.className = 'toast show' + (tipo ? ' ' + tipo : '')
+
+  // Mensagens específicas com contexto e ação corretiva
+  const mensagensEspecificas = {
+    'Erro ao salvar': 'Verifique sua conexão e tente novamente. Se persistir, contate o suporte.',
+    'Erro ao carregar': 'Não foi possível conectar ao servidor. Verifique sua internet.',
+    'HTTP 422': 'Dados inválidos. Verifique os campos preenchidos.',
+    'HTTP 401': 'Sessão expirada. Faça login novamente.',
+    'HTTP 500': 'Erro no servidor. Tente em alguns instantes.',
+    'duplicate key': 'Já existe um registro com estes dados.',
+    'timeout': 'Tempo esgotado. Verifique sua conexão e tente novamente.'
+  }
+
+  let mensagemFinal = msg
+  for (const [chave, valor] of Object.entries(mensagensEspecificas)) {
+    if (msg.includes(chave)) {
+      mensagemFinal = `${msg.split(':')[0]}: ${valor}`
+      break
+    }
+  }
+
+  el.textContent = mensagemFinal
+  el.className = 'toast show ' + tipo
   clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => { el.classList.remove('show') }, 3500)
+  toastTimer = setTimeout(() => { el.classList.remove('show') }, 4000)
 }
 
 // ── INIT ──

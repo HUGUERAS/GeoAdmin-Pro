@@ -313,6 +313,27 @@ def obter_arquivo_projeto(sb, projeto_id: str, arquivo_id: str) -> dict[str, Any
     return dados[0] if dados else None
 
 
+def buscar_arquivo_por_id(sb, projeto_id: str, arquivo_id: str) -> dict[str, Any] | None:
+    return obter_arquivo_projeto(sb, projeto_id, arquivo_id)
+
+
+def remover_arquivo_projeto(sb, projeto_id: str, arquivo_id: str) -> dict[str, Any] | None:
+    arquivo = obter_arquivo_projeto(sb, projeto_id, arquivo_id)
+    if not arquivo:
+        return None
+
+    atualizado = {"deleted_at": _agora_iso()}
+    resposta = (
+        sb.table("arquivos_projeto")
+        .update(atualizado)
+        .eq("projeto_id", projeto_id)
+        .eq("id", arquivo_id)
+        .execute()
+    )
+    dados = _dados(resposta)
+    return dados[0] if dados else {**arquivo, **atualizado}
+
+
 def promover_arquivo_base_oficial(
     sb,
     *,

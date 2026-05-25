@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Platform, Switch } from 'react-native'
 import { Colors } from '../../../constants/Colors'
-import { apiPost } from '../../../lib/api'
+import { apiPost, type JsonValue } from '../../../lib/api'
 import { ScreenHeader } from '../../../components/ScreenHeader'
 
 type PontoLinha = { norte: string; este: string }
@@ -49,7 +49,7 @@ export default function RotacaoScreen() {
       Alert.alert('Dados incompletos', 'Preencha Norte e Este de todos os pontos.')
       return
     }
-    const body: Record<string, unknown> = { pontos: pontosValidos, angulo_graus: ang }
+    const body: { [key: string]: JsonValue } = { pontos: pontosValidos, angulo_graus: ang }
     if (usarOrigem) {
       const oN = parseFloat(origem.norte), oE = parseFloat(origem.este)
       if (isNaN(oN) || isNaN(oE)) {

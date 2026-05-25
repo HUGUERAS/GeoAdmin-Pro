@@ -52,7 +52,7 @@ async def verificar_token(
     try:
         from supabase import create_client
         url = os.getenv("SUPABASE_URL", "")
-        key = os.getenv("SUPABASE_KEY", "")
+        key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY", "")
         if not url or not key:
             if not auth_obrigatorio:
                 return {"sub": "dev-local", "role": "anon"}
