@@ -649,6 +649,65 @@ def _resumo_lotes_lista(sb, projeto_ids: list[str]) -> dict[str, dict[str, Any]]
     return {projeto_id: _resumo_lotes(areas) for projeto_id, areas in por_projeto.items() if areas}
 
 
+def _resumo_confrontacoes(
+    confrontacoes: list[dict[str, Any]],
+    confrontantes: list[dict[str, Any]],
+) -> dict[str, Any]:
+    por_status: dict[str, int] = {}
+    areas: set[str] = set()
+
+    for confrontacao in confrontacoes:
+        status = confrontacao.get("status_revisao") or confrontacao.get("status") or "pendente"
+        por_status[status] = por_status.get(status, 0) + 1
+        if confrontacao.get("area_id"):
+            areas.add(str(confrontacao["area_id"]))
+
+    return {
+        "total": len(confrontacoes),
+        "confrontantes_total": len(confrontantes),
+        "areas_com_confrontacao": len(areas),
+        "pendentes": por_status.get("pendente", 0),
+        "confirmadas": por_status.get("confirmada", 0),
+        "descartadas": por_status.get("descartada", 0),
+        "por_status": dict(sorted(por_status.items())),
+    }
+
+
+def _prontidao_piloto(projeto: dict[str, Any]) -> dict[str, Any]:
+    areas = projeto.get("areas") or []
+    formulario = projeto.get("formulario") or {}
+    requisitos = {
+        "projeto_cadastrado": bool(projeto.get("id")),
+        "cliente_vinculado": bool(projeto.get("cliente_id") or projeto.get("cliente") or projeto.get("clientes")),
+        "participantes_mapeados": bool(projeto.get("participantes") or projeto.get("clientes")),
+        "perimetro_definido": bool(
+            projeto.get("perimetro_ativo")
+            or any(
+                area.get("geometria_final")
+                or area.get("geometria_esboco")
+                or area.get("tipo_geometria_ativa") in {"esboco", "final"}
+                for area in areas
+            )
+        ),
+        "formulario_cliente": bool(formulario.get("formulario_ok")),
+    }
+    rotulos = {
+        "projeto_cadastrado": "Projeto cadastrado",
+        "cliente_vinculado": "Cliente vinculado",
+        "participantes_mapeados": "Participantes mapeados",
+        "perimetro_definido": "Perimetro definido",
+        "formulario_cliente": "Formulario do cliente confirmado",
+    }
+    pendencias = [rotulos[chave] for chave, ok in requisitos.items() if not ok]
+
+    return {
+        "status": "pronto" if not pendencias else "pendente",
+        "pronto": not pendencias,
+        "pendencias": pendencias,
+        "requisitos": requisitos,
+    }
+
+
 
 def _safe(fn, *args, default=None, label="", **kwargs):
     import logging as _log
