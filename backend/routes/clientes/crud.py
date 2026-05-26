@@ -61,6 +61,18 @@ def carregar_projetos(sb, cliente_ids: list[str]) -> list[dict[str, Any]]:
         [],
     )
     if not vinculados:
+        vinculados = query_segura(
+            lambda: (
+                sb.table("projeto_clientes")
+                .select("projeto_id, cliente_id, papel, principal, area_id")
+                .in_("cliente_id", cliente_ids)
+                .execute()
+                .data
+                or []
+            ),
+            [],
+        )
+    if not vinculados:
         return []
 
     projeto_ids = sorted({item["projeto_id"] for item in vinculados if item.get("projeto_id")})
@@ -68,17 +80,25 @@ def carregar_projetos(sb, cliente_ids: list[str]) -> list[dict[str, Any]]:
         return []
 
     projetos_por_id = {}
-    projetos = query_segura(
-        lambda: (
-            sb.table("projetos")
-            .select("id, nome, projeto_nome, status, municipio, uf, estado, total_pontos, criado_em, created_at")
-            .in_("id", projeto_ids)
-            .execute()
-            .data
-            or []
-        ),
-        [],
-    )
+    projetos = []
+    for selection in (
+        "id, nome, projeto_nome, status, municipio, uf, estado, total_pontos, criado_em, created_at",
+        "id, nome, status, municipio, uf, total_pontos, criado_em, created_at",
+        "id, nome, status, municipio, uf, criado_em, created_at",
+    ):
+        projetos = query_segura(
+            lambda selection=selection: (
+                sb.table("projetos")
+                .select(selection)
+                .in_("id", projeto_ids)
+                .execute()
+                .data
+                or []
+            ),
+            [],
+        )
+        if projetos:
+            break
     for projeto in projetos:
         if projeto.get("id"):
             projetos_por_id[projeto["id"]] = projeto
@@ -97,7 +117,7 @@ def carregar_projetos(sb, cliente_ids: list[str]) -> list[dict[str, Any]]:
             "area_ha": projeto.get("area_ha"),
             "total_pontos": projeto.get("total_pontos"),
             "criado_em": criado_em,
-            "vinculo": vinculo.get("vinculo"),
+            "vinculo": vinculo.get("vinculo") or vinculo.get("papel"),
             "principal": vinculo.get("principal"),
             "area_id": vinculo.get("area_id"),
         })

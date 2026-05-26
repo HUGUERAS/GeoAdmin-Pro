@@ -190,6 +190,42 @@ def test_carregar_projetos_faz_fallback_para_vw_projeto_clientes():
     }]
 
 
+def test_carregar_projetos_faz_fallback_para_tabela_projeto_clientes():
+    def resolver(query):
+        if query.table == "vw_projetos_completo":
+            raise Exception("column vw_projetos_completo.area_ha does not exist")
+        if query.table == "vw_projeto_clientes":
+            raise Exception("view vw_projeto_clientes unavailable")
+        if query.table == "projeto_clientes":
+            return [{
+                "projeto_id": "projeto-1",
+                "cliente_id": "cliente-1",
+                "papel": "principal",
+                "principal": True,
+                "area_id": None,
+            }]
+        if query.table == "projetos":
+            if "projeto_nome" in (query.selection or ""):
+                raise Exception("column projetos.projeto_nome does not exist")
+            return [{
+                "id": "projeto-1",
+                "nome": "Fazenda A",
+                "status": "medicao",
+                "municipio": "Goiania",
+                "uf": "GO",
+                "total_pontos": 4,
+                "criado_em": "2026-05-26T10:00:00+00:00",
+            }]
+        raise AssertionError(f"Consulta inesperada: {query.table}")
+
+    projetos = carregar_projetos(FakeSupabase(resolver), ["cliente-1"])
+
+    assert projetos[0]["id"] == "projeto-1"
+    assert projetos[0]["cliente_id"] == "cliente-1"
+    assert projetos[0]["projeto_nome"] == "Fazenda A"
+    assert projetos[0]["vinculo"] == "principal"
+
+
 def test_detalhar_cliente_agrega_dados_documentais(monkeypatch):
     cliente = {
         "id": "cliente-1",
