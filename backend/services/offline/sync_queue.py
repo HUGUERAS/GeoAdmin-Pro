@@ -40,10 +40,10 @@ class SyncItem:
     retry_count: int = 0
     error_message: Optional[str] = None
     correlation_id: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
-    
+
     @classmethod
     def from_row(cls, row: tuple) -> 'SyncItem':
         return cls(
@@ -64,15 +64,15 @@ class SyncItem:
 class SyncQueue:
     """
     Fila de sincronização offline usando SQLite.
-    
+
     Armazena operações locais e sincroniza quando há conectividade.
     Usa estratégia de conflito: último escritor vence (baseado em updated_at).
     """
-    
+
     def __init__(self, db_path: str = ":memory:"):
         """
         Inicializa fila de sincronização.
-        
+
         Args:
             db_path: Caminho para banco SQLite ou ':memory:' para teste.
         """
@@ -81,11 +81,11 @@ class SyncQueue:
         self.conn.row_factory = sqlite3.Row
         self._create_tables()
         logger.info(f"SyncQueue inicializada em {db_path}")
-    
+
     def _create_tables(self) -> None:
         """Cria tabelas necessárias para fila de sincronização."""
         cursor = self.conn.cursor()
-        
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS sync_queue (
                 id TEXT PRIMARY KEY,
@@ -102,31 +102,31 @@ class SyncQueue:
                 UNIQUE(entity_type, entity_id, operation)
             )
         """)
-        
+
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_sync_status 
+            CREATE INDEX IF NOT EXISTS idx_sync_status
             ON sync_queue(sync_status, retry_count)
         """)
-        
+
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_entity 
+            CREATE INDEX IF NOT EXISTS idx_entity
             ON sync_queue(entity_type, entity_id)
         """)
-        
+
         self.conn.commit()
-    
+
     def enqueue(self, item: SyncItem) -> None:
         """
         Adiciona item à fila de sincronização.
-        
+
         Args:
             item: Item a ser sincronizado.
         """
         cursor = self.conn.cursor()
-        
+
         cursor.execute("""
-            INSERT OR REPLACE INTO sync_queue 
-            (id, entity_type, entity_id, operation, payload, created_at, updated_at, 
+            INSERT OR REPLACE INTO sync_queue
+            (id, entity_type, entity_id, operation, payload, created_at, updated_at,
              sync_status, retry_count, error_message, correlation_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
@@ -142,125 +142,125 @@ class SyncQueue:
             item.error_message,
             item.correlation_id,
         ))
-        
+
         self.conn.commit()
         logger.debug(f"Item {item.id} ({item.entity_type}) enfileirado para {item.operation}")
-    
+
     def dequeue_pending(self, limit: int = 10) -> List[SyncItem]:
         """
         Recupera itens pendentes para sincronização.
-        
+
         Args:
             limit: Número máximo de itens para retornar.
-            
+
         Returns:
             Lista de itens pendentes.
         """
         cursor = self.conn.cursor()
-        
+
         cursor.execute("""
-            SELECT * FROM sync_queue 
+            SELECT * FROM sync_queue
             WHERE sync_status IN ('pending', 'error')
             ORDER BY retry_count ASC, updated_at ASC
             LIMIT ?
         """, (limit,))
-        
+
         return [SyncItem.from_row(row) for row in cursor.fetchall()]
-    
+
     def mark_synced(self, item_id: str) -> None:
         """Marca item como sincronizado com sucesso."""
         cursor = self.conn.cursor()
-        
+
         cursor.execute("""
-            UPDATE sync_queue 
+            UPDATE sync_queue
             SET sync_status = ?, updated_at = ?, error_message = NULL
             WHERE id = ?
         """, (SyncStatus.SYNCED.value, datetime.utcnow().isoformat(), item_id))
-        
+
         self.conn.commit()
         logger.debug(f"Item {item_id} marcado como sincronizado")
-    
+
     def mark_error(self, item_id: str, error_message: str) -> None:
         """
         Marca item com erro de sincronização.
-        
+
         Args:
             item_id: ID do item.
             error_message: Mensagem de erro.
         """
         cursor = self.conn.cursor()
-        
+
         cursor.execute("""
-            UPDATE sync_queue 
-            SET sync_status = ?, 
+            UPDATE sync_queue
+            SET sync_status = ?,
                 retry_count = retry_count + 1,
                 updated_at = ?,
                 error_message = ?
             WHERE id = ?
         """, (SyncStatus.ERROR.value, datetime.utcnow().isoformat(), error_message, item_id))
-        
+
         self.conn.commit()
         logger.warning(f"Item {item_id} marcado com erro: {error_message}")
-    
+
     def mark_syncing(self, item_id: str) -> None:
         """Marca item como em processo de sincronização."""
         cursor = self.conn.cursor()
-        
+
         cursor.execute("""
-            UPDATE sync_queue 
+            UPDATE sync_queue
             SET sync_status = ?, updated_at = ?
             WHERE id = ?
         """, (SyncStatus.SYNCING.value, datetime.utcnow().isoformat(), item_id))
-        
+
         self.conn.commit()
-    
+
     def get_pending_count(self) -> int:
         """Retorna número de itens pendentes de sincronização."""
         cursor = self.conn.cursor()
-        
+
         cursor.execute("""
-            SELECT COUNT(*) FROM sync_queue 
+            SELECT COUNT(*) FROM sync_queue
             WHERE sync_status IN ('pending', 'error', 'syncing')
         """)
-        
+
         return cursor.fetchone()[0]
-    
+
     def clear_synced(self, older_than_days: int = 7) -> int:
         """
         Remove itens já sincronizados mais antigos que X dias.
-        
+
         Args:
             older_than_days: Dias para considerar como antigo.
-            
+
         Returns:
             Número de itens removidos.
         """
         cursor = self.conn.cursor()
-        
+
         cutoff_date = datetime.utcnow().isoformat()
-        
+
         cursor.execute("""
-            DELETE FROM sync_queue 
-            WHERE sync_status = 'synced' 
+            DELETE FROM sync_queue
+            WHERE sync_status = 'synced'
               AND updated_at < ?
         """, (cutoff_date,))
-        
+
         removed = cursor.rowcount
         self.conn.commit()
-        
+
         if removed > 0:
             logger.info(f"Removidos {removed} itens sincronizados antigos")
-        
+
         return removed
-    
+
     def get_all(self) -> List[SyncItem]:
         """Retorna todos os itens da fila."""
         cursor = self.conn.cursor()
-        
+
         cursor.execute("SELECT * FROM sync_queue ORDER BY updated_at DESC")
-        
+
         return [SyncItem.from_row(row) for row in cursor.fetchall()]
-    
+
     def close(self) -> None:
         """Fecha conexão com banco de dados."""
         if self.conn:

@@ -35,7 +35,7 @@ def set_correlation_id(cid: str) -> None:
 
 class CorrelationIdFilter(logging.Filter):
     """Filtro que adiciona correlation_id aos logs."""
-    
+
     def filter(self, record: logging.LogRecord) -> bool:
         record.correlation_id = get_correlation_id()
         return True
@@ -43,7 +43,7 @@ class CorrelationIdFilter(logging.Filter):
 
 class JsonFormatter(logging.Formatter):
     """Formatador de logs em JSON estruturado."""
-    
+
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -55,7 +55,7 @@ class JsonFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno,
         }
-        
+
         # Adiciona informações extras se disponíveis
         if hasattr(record, 'request_id'):
             log_entry['request_id'] = record.request_id
@@ -63,11 +63,11 @@ class JsonFormatter(logging.Formatter):
             log_entry['user_id'] = record.user_id
         if hasattr(record, 'endpoint'):
             log_entry['endpoint'] = record.endpoint
-            
+
         # Adiciona stack trace para erros
         if record.exc_info:
             log_entry['exception'] = self.formatException(record.exc_info)
-        
+
         import json
         return json.dumps(log_entry, ensure_ascii=False)
 
@@ -75,22 +75,22 @@ class JsonFormatter(logging.Formatter):
 def setup_logging(json_logs: bool = True, level: int = logging.INFO) -> None:
     """
     Configura logging estruturado para toda a aplicação.
-    
+
     Args:
         json_logs: Se True, formata logs em JSON (produção). Se False, formato texto (dev).
         level: Nível de logging (DEBUG, INFO, WARNING, ERROR, CRITICAL).
     """
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
-    
+
     # Remove handlers existentes
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     # Cria handler para console
     console_handler = logging.StreamHandler()
     console_handler.setLevel(level)
-    
+
     if json_logs:
         console_handler.setFormatter(JsonFormatter())
     else:
@@ -101,11 +101,11 @@ def setup_logging(json_logs: bool = True, level: int = logging.INFO) -> None:
                 datefmt='%Y-%m-%d %H:%M:%S'
             )
         )
-    
+
     # Adiciona filtro de correlation_id
     console_handler.addFilter(CorrelationIdFilter())
     root_logger.addHandler(console_handler)
-    
+
     # Logger da aplicação
     app_logger = logging.getLogger("geoadmin")
     app_logger.setLevel(level)
@@ -120,17 +120,17 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
     - Loga requisições e respostas
     - Adiciona headers de rastreabilidade
     """
-    
+
     async def dispatch(self, request: Request, call_next) -> Response:
         start_time = time.time()
-        
+
         # Extrai ou gera correlation_id
         correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
         set_correlation_id(correlation_id)
-        
+
         # logger da requisição
         logger = logging.getLogger("geoadmin.http")
-        
+
         logger.info(
             f"{request.method} {request.url.path}",
             extra={
@@ -140,18 +140,18 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
                 "user_agent": request.headers.get("user-agent", "unknown"),
             }
         )
-        
+
         try:
             # Processa requisição
             response = await call_next(request)
-            
+
             # Calcula duração
             duration_ms = (time.time() - start_time) * 1000
-            
+
             # Adiciona headers de rastreabilidade na resposta
             response.headers["X-Correlation-ID"] = correlation_id
             response.headers["X-Response-Time-Ms"] = f"{duration_ms:.2f}"
-            
+
             # Log da resposta
             log_level = logging.WARNING if response.status_code >= 400 else logging.INFO
             logger.log(
@@ -163,9 +163,9 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
                     "endpoint": request.url.path,
                 }
             )
-            
+
             return response
-            
+
         except Exception as exc:
             duration_ms = (time.time() - start_time) * 1000
             logger.error(
@@ -189,7 +189,7 @@ def create_health_check_details() -> Dict[str, Any]:
     - Métricas básicas
     """
     from core.config import settings
-    
+
     health_details = {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -197,7 +197,7 @@ def create_health_check_details() -> Dict[str, Any]:
         "environment": os.getenv("APP_ENV", "development"),
         "checks": {}
     }
-    
+
     # Check do Supabase
     try:
         from core.database import get_supabase
@@ -216,7 +216,7 @@ def create_health_check_details() -> Dict[str, Any]:
             "message": str(e)
         }
         health_details["status"] = "degraded"
-    
+
     # Check de memória (básico)
     import psutil
     try:
@@ -231,7 +231,7 @@ def create_health_check_details() -> Dict[str, Any]:
             "status": "unknown",
             "message": str(e)
         }
-    
+
     return health_details
 
 

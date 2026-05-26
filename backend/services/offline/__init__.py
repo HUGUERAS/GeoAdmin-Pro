@@ -10,7 +10,7 @@ from .offline_storage import OfflineStorage
 
 __all__ = [
     "SyncQueue",
-    "SyncItem", 
+    "SyncItem",
     "SyncStatus",
     "OfflineStorage",
 ]

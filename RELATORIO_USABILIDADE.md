@@ -22,7 +22,7 @@ Foram identificadas **27 falhas de usabilidade** distribuídas em 5 categorias c
 
 ### 3. **Mapa Web - Ferramentas de Edição Pouco Intuitivas**
 - **Localização**: `backend/static/geoadmin_web.html` (linhas 1400-1550)
-- **Problema**: 
+- **Problema**:
   - Ícones de ferramentas sem tooltips explicativos
   - Sem confirmação antes de deletar vértices críticos
   - Histórico de desfazer limitado (50 ações) sem indicador visual
