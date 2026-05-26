@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -18,6 +19,7 @@ PAPEIS_VALIDOS = {
 
 EVENTOS_MAGIC_LINK_VALIDOS = {'gerado', 'reenviado', 'revogado', 'consumido', 'legado'}
 CANAIS_MAGIC_LINK_VALIDOS = {'whatsapp', 'email', 'sms', 'manual', 'interno'}
+DEFAULT_OWNER_ID = os.getenv('GEOADMIN_DEFAULT_OWNER_ID', 'ced69d38-2c81-44c1-94b7-8d3c89f4ebe4')
 
 
 def _erro_schema(exc: Exception, trecho: str) -> bool:
@@ -73,9 +75,14 @@ def _buscar_cliente_por_documento(sb, cpf: str | None) -> dict[str, Any] | None:
 
 
 def _payload_cliente(nome: str, cpf: str | None, telefone: str | None, *, preferir_cpf_cnpj: bool = True) -> dict[str, Any]:
+    nome_normalizado = (nome or '').strip() or 'Cliente sem nome'
     payload: dict[str, Any] = {
-        'nome': (nome or '').strip() or 'Cliente sem nome',
+        'owner_id': DEFAULT_OWNER_ID,
+        'tipo_pessoa': 'fisica',
+        'nome': nome_normalizado,
+        'nome_razao': nome_normalizado,
         'telefone': (telefone or '').strip() or None,
+        'contato': {'telefone': (telefone or '').strip()} if (telefone or '').strip() else {},
         'deleted_at': None,
     }
     documento = _normalizar_documento(cpf)

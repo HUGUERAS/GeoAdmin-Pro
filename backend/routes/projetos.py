@@ -18,6 +18,7 @@ GET  /projetos/{id}/confrontacoes/cartas   -> gera ZIP de cartas de confrontacao
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -63,6 +64,7 @@ from middleware.auth import verificar_token
 router = APIRouter(prefix="/projetos", tags=["Projetos"], dependencies=[Depends(verificar_token)])
 
 TIPOS_PROCESSO_VALIDOS = {"INCRA_SIGEF", "SEAPA", "AMBOS"}
+DEFAULT_OWNER_ID = os.getenv("GEOADMIN_DEFAULT_OWNER_ID", "ced69d38-2c81-44c1-94b7-8d3c89f4ebe4")
 
 
 class ParticipanteProjetoPayload(BaseModel):
@@ -250,9 +252,14 @@ def _payload_cliente_compativel(
     telefone: str | None,
     preferir_cpf_cnpj: bool = True,
 ) -> dict[str, Any]:
+    nome_normalizado = nome or "Cliente sem nome"
     payload: dict[str, Any] = {
-        "nome": nome or "Cliente sem nome",
+        "owner_id": DEFAULT_OWNER_ID,
+        "tipo_pessoa": "fisica",
+        "nome": nome_normalizado,
+        "nome_razao": nome_normalizado,
         "telefone": telefone or None,
+        "contato": {"telefone": telefone} if telefone else {},
     }
     if preferir_cpf_cnpj:
         payload["cpf_cnpj"] = cpf or None
@@ -312,25 +319,41 @@ def _criar_cliente_compativel(sb, *, nome: str, cpf: str | None, telefone: str |
 
 def _inserir_projeto_compativel(sb, dados: dict[str, Any]):
     payload = dict(dados)
-    try:
-        return sb.table("projetos").insert(payload).execute()
-    except Exception as exc:
-        if payload.get("tipo_processo") is not None and _erro_schema(exc, "'tipo_processo' column"):
-            payload.pop("tipo_processo", None)
+    colunas_opcionais = {"cliente_id", "tipo_processo", "numero_job", "zona_utm", "estado"}
+    while True:
+        try:
             return sb.table("projetos").insert(payload).execute()
-        raise
+        except Exception as exc:
+            removidas = [
+                coluna
+                for coluna in list(colunas_opcionais)
+                if coluna in payload and (_erro_schema(exc, f"'{coluna}' column") or coluna.lower() in str(exc).lower())
+            ]
+            if not removidas:
+                raise
+            for coluna in removidas:
+                payload.pop(coluna, None)
+                colunas_opcionais.discard(coluna)
 
 
 
 def _atualizar_projeto_compativel(sb, projeto_id: str, dados: dict[str, Any]):
     payload = dict(dados)
-    try:
-        return sb.table("projetos").update(payload).eq("id", projeto_id).execute()
-    except Exception as exc:
-        if payload.get("tipo_processo") is not None and _erro_schema(exc, "'tipo_processo' column"):
-            payload.pop("tipo_processo", None)
+    colunas_opcionais = {"cliente_id", "tipo_processo", "numero_job", "deleted_at", "zona_utm", "estado"}
+    while True:
+        try:
             return sb.table("projetos").update(payload).eq("id", projeto_id).execute()
-        raise
+        except Exception as exc:
+            removidas = [
+                coluna
+                for coluna in list(colunas_opcionais)
+                if coluna in payload and (_erro_schema(exc, f"'{coluna}' column") or coluna.lower() in str(exc).lower())
+            ]
+            if not removidas:
+                raise
+            for coluna in removidas:
+                payload.pop(coluna, None)
+                colunas_opcionais.discard(coluna)
 
 
 
@@ -860,14 +883,15 @@ def criar_projeto(payload: ProjetoCreate):
     cliente_id = _cliente_principal_do_payload(sb, participantes, payload)
     tipo_processo = _validar_tipo_processo(payload.tipo_processo)
     dados = {
+        "owner_id": DEFAULT_OWNER_ID,
         "nome": payload.nome,
-        "zona_utm": payload.zona_utm,
         "status": payload.status,
         "numero_job": payload.numero_job,
         "municipio": payload.municipio,
-        "estado": payload.estado,
+        "uf": payload.estado,
         "cliente_id": cliente_id,
         "tipo_processo": tipo_processo,
+        "metadados": {"zona_utm": payload.zona_utm} if payload.zona_utm else None,
     }
     dados = {chave: valor for chave, valor in dados.items() if valor is not None}
     res = _inserir_projeto_compativel(sb, dados)
