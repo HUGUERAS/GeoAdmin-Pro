@@ -36,7 +36,7 @@ FASE 4 — Validação (depende de todas as anteriores)
 | 4.1 | Adicionar `backend/.env` e `mobile/credentials.json` ao `.gitignore` | `.gitignore` | 🔴 Crítico | "Agente Dados, adicione backend/.env e mobile/credentials.json ao .gitignore. Verifique que não há outras credenciais rastreadas no repo." |
 | 4.2 | Criar middleware de autenticação JWT via Supabase Auth | `backend/middleware/auth.py` (novo) | 🔴 Crítico | "Agente Dados, crie um middleware FastAPI `Depends(verificar_token)` que valida o JWT do Supabase Auth. O token vem no header `Authorization: Bearer <token>`. Use a lib `jose` ou `supabase.auth.get_user()`. Aplique em TODOS os routers exceto `/health`." |
 | 4.3 | Revisar políticas RLS — `topografo_acesso_total` é permissiva demais | `infra/supabase/migrations/` | 🟠 Alto | "Agente Dados, revise as policies RLS. A policy `topografo_acesso_total` deve filtrar por `auth.uid()` para que cada topógrafo veja apenas seus projetos. Crie uma nova migration." |
-| 4.4 | Separar `anon key` (mobile) de `service_role` (backend) | `.env`, `mobile/constants/` | 🟠 Alto | "Agente Dados, garanta que o mobile use apenas a `anon_key` do Supabase e o backend use `service_role`. Documente a diferença no CLAUDE.md." |
+| 4.4 | Separar `anon key` (mobile) de `service_role` (backend) | `.env`, `mobile/constants/` | 🟠 Alto | "Agente Dados, garanta que o mobile use apenas a `anon_key` do Supabase e o backend use `service_role`. Documente a diferença no AGENTS.md." |
 
 **Critério de conclusão:** Nenhuma credencial no git, auth middleware funcionando, RLS restritiva.
 
