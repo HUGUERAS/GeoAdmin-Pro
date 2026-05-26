@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import * as DocumentPicker from 'expo-document-picker'
 import { useRouter } from 'expo-router'
+import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
 import { apiPost, apiPostFormData } from '../../../lib/api'
 
@@ -149,7 +150,7 @@ async function anexarArquivoNoFormData(formData: FormData, asset: DocumentPicker
 function chipStyleAtivo(ativo: boolean, C: typeof Colors.dark) {
   return ativo
     ? { backgroundColor: C.primary, borderColor: C.primary }
-    : { backgroundColor: C.background, borderColor: C.cardBorder }
+    : { backgroundColor: C.panel, borderColor: C.line }
 }
 
 export default function NovoProjetoScreen() {
@@ -328,22 +329,29 @@ export default function NovoProjetoScreen() {
   return (
     <ScrollView style={[s.container, { backgroundColor: C.background }]} contentContainerStyle={s.content}>
       <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}> 
-        <Text style={[s.title, { color: C.text }]}>Novo projeto</Text>
-        <Text style={[s.subtitle, { color: C.muted }]}>Abra o processo com os participantes certos e, se quiser, já deixe a base cartografica inicial pronta para o topografo.</Text>
+        <View style={s.cardTitleRow}>
+          <View style={[s.stepBadge, { borderColor: C.line, backgroundColor: C.accentSoft }]}>
+            <Text style={[s.stepTxt, { color: C.primary }]}>01</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.title, { color: C.text }]}>Novo projeto</Text>
+            <Text style={[s.subtitle, { color: C.muted }]}>Abra o processo com local, status e zona técnica.</Text>
+          </View>
+        </View>
 
         <View style={s.field}>
           <Text style={[s.label, { color: C.muted }]}>Nome do projeto</Text>
-          <TextInput style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]} value={form.nome} onChangeText={(v) => atualizar('nome', v)} placeholder="Ex.: Fazenda Boa Vista" placeholderTextColor={C.muted} />
+          <TextInput style={[s.input, { color: C.text, borderColor: C.fieldBorder, backgroundColor: C.field }]} value={form.nome} onChangeText={(v) => atualizar('nome', v)} placeholder="Ex.: Fazenda Boa Vista" placeholderTextColor={C.muted} />
         </View>
 
         <View style={s.row}>
           <View style={[s.field, s.flex]}>
             <Text style={[s.label, { color: C.muted }]}>Município</Text>
-            <TextInput style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]} value={form.municipio} onChangeText={(v) => atualizar('municipio', v)} placeholder="Município" placeholderTextColor={C.muted} />
+            <TextInput style={[s.input, { color: C.text, borderColor: C.fieldBorder, backgroundColor: C.field }]} value={form.municipio} onChangeText={(v) => atualizar('municipio', v)} placeholder="Município" placeholderTextColor={C.muted} />
           </View>
           <View style={[s.field, s.ufField]}>
             <Text style={[s.label, { color: C.muted }]}>UF</Text>
-            <TextInput style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]} value={form.estado} onChangeText={(v) => atualizar('estado', v.toUpperCase())} placeholder="UF" placeholderTextColor={C.muted} maxLength={2} />
+            <TextInput style={[s.input, { color: C.text, borderColor: C.fieldBorder, backgroundColor: C.field }]} value={form.estado} onChangeText={(v) => atualizar('estado', v.toUpperCase())} placeholder="UF" placeholderTextColor={C.muted} maxLength={2} />
           </View>
         </View>
 
@@ -361,25 +369,31 @@ export default function NovoProjetoScreen() {
 
         <View style={s.field}>
           <Text style={[s.label, { color: C.muted }]}>Zona UTM</Text>
-          <TextInput style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.background }]} value={form.zona_utm} onChangeText={(v) => atualizar('zona_utm', v.toUpperCase())} placeholder="23S" placeholderTextColor={C.muted} />
+          <TextInput style={[s.input, { color: C.text, borderColor: C.fieldBorder, backgroundColor: C.field }]} value={form.zona_utm} onChangeText={(v) => atualizar('zona_utm', v.toUpperCase())} placeholder="23S" placeholderTextColor={C.muted} />
         </View>
       </View>
 
       <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}> 
         <View style={s.sectionHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.title, { color: C.text }]}>Participantes do projeto</Text>
-            <Text style={[s.subtitle, { color: C.muted }]}>Cliente principal + outros envolvidos. Cada participante pode receber um magic link próprio.</Text>
+          <View style={s.cardTitleRow}>
+            <View style={[s.stepBadge, { borderColor: C.line, backgroundColor: C.cyanSoft }]}>
+              <Text style={[s.stepTxt, { color: C.info }]}>02</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.title, { color: C.text }]}>Participantes</Text>
+              <Text style={[s.subtitle, { color: C.muted }]}>Cliente principal e envolvidos no fluxo do magic link.</Text>
+            </View>
           </View>
-          <TouchableOpacity style={[s.smallButton, { borderColor: C.cardBorder, backgroundColor: C.background }]} onPress={adicionarParticipante}>
-            <Text style={[s.smallButtonTxt, { color: C.text }]}>+ Adicionar outro cliente</Text>
+          <TouchableOpacity style={[s.smallButton, { borderColor: C.line, backgroundColor: C.panel }]} onPress={adicionarParticipante}>
+            <Feather name="user-plus" size={14} color={C.text} />
+            <Text style={[s.smallButtonTxt, { color: C.text }]}>Adicionar</Text>
           </TouchableOpacity>
         </View>
 
         {participantes.map((participante, indice) => {
           const principal = indice === 0
           return (
-            <View key={participante.id} style={[s.participantCard, { borderColor: C.cardBorder, backgroundColor: C.background }]}> 
+            <View key={participante.id} style={[s.participantCard, { borderColor: C.line, backgroundColor: C.surfaceAlt }]}> 
               <View style={s.participantHeader}>
                 <View>
                   <Text style={[s.participantTitle, { color: C.text }]}>{principal ? 'Cliente principal' : `Participante ${indice + 1}`}</Text>
@@ -393,7 +407,7 @@ export default function NovoProjetoScreen() {
               <View style={s.field}>
                 <Text style={[s.label, { color: C.muted }]}>Nome</Text>
                 <TextInput
-                  style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.card }]}
+                  style={[s.input, { color: C.text, borderColor: C.fieldBorder, backgroundColor: C.field }]}
                   value={participante.nome}
                   onChangeText={(v) => atualizarParticipante(participante.id, 'nome', v)}
                   placeholder="Nome completo"
@@ -405,7 +419,7 @@ export default function NovoProjetoScreen() {
                 <View style={[s.field, s.flex]}>
                   <Text style={[s.label, { color: C.muted }]}>CPF</Text>
                   <TextInput
-                    style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.card }]}
+                    style={[s.input, { color: C.text, borderColor: C.fieldBorder, backgroundColor: C.field }]}
                     value={participante.cpf}
                     onChangeText={(v) => atualizarParticipante(participante.id, 'cpf', v)}
                     placeholder="000.000.000-00"
@@ -416,7 +430,7 @@ export default function NovoProjetoScreen() {
                 <View style={[s.field, s.flex]}>
                   <Text style={[s.label, { color: C.muted }]}>Telefone</Text>
                   <TextInput
-                    style={[s.input, { color: C.text, borderColor: C.cardBorder, backgroundColor: C.card }]}
+                    style={[s.input, { color: C.text, borderColor: C.fieldBorder, backgroundColor: C.field }]}
                     value={participante.telefone}
                     onChangeText={(v) => atualizarParticipante(participante.id, 'telefone', v)}
                     placeholder="(00) 00000-0000"
@@ -454,7 +468,7 @@ export default function NovoProjetoScreen() {
               )}
 
               <TouchableOpacity
-                style={[s.toggleCard, { borderColor: C.cardBorder, backgroundColor: participante.gerar_magic_link ? `${C.primary}22` : C.card }]}
+                style={[s.toggleCard, { borderColor: participante.gerar_magic_link ? C.primary : C.line, backgroundColor: participante.gerar_magic_link ? C.accentSoft : C.panel }]}
                 onPress={() => atualizarParticipante(participante.id, 'gerar_magic_link', !participante.gerar_magic_link)}
               >
                 <View style={[s.toggleBullet, { backgroundColor: participante.gerar_magic_link ? C.primary : C.cardBorder }]} />
@@ -476,12 +490,18 @@ export default function NovoProjetoScreen() {
 
       <View style={[s.card, { backgroundColor: C.card, borderColor: C.cardBorder }]}> 
         <View style={s.sectionHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.title, { color: C.text }]}>Base cartográfica inicial</Text>
-            <Text style={[s.subtitle, { color: C.muted }]}>Importe uma referência simples para o topografo revisar depois. Nada vira base oficial sem confirmação explícita.</Text>
+          <View style={s.cardTitleRow}>
+            <View style={[s.stepBadge, { borderColor: C.line, backgroundColor: C.accentSoft }]}>
+              <Text style={[s.stepTxt, { color: C.primary }]}>03</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.title, { color: C.text }]}>Base cartográfica</Text>
+              <Text style={[s.subtitle, { color: C.muted }]}>Referência inicial para revisão técnica posterior.</Text>
+            </View>
           </View>
-          <TouchableOpacity style={[s.smallButton, { borderColor: C.cardBorder, backgroundColor: C.background }]} onPress={adicionarArquivo}>
-            <Text style={[s.smallButtonTxt, { color: C.text }]}>+ Adicionar arquivo</Text>
+          <TouchableOpacity style={[s.smallButton, { borderColor: C.line, backgroundColor: C.panel }]} onPress={adicionarArquivo}>
+            <Feather name="paperclip" size={14} color={C.text} />
+            <Text style={[s.smallButtonTxt, { color: C.text }]}>Arquivo</Text>
           </TouchableOpacity>
         </View>
 
@@ -552,9 +572,12 @@ export default function NovoProjetoScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingTop: 26, gap: 14 },
-  card: { borderWidth: 1, borderRadius: 18, padding: 16, gap: 14 },
-  title: { fontSize: 20, fontWeight: '700' },
+  content: { padding: 16, paddingTop: 24, gap: 12 },
+  card: { borderWidth: 1, borderRadius: 10, padding: 14, gap: 14 },
+  cardTitleRow: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  stepBadge: { width: 34, height: 34, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  stepTxt: { fontSize: 12, fontWeight: '900' },
+  title: { fontSize: 19, fontWeight: '800' },
   subtitle: { fontSize: 13, lineHeight: 20 },
   section: { fontSize: 15, fontWeight: '700', marginTop: 4 },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
@@ -562,35 +585,35 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   flex: { flex: 1 },
   ufField: { width: 78 },
-  label: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: '700' },
-  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 14 },
+  label: { fontSize: 11, textTransform: 'uppercase', fontWeight: '800' },
+  input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, fontSize: 14 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
-  smallButton: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10 },
+  chip: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9 },
+  smallButton: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
   smallButtonTxt: { fontSize: 12, fontWeight: '800' },
-  participantCard: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
+  participantCard: { borderWidth: 1, borderRadius: 10, padding: 14, gap: 12 },
   participantHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   participantTitle: { fontSize: 16, fontWeight: '800' },
   participantSubtitle: { fontSize: 12, lineHeight: 18, marginTop: 2 },
-  badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  badge: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   badgeTxt: { fontSize: 11, fontWeight: '800' },
   roleInline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   roleLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: '700' },
   roleValue: { fontSize: 13, fontWeight: '700' },
-  toggleCard: { borderWidth: 1, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  toggleCard: { borderWidth: 1, borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   toggleBullet: { width: 14, height: 14, borderRadius: 999 },
   toggleTitle: { fontSize: 14, fontWeight: '700' },
   toggleSubtitle: { fontSize: 12, lineHeight: 18, marginTop: 2 },
   removeLink: { alignSelf: 'flex-start' },
   removeLinkTxt: { fontSize: 12, fontWeight: '700' },
-  emptyBox: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 6 },
+  emptyBox: { borderWidth: 1, borderRadius: 8, padding: 14, gap: 6 },
   emptyTitle: { fontSize: 14, fontWeight: '700' },
   emptySubtitle: { fontSize: 12, lineHeight: 18 },
-  fileCard: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
+  fileCard: { borderWidth: 1, borderRadius: 10, padding: 14, gap: 12 },
   fileHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   fileTitle: { fontSize: 14, fontWeight: '800' },
   fileSubtitle: { fontSize: 12, marginTop: 2 },
-  submit: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 30 },
+  submit: { borderRadius: 8, paddingVertical: 16, alignItems: 'center', marginBottom: 30 },
   submitTxt: { fontSize: 15, fontWeight: '800' },
 })
 

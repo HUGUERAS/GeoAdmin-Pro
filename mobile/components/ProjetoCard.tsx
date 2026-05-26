@@ -1,4 +1,5 @@
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native'
+import { Feather } from '@expo/vector-icons'
 import { Colors } from '../constants/Colors'
 import { StatusBadge } from './StatusBadge'
 
@@ -80,49 +81,65 @@ export function ProjetoCard({ projeto, onPress }: { projeto: Projeto; onPress: (
       accessibilityRole="button"
       accessibilityLabel={`Projeto ${projeto.projeto_nome}`}
     >
-      <View style={s.top}>
-        <Text style={[s.nome, { color: C.text }]} numberOfLines={1}>{projeto.projeto_nome}</Text>
-        <StatusBadge status={projeto.status} />
-      </View>
-
-      <Text style={[s.cliente, { color: C.muted }]} numberOfLines={1}>
-        {projeto.cliente_nome || 'Sem cliente principal vinculado'}
-      </Text>
-
-      <View style={s.progressWrap}>
-        <View style={[s.progressTrack, { backgroundColor: C.cardBorder }]}>
-          <View style={[s.progressFill, { backgroundColor: C.primary, width: `${meta.progresso}%` }]} />
+      <View style={[s.rail, { backgroundColor: lotesPendentes > 0 ? C.warning : C.primary }]} />
+      <View style={s.body}>
+        <View style={s.top}>
+          <View style={s.titleGroup}>
+            <Text style={[s.nome, { color: C.text }]} numberOfLines={1}>{projeto.projeto_nome}</Text>
+            <Text style={[s.cliente, { color: C.muted }]} numberOfLines={1}>
+              {projeto.cliente_nome || 'Cliente principal pendente'}
+            </Text>
+          </View>
+          <StatusBadge status={projeto.status} />
         </View>
-        <Text style={[s.progressTxt, { color: C.primary }]}>{meta.progresso}%</Text>
-      </View>
 
-      <Text style={[s.acao, { color: C.text }]} numberOfLines={2}>Próxima ação: {meta.proximaAcao}</Text>
-      <Text style={[s.loteResumo, { color: C.muted }]} numberOfLines={1}>{meta.loteResumo}</Text>
+        <View style={s.progressWrap}>
+          <View style={[s.progressTrack, { backgroundColor: C.line }]}>
+            <View style={[s.progressFill, { backgroundColor: C.primary, width: `${meta.progresso}%` }]} />
+          </View>
+          <Text style={[s.progressTxt, { color: C.primary }]}>{meta.progresso}%</Text>
+        </View>
 
-      <View style={s.footer}>
-        <Text style={[s.info, { color: C.muted }]}>{projeto.municipio || 'Município pendente'}</Text>
-        {totalLotes > 0 ? (
-          <Text style={[s.pontos, { color: lotesPendentes > 0 ? C.primary : C.success }]}>{totalLotes} lotes</Text>
-        ) : (
-          <Text style={[s.pontos, { color: C.primary }]}>{projeto.total_pontos ?? 0} pts</Text>
-        )}
+        <View style={[s.actionBox, { backgroundColor: C.surfaceAlt, borderColor: C.line }]}>
+          <Feather name="target" size={14} color={C.primary} />
+          <Text style={[s.acao, { color: C.text }]} numberOfLines={2}>{meta.proximaAcao}</Text>
+        </View>
+
+        <View style={s.footer}>
+          <View style={s.metaItem}>
+            <Feather name="map-pin" size={13} color={C.muted} />
+            <Text style={[s.info, { color: C.muted }]} numberOfLines={1}>{projeto.municipio || 'Município pendente'}</Text>
+          </View>
+          <View style={s.metaItem}>
+            <Feather name={totalLotes > 0 ? 'layers' : 'crosshair'} size={13} color={totalLotes > 0 && lotesPendentes === 0 ? C.success : C.primary} />
+            <Text style={[s.pontos, { color: totalLotes > 0 && lotesPendentes === 0 ? C.success : C.primary }]} numberOfLines={1}>
+              {totalLotes > 0 ? `${totalLotes} lotes` : `${projeto.total_pontos ?? 0} pts`}
+            </Text>
+          </View>
+        </View>
+        <Text style={[s.loteResumo, { color: C.muted }]} numberOfLines={1}>{meta.loteResumo}</Text>
       </View>
     </TouchableOpacity>
   )
 }
 
 const s = StyleSheet.create({
-  card: { borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 0.5, gap: 8 },
+  card: { borderRadius: 10, marginHorizontal: 16, marginBottom: 10, borderWidth: 1, overflow: 'hidden', flexDirection: 'row' },
+  rail: { width: 4 },
+  body: { flex: 1, padding: 14, gap: 10 },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  nome: { fontSize: 15, fontWeight: '700', flex: 1 },
+  titleGroup: { flex: 1, gap: 3 },
+  nome: { fontSize: 15, fontWeight: '800', flex: 1 },
   cliente: { fontSize: 12 },
   progressWrap: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  progressTrack: { flex: 1, height: 8, borderRadius: 999, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 999 },
+  progressTrack: { flex: 1, height: 6, borderRadius: 6, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 6 },
   progressTxt: { fontSize: 12, fontWeight: '700', minWidth: 36, textAlign: 'right' },
-  acao: { fontSize: 12, lineHeight: 18, fontWeight: '600' },
+  actionBox: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 9, flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  acao: { flex: 1, fontSize: 12, lineHeight: 18, fontWeight: '700' },
   loteResumo: { fontSize: 12 },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  info: { fontSize: 12 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '52%' },
+  info: { fontSize: 12, flexShrink: 1 },
   pontos: { fontSize: 12, fontWeight: '700' },
 })

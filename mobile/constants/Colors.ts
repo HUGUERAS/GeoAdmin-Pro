@@ -1,16 +1,28 @@
 export const Colors = {
   dark: {
-    background: '#07131B', // Azul petróleo escuro para dar cara mais técnica
-    card: '#0D1E29', // Cartões com contraste limpo sobre o fundo
-    cardBorder: '#183445', // Borda fria e sutil
-    primary: '#28C76F', // Verde operacional mais vivo
-    primaryDark: '#149553', // Variação para estados de toque
-    primaryText: '#04110A', // Texto escuro sobre botões claros
-    text: '#F3FBF7', // Branco levemente esverdeado
-    muted: '#8FA4B2', // Cinza azulado para apoio
-    success: '#34D399', // Verde de sucesso mais luminoso
+    background: '#061017',
+    surface: '#081923',
+    surfaceAlt: '#0A202B',
+    panel: '#0D1E29',
+    panelStrong: '#102B38',
+    card: '#0D1E29',
+    cardBorder: '#1A3341',
+    line: '#16303E',
+    lineStrong: '#275064',
+    field: '#081721',
+    fieldBorder: '#224557',
+    accentSoft: '#123825',
+    cyanSoft: '#0E3140',
+    shadow: '#02070A',
+    grid: '#12303D',
+    primary: '#35D07F',
+    primaryDark: '#149553',
+    primaryText: '#03140A',
+    text: '#F3FBF7',
+    muted: '#93A9B6',
+    success: '#34D399',
     danger: '#EF4444',
-    info: '#38BDF8',
+    info: '#36C5F0',
     warning: '#FBBF24',
     purple: '#7C6CF2',
     gray: '#6B7C88',

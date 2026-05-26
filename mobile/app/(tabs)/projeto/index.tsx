@@ -134,21 +134,33 @@ export default function ProjetosScreen() {
         )}
         ListHeaderComponent={
           <>
-            <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(topInset + 12, 20) }]}>
+            <View style={[s.header, { backgroundColor: C.surface, borderBottomColor: C.cardBorder, paddingTop: Math.max(topInset + 12, 20) }]}>
               <View style={s.topRow}>
                 <View style={{ flex: 1 }}>
+                  <Text style={[s.kicker, { color: C.primary }]}>VERTEX OPERACIONAL</Text>
                   <Text style={[s.titulo, { color: C.text }]}>Projetos</Text>
-                  <Text style={[s.sub, { color: C.muted }]}>Painel de campo, documentação e operação por lote</Text>
+                  <Text style={[s.sub, { color: C.muted }]}>Campo, documentação e perímetro em um fluxo só</Text>
                 </View>
-                <TouchableOpacity style={[s.novoBtn, { borderColor: C.primary }]} onPress={() => router.push('/projeto/novo' as any)} accessibilityRole="button" accessibilityLabel="Criar novo projeto">
-                  <Feather name="plus" size={16} color={C.primary} />
-                  <Text style={[s.novoBtnTxt, { color: C.primary }]}>Novo</Text>
+                <TouchableOpacity style={[s.novoBtn, { backgroundColor: C.primary }]} onPress={() => router.push('/projeto/novo' as any)} accessibilityRole="button" accessibilityLabel="Criar novo projeto">
+                  <Feather name="plus" size={16} color={C.primaryText} />
+                  <Text style={[s.novoBtnTxt, { color: C.primaryText }]}>Novo</Text>
                 </TouchableOpacity>
+              </View>
+
+              <View style={s.statusRow}>
+                <View style={[s.statusChip, { borderColor: C.line, backgroundColor: C.accentSoft }]}>
+                  <Feather name={offline ? 'hard-drive' : 'cloud'} size={13} color={offline ? C.warning : C.primary} />
+                  <Text style={[s.statusTxt, { color: C.text }]}>{offline ? 'Cache local' : 'API ativa'}</Text>
+                </View>
+                <View style={[s.statusChip, { borderColor: C.line, backgroundColor: C.cyanSoft }]}>
+                  <Feather name="database" size={13} color={C.info} />
+                  <Text style={[s.statusTxt, { color: C.text }]}>Supabase</Text>
+                </View>
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.metricasRow}>
                 {cardsMeta.map((item) => (
-                  <View key={item.label} style={[s.metaCard, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
+                  <View key={item.label} style={[s.metaCard, { backgroundColor: C.panel, borderColor: C.line }]}>
                     <View style={s.metaIconRow}>
                       <View style={[s.metaIcon, { backgroundColor: `${item.cor}18` }]}>
                         <Feather name={item.icone as any} size={16} color={item.cor} />
@@ -171,18 +183,18 @@ export default function ProjetosScreen() {
                         s.chip,
                         selected
                           ? { backgroundColor: C.primary }
-                          : { backgroundColor: 'transparent', borderColor: C.cardBorder, borderWidth: 1 },
+                          : { backgroundColor: C.panel, borderColor: C.line, borderWidth: 1 },
                       ]}
                       accessibilityRole="button"
                       accessibilityLabel={`Filtrar por ${chip.label}`}
                     >
-                      <Text style={[s.chipTxt, { color: selected ? '#fff' : C.muted }]}>{chip.label}</Text>
+                      <Text style={[s.chipTxt, { color: selected ? C.primaryText : C.muted }]}>{chip.label}</Text>
                     </TouchableOpacity>
                   )
                 })}
               </ScrollView>
 
-              <View style={[s.buscaBox, { backgroundColor: C.background, borderColor: C.cardBorder }]}>
+              <View style={[s.buscaBox, { backgroundColor: C.field, borderColor: C.fieldBorder }]}>
                 <Feather name="search" size={16} color={C.muted} />
                 <TextInput
                   style={[s.buscaInput, { color: C.text }]}
@@ -227,24 +239,28 @@ export default function ProjetosScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, borderBottomWidth: 0.5, gap: 14, marginBottom: 8 },
+  header: { padding: 18, borderBottomWidth: 1, gap: 14, marginBottom: 12 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  titulo: { fontSize: 28, fontWeight: '700' },
-  sub: { fontSize: 13, lineHeight: 20 },
-  novoBtn: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  kicker: { fontSize: 11, fontWeight: '900', marginBottom: 4 },
+  titulo: { fontSize: 28, fontWeight: '800' },
+  sub: { fontSize: 13, lineHeight: 19 },
+  novoBtn: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
   novoBtnTxt: { fontSize: 13, fontWeight: '700' },
+  statusRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  statusChip: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusTxt: { fontSize: 12, fontWeight: '700' },
   metricasRow: { flexDirection: 'row', gap: 10 },
-  metaCard: { minWidth: 148, borderWidth: 1, borderRadius: 14, padding: 12, gap: 8 },
+  metaCard: { minWidth: 148, borderWidth: 1, borderRadius: 8, padding: 12, gap: 8 },
   metaIconRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  metaIcon: { width: 30, height: 30, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  metaIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   metaValor: { fontSize: 22, fontWeight: '700' },
   metaLabel: { fontSize: 12, fontWeight: '500' },
   chipsRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
-  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
-  chipTxt: { fontSize: 13, fontWeight: '500' },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 },
+  chipTxt: { fontSize: 13, fontWeight: '700' },
   buscaBox: {
     minHeight: 48,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 14,
     flexDirection: 'row',
