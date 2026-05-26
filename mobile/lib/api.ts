@@ -1,5 +1,6 @@
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+
+const DEFAULT_API_BASE_URL = 'https://geoadmin-pro-api-njpsk7knsa-rj.a.run.app';
 
 export type JsonValue =
   | string
@@ -27,45 +28,10 @@ function getRequiredPublicApiBaseUrl(): string {
     return explicitUrl;
   }
 
-  throw new Error('EXPO_PUBLIC_API_BASE_URL não configurado para ambiente web público.');
-}
-
-function extractHostFromExpoConfig(): string | null {
-  const expoConfigHost =
-    (Constants.expoConfig as { hostUri?: string } | null)?.hostUri ??
-    (Constants as { manifest2?: { extra?: { expoGo?: { debuggerHost?: string } } } }).manifest2
-      ?.extra?.expoGo?.debuggerHost ??
-    (Constants as { manifest?: { debuggerHost?: string } }).manifest?.debuggerHost;
-
-  if (!expoConfigHost) {
-    return null;
-  }
-
-  return expoConfigHost.split(':')[0] ?? null;
+  return DEFAULT_API_BASE_URL;
 }
 
 function getApiBaseUrlWeb(): string {
-  if (typeof window === 'undefined') {
-    return getRequiredPublicApiBaseUrl();
-  }
-
-  const { hostname, origin, port, protocol } = window.location;
-
-  const hostLocal =
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname.startsWith('192.168.') ||
-    hostname.startsWith('10.') ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
-
-  if (hostLocal && port === '8000') {
-    return origin.replace(/\/+$/, '');
-  }
-
-  if (hostLocal && hostname) {
-    return `${protocol}//${hostname}:8000`;
-  }
-
   return getRequiredPublicApiBaseUrl();
 }
 
@@ -79,16 +45,11 @@ export function getApiBaseUrl(): string {
     return getApiBaseUrlWeb();
   }
 
-  const host = extractHostFromExpoConfig();
-  if (host) {
-    return `http://${host}:8000`;
-  }
-
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000';
+    return DEFAULT_API_BASE_URL;
   }
 
-  return 'http://127.0.0.1:8000';
+  return DEFAULT_API_BASE_URL;
 }
 
 function formatErrorDetail(detail: JsonValue | undefined): string {
