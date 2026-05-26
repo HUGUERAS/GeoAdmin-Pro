@@ -439,6 +439,52 @@ def _perimetro_ativo(sb, projeto_id: str) -> dict[str, Any] | None:
     return query_segura(lambda: buscar_perimetro_ativo(projeto_id, supabase=sb), None)
 
 
+def _normalizar_pontos_projeto(pontos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalizados: list[dict[str, Any]] = []
+    for ponto in pontos:
+        codigo = ponto.get("codigo") or ponto.get("nome")
+        altitude = ponto.get("altitude_m")
+        if altitude is None:
+            altitude = ponto.get("cota")
+        normalizados.append({
+            **ponto,
+            "nome": ponto.get("nome") or codigo,
+            "codigo": codigo,
+            "altitude_m": altitude,
+            "descricao": ponto.get("descricao"),
+        })
+    return normalizados
+
+
+def _pontos_projeto(sb, projeto_id: str) -> list[dict[str, Any]]:
+    pontos_view = query_segura(
+        lambda: (
+            sb.table("vw_pontos_geo")
+            .select("id, nome, altitude_m, descricao, codigo, lon, lat")
+            .eq("projeto_id", projeto_id)
+            .execute()
+            .data
+            or []
+        ),
+        None,
+    )
+    if pontos_view:
+        return _normalizar_pontos_projeto(pontos_view)
+
+    pontos_tabela = query_segura(
+        lambda: (
+            sb.table("pontos")
+            .select("*")
+            .eq("projeto_id", projeto_id)
+            .execute()
+            .data
+            or []
+        ),
+        [],
+    )
+    return _normalizar_pontos_projeto(pontos_tabela)
+
+
 
 def _resolver_cliente_para_criacao(sb, payload: ProjetoCreate) -> str | None:
     if payload.cliente_id:
@@ -745,17 +791,7 @@ def _enriquecer_projeto(sb, projeto_id: str) -> dict[str, Any]:
     projeto = _projeto_ou_404(sb, projeto_id)
     cliente = _safe(_cliente_primario, sb, projeto.get("cliente_id"), default=None, label="_cliente_primario")
     participantes = listar_participantes_projeto(sb, projeto_id, cliente_principal=cliente)
-
-    def _pontos():
-        res = (
-            sb.table("vw_pontos_geo")
-            .select("id, nome, altitude_m, descricao, codigo, lon, lat")
-            .eq("projeto_id", projeto_id)
-            .execute()
-        )
-        return res.data or []
-
-    pontos = _safe(_pontos, default=[], label="pontos")
+    pontos = _safe(_pontos_projeto, sb, projeto_id, default=[], label="pontos")
     perimetro_ativo = _safe(_perimetro_ativo, sb, projeto_id, default=None, label="_perimetro_ativo")
     formulario = _safe(_formulario_projeto, sb, projeto_id, projeto.get("cliente_id"), default=None, label="_formulario_projeto")
     documentos = _safe(_documentos_projeto, sb, projeto_id, default=[], label="_documentos_projeto")
