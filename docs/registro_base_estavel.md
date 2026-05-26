@@ -67,7 +67,7 @@ Foi adicionada uma migration incremental para:
 
 Antes:
 
-- parte do app usava URL fixa da Railway;
+- parte do app usava URL fixa de provedor externo;
 - outra parte usava resolução dinâmica em `mobile/lib/api.ts`.
 
 Agora:

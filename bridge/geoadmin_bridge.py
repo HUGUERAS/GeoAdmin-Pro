@@ -16,7 +16,7 @@ import winreg
 import zipfile
 
 
-BACKEND_PADRAO = "https://geoadmin-pro-production.up.railway.app"
+BACKEND_PADRAO = os.getenv("GEOADMIN_BACKEND_URL", "http://127.0.0.1:8000")
 PASTA_TRABALHO_PADRAO = Path.home() / "GeoAdmin" / "Metrica"
 CONFIG_DIR = Path(os.getenv("APPDATA", Path.home() / "AppData" / "Roaming")) / "GeoAdminBridge"
 CONFIG_PATH = CONFIG_DIR / "config.json"

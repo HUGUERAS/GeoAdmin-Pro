@@ -16,11 +16,13 @@ Utilitario Windows para preparar um projeto do GeoAdmin e entregar o workspace m
 
 ```bash
 python bridge/geoadmin_bridge.py ^
-  --backend-url https://geoadmin-pro-production.up.railway.app ^
+  --backend-url http://127.0.0.1:8000 ^
   --projeto-id 36510522-3544-46fe-bbe1-e6348dd708df ^
   --abrir-metrica ^
   --salvar-config
 ```
+
+Para usar uma API publicada, troque `--backend-url` pela URL publica do backend ou defina `GEOADMIN_BACKEND_URL`.
 
 Ou consumindo um pacote local ja baixado:
 

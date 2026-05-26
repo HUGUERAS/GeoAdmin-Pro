@@ -14,7 +14,7 @@ Sistema de administração geoespacial para topografia, georreferenciamento e ge
 ## Arquitetura
 - GeoAdmin-Pro é a **fonte única de verdade** — não replicar dados em múltiplos sistemas
 - Credenciais **exclusivamente em `.env`** — nunca commitar
-- URL do backend via `mobile/constants/Api.ts` (`API_URL`) — dev aponta para IP local, prod para Railway
+- URL do backend via `mobile/lib/api.ts` — dev aponta para backend local na porta `8000`; deploy publico exige `EXPO_PUBLIC_API_BASE_URL`
 
 ## Backend (FastAPI)
 **Entry point:** `backend/main.py`
@@ -37,7 +37,7 @@ Rotas:
 
 **Rotas de cálculo** definidas em `backend/routes/geo.py` e registradas em `main.py`.
 
-**Deploy:** Railway — configurado via `backend/railway.json` e `backend/Procfile`
+**Deploy:** sem provedor oficial fixo. O backend e FastAPI padrao; configure `PORT`, `APP_URL`/`PUBLIC_APP_URL` e as chaves Supabase na plataforma escolhida.
 
 **Variáveis de ambiente necessárias:**
 ```

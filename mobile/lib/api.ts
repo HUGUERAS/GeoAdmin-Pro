@@ -11,10 +11,23 @@ export type JsonValue =
 
 // Token de autenticação do Supabase — defina via definirToken()
 let _authToken: string | null = null;
-const API_PUBLICA_PADRAO = 'https://geoadmin-pro-production.up.railway.app';
 
 export function definirToken(token: string | null): void {
   _authToken = token;
+}
+
+function getExplicitApiBaseUrl(): string | null {
+  const explicitUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  return explicitUrl ? explicitUrl.replace(/\/+$/, '') : null;
+}
+
+function getRequiredPublicApiBaseUrl(): string {
+  const explicitUrl = getExplicitApiBaseUrl();
+  if (explicitUrl) {
+    return explicitUrl;
+  }
+
+  throw new Error('EXPO_PUBLIC_API_BASE_URL não configurado para ambiente web público.');
 }
 
 function extractHostFromExpoConfig(): string | null {
@@ -33,7 +46,7 @@ function extractHostFromExpoConfig(): string | null {
 
 function getApiBaseUrlWeb(): string {
   if (typeof window === 'undefined') {
-    return API_PUBLICA_PADRAO;
+    return getRequiredPublicApiBaseUrl();
   }
 
   const { hostname, origin, port, protocol } = window.location;
@@ -53,14 +66,13 @@ function getApiBaseUrlWeb(): string {
     return `${protocol}//${hostname}:8000`;
   }
 
-  // Produção (Vercel/CDN): usar proxy relativo para evitar CORS
-  return '/proxy';
+  return getRequiredPublicApiBaseUrl();
 }
 
 export function getApiBaseUrl(): string {
-  const explicitUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  const explicitUrl = getExplicitApiBaseUrl();
   if (explicitUrl) {
-    return explicitUrl.replace(/\/+$/, '');
+    return explicitUrl;
   }
 
   if (Platform.OS === 'web') {

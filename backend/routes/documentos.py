@@ -111,10 +111,6 @@ def _resolver_app_url() -> str:
         if valor:
             return valor.rstrip("/")
 
-    railway = (os.environ.get("RAILWAY_PUBLIC_DOMAIN") or "").strip()
-    if railway:
-        return f"https://{railway.lstrip('/')}".rstrip("/")
-
     vercel = (os.environ.get("VERCEL_URL") or "").strip()
     if vercel:
         return f"https://{vercel.lstrip('/')}".rstrip("/")

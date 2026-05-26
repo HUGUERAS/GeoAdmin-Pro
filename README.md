@@ -178,8 +178,17 @@ O build estatico e gerado em `mobile/dist/`.
 
 ### Backend
 
-O backend esta preparado para deploy no Railway usando `backend/Procfile` e `backend/railway.json`.
-Para o magic link funcionar fora do ambiente local, configure tambem `APP_URL` no Railway apontando para a URL publica da API.
+O backend nao tem provedor oficial fixo no repo. Publique `backend/main.py` como app FastAPI na plataforma escolhida e configure:
+
+```env
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+APP_URL=https://URL_PUBLICA_DA_API
+PUBLIC_APP_URL=https://URL_PUBLICA_DA_API
+```
+
+Para build web/mobile publicado, defina tambem `EXPO_PUBLIC_API_BASE_URL` apontando para essa API. Sem essa variavel, o app web publico falha de forma explicita em vez de usar endpoint antigo.
 
 ### GeoAdmin Bridge
 
