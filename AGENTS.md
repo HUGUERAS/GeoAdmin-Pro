@@ -42,7 +42,9 @@ Rotas:
 **Variáveis de ambiente necessárias:**
 ```
 SUPABASE_URL=https://jrlrlsotwsiidglcbifo.supabase.co
-SUPABASE_KEY=<service_key>
+SUPABASE_ANON_KEY=<anon_key>
+SUPABASE_SERVICE_ROLE_KEY=<service_key>
+# SUPABASE_KEY ainda é aceito como legado em deployments antigos.
 ```
 
 ## Mobile (Expo)

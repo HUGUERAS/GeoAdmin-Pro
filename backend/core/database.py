@@ -21,7 +21,7 @@ def get_supabase() -> Client:
         Client: Instância do cliente Supabase.
 
     Raises:
-        ValueError: Se SUPABASE_URL ou SUPABASE_ANON_KEY não estiverem configurados.
+        ValueError: Se SUPABASE_URL e as chaves Supabase não estiverem configuradas.
     """
     global _supabase_client
 
@@ -30,9 +30,10 @@ def get_supabase() -> Client:
 
     settings.validate()
 
-    # Usa SUPABASE_ANON_KEY para operações do lado do cliente
-    # Para operações administrativas, use SUPABASE_SERVICE_ROLE_KEY diretamente
-    _supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+    # Backend deve preferir service role quando disponível. SUPABASE_KEY legado
+    # continua aceito via Settings para não quebrar deployments existentes.
+    supabase_key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_ANON_KEY
+    _supabase_client = create_client(settings.SUPABASE_URL, supabase_key)
     return _supabase_client
 
 

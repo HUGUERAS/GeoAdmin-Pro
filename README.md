@@ -84,7 +84,9 @@ Crie `backend/.env` com:
 
 ```env
 SUPABASE_URL=https://jrlrlsotwsiidglcbifo.supabase.co
-SUPABASE_KEY=seu_service_key_ou_anon_key
+SUPABASE_ANON_KEY=sua_anon_key
+SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
+# SUPABASE_KEY ainda é aceito como legado em deployments antigos
 ```
 
 Opcional:

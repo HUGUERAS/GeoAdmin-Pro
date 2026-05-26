@@ -31,10 +31,11 @@ class Settings:
     ]
     PUBLIC_APP_URL: str = os.getenv("PUBLIC_APP_URL", "http://localhost:8000")
 
-    # Supabase - Nomes oficiais (SUPABASE_KEY legado não é mais usado)
+    # Supabase - nomes oficiais com compatibilidade para SUPABASE_KEY legado
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
-    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    SUPABASE_KEY_LEGACY: str = os.getenv("SUPABASE_KEY", "")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY") or SUPABASE_KEY_LEGACY
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or SUPABASE_KEY_LEGACY
     SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
 
     # Bucket de Storage
@@ -68,9 +69,10 @@ class Settings:
 
     def validate(self) -> None:
         """Valida configurações críticas."""
-        if not self.SUPABASE_URL or not self.SUPABASE_ANON_KEY:
+        if not self.SUPABASE_URL or not (self.SUPABASE_ANON_KEY or self.SUPABASE_SERVICE_ROLE_KEY):
             raise ValueError(
                 "Supabase não configurado. Defina SUPABASE_URL e SUPABASE_ANON_KEY "
+                "ou SUPABASE_SERVICE_ROLE_KEY "
                 "no arquivo .env ou no ambiente do servidor."
             )
 
