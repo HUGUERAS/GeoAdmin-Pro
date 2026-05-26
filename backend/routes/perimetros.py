@@ -33,11 +33,53 @@ def _serialize_perimetro(row: Optional[dict]) -> Optional[dict]:
 
     return {
         "id": row.get("id"),
-        "nome": row.get("nome"),
+        "nome": row.get("nome") or row.get("tipo"),
         "tipo": row.get("tipo"),
         "criado_em": row.get("criado_em"),
-        "vertices": row.get("vertices_json") or [],
+        "vertices": row.get("vertices_json") or row.get("vertices") or [],
     }
+
+
+def _is_schema_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return any(
+        marker in text
+        for marker in (
+            "column does not exist",
+            "pgrst204",
+            "pgrst205",
+            "42703",
+            "deleted_at",
+            "vertices_json",
+            "nome",
+        )
+    )
+
+
+def _query_perimetros_por_tipo(c, projeto_id: str, tipo: str):
+    try:
+        return (
+            c.table("perimetros")
+            .select("id, nome, tipo, vertices_json, criado_em")
+            .eq("projeto_id", projeto_id)
+            .eq("tipo", tipo)
+            .is_("deleted_at", "null")
+            .order("criado_em", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        if not _is_schema_error(exc):
+            raise
+        return (
+            c.table("perimetros")
+            .select("id, projeto_id, area_id, tipo, vertices, criado_em")
+            .eq("projeto_id", projeto_id)
+            .eq("tipo", tipo)
+            .order("criado_em", desc=True)
+            .limit(1)
+            .execute()
+        )
 
 
 def buscar_perimetro_ativo(projeto_id: str, supabase=None) -> Optional[dict]:
@@ -52,17 +94,8 @@ def buscar_perimetro_ativo(projeto_id: str, supabase=None) -> Optional[dict]:
     """
     c = supabase or _get_supabase()
 
-    for tipo in ("definitivo", "editado", "original"):
-        res = (
-            c.table("perimetros")
-            .select("id, nome, tipo, vertices_json, criado_em")
-            .eq("projeto_id", projeto_id)
-            .eq("tipo", tipo)
-            .is_("deleted_at", "null")
-            .order("criado_em", desc=True)
-            .limit(1)
-            .execute()
-        )
+    for tipo in ("definitivo", "editado", "original", "importado"):
+        res = _query_perimetros_por_tipo(c, projeto_id, tipo)
         if res.data:
             return _serialize_perimetro(res.data[0])
 
@@ -72,40 +105,62 @@ def buscar_perimetro_ativo(projeto_id: str, supabase=None) -> Optional[dict]:
 @router.get("/{projeto_id}")
 def listar_perimetros(projeto_id: str):
     """Lista todos os perímetros ativos de um projeto."""
-    res = (
-        _get_supabase()
-        .table("perimetros")
-        .select("id, nome, tipo, vertices_json, criado_em")
-        .eq("projeto_id", projeto_id)
-        .is_("deleted_at", "null")
-        .order("criado_em", desc=True)
-        .execute()
-    )
+    c = _get_supabase()
+    try:
+        res = (
+            c.table("perimetros")
+            .select("id, nome, tipo, vertices_json, criado_em")
+            .eq("projeto_id", projeto_id)
+            .is_("deleted_at", "null")
+            .order("criado_em", desc=True)
+            .execute()
+        )
+    except Exception as exc:
+        if not _is_schema_error(exc):
+            raise
+        res = (
+            c.table("perimetros")
+            .select("id, projeto_id, area_id, tipo, vertices, criado_em")
+            .eq("projeto_id", projeto_id)
+            .order("criado_em", desc=True)
+            .execute()
+        )
     return [_serialize_perimetro(row) for row in (res.data or [])]
 
 
 @router.post("/")
-def salvar_perimetro(payload: PerimetroCreate):
+def salvar_perimetro(payload: PerimetroCreate, supabase=None):
     """
     Salva um perímetro.
     Se tipo='editado', primeiro arquiva qualquer 'editado' anterior do mesmo projeto.
     Se tipo='original', só insere se ainda não existir um original para o projeto.
     """
-    c = _get_supabase()
+    c = supabase or _get_supabase()
 
     if payload.tipo not in ("original", "editado"):
         raise HTTPException(status_code=422, detail="tipo deve ser 'original' ou 'editado'")
 
     if payload.tipo == "original":
         # Verificar se já existe original
-        existe = (
-            c.table("perimetros")
-            .select("id")
-            .eq("projeto_id", payload.projeto_id)
-            .eq("tipo", "original")
-            .is_("deleted_at", "null")
-            .execute()
-        )
+        try:
+            existe = (
+                c.table("perimetros")
+                .select("id")
+                .eq("projeto_id", payload.projeto_id)
+                .eq("tipo", "original")
+                .is_("deleted_at", "null")
+                .execute()
+            )
+        except Exception as exc:
+            if not _is_schema_error(exc):
+                raise
+            existe = (
+                c.table("perimetros")
+                .select("id")
+                .eq("projeto_id", payload.projeto_id)
+                .eq("tipo", "original")
+                .execute()
+            )
         if existe.data:
             # Retorna o existente sem duplicar
             atual = (
@@ -121,24 +176,43 @@ def salvar_perimetro(payload: PerimetroCreate):
     if payload.tipo == "editado":
         # Arquivar editados anteriores
         now = datetime.now(timezone.utc).isoformat()
-        c.table("perimetros").update({"deleted_at": now}).eq(
-            "projeto_id", payload.projeto_id
-        ).eq("tipo", "editado").is_("deleted_at", "null").execute()
+        try:
+            c.table("perimetros").update({"deleted_at": now}).eq(
+                "projeto_id", payload.projeto_id
+            ).eq("tipo", "editado").is_("deleted_at", "null").execute()
+        except Exception as exc:
+            if not _is_schema_error(exc):
+                raise
 
     vertices_json = [v.model_dump() for v in payload.vertices]
 
-    res = (
-        c.table("perimetros")
-        .insert(
-            {
-                "projeto_id": payload.projeto_id,
-                "nome": payload.nome,
-                "tipo": payload.tipo,
-                "vertices_json": vertices_json,
-            }
+    try:
+        res = (
+            c.table("perimetros")
+            .insert(
+                {
+                    "projeto_id": payload.projeto_id,
+                    "nome": payload.nome,
+                    "tipo": payload.tipo,
+                    "vertices_json": vertices_json,
+                }
+            )
+            .execute()
         )
-        .execute()
-    )
+    except Exception as exc:
+        if not _is_schema_error(exc):
+            raise
+        res = (
+            c.table("perimetros")
+            .insert(
+                {
+                    "projeto_id": payload.projeto_id,
+                    "tipo": payload.tipo,
+                    "vertices": vertices_json,
+                }
+            )
+            .execute()
+        )
     return _serialize_perimetro(res.data[0]) if res.data else {"status": "ok"}
 
 

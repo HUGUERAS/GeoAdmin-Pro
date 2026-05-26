@@ -93,6 +93,20 @@ def _erro_schema(exc: Exception, trecho: str) -> bool:
     return trecho.lower() in str(exc).lower()
 
 
+def _erro_schema_compat(exc: Exception) -> bool:
+    texto = str(exc).lower()
+    return any(
+        marcador in texto
+        for marcador in (
+            "column does not exist",
+            "missing response",
+            "pgrst204",
+            "pgrst205",
+            "42703",
+        )
+    )
+
+
 def _erro_documento_duplicado(exc: Exception) -> bool:
     texto = str(exc).lower()
     return (
@@ -504,9 +518,20 @@ def _carregar_area_contexto(sb, area_id: str | None) -> dict[str, Any] | None:
             .execute()
         )
     except Exception as exc:
-        if "areas_projeto" in str(exc).lower():
-            return None
-        raise
+        if not _erro_schema_compat(exc) and "areas_projeto" not in str(exc).lower():
+            raise
+        try:
+            resposta = (
+                sb.table("areas_projeto")
+                .select("id, nome, tipo, area_m2, geometria_final, geometria_esboco, metadados, criado_em, atualizado_em")
+                .eq("id", area_id)
+                .maybe_single()
+                .execute()
+            )
+        except Exception as exc_fallback:
+            if _erro_schema_compat(exc_fallback) or "areas_projeto" in str(exc_fallback).lower():
+                return None
+            raise
     area = resposta.data
     if not area:
         return None
