@@ -9,7 +9,8 @@ import Svg, { G, Line, Text as SvgText, Polyline as SvgPolyline, Circle } from '
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
-import { API_URL } from '../../../constants/Api'
+import { apiGet, apiPost } from '../../../lib/api'
+import { cacheProjetoDetalhe, getCachedProjetoDetalhe, initDB } from '../../../lib/db'
 
 type Ponto    = { id: string; nome: string; altitude_m: number; lon: number; lat: number }
 type Vertice  = { lon: number; lat: number; nome: string }
@@ -18,6 +19,18 @@ type Mode     = 'mapa' | 'cad'
 type EditTool = 'mover' | 'adicionar' | 'deletar'
 
 type NomeFerramenta = 'area' | 'inverso' | 'irradiacao' | 'intersecao' | 'distpl' | 'deflexao' | 'mediaPts' | 'conversao' | 'rotacao' | 'subdivisao'
+
+type ProjetoMapa = {
+  id?: string
+  projeto_nome?: string
+  nome?: string
+  pontos?: Ponto[]
+  perimetro_ativo?: {
+    id?: string
+    tipo?: string
+    vertices?: Vertice[]
+  } | null
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -88,6 +101,35 @@ function calcPerimetro(verts: Vertice[]): number {
 
 function pontosParaVertices(pontos: Ponto[]): Vertice[] {
   return pontos.map((p) => ({ lon: p.lon, lat: p.lat, nome: p.nome }))
+}
+
+function normalizarVertices(vertices?: any[]): Vertice[] {
+  return (vertices || [])
+    .map((v, idx) => ({
+      lon: Number(v.lon),
+      lat: Number(v.lat),
+      nome: String(v.nome || `V${idx + 1}`),
+    }))
+    .filter((v) => Number.isFinite(v.lon) && Number.isFinite(v.lat))
+}
+
+function normalizarPontos(pontos?: any[]): Ponto[] {
+  return (pontos || [])
+    .map((p, idx) => ({
+      id: String(p.id || `ponto-${idx}`),
+      nome: String(p.nome || p.codigo || `P${idx + 1}`),
+      altitude_m: Number(p.altitude_m ?? p.cota ?? 0),
+      lon: Number(p.lon),
+      lat: Number(p.lat),
+    }))
+    .filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat))
+}
+
+function extrairGeometriaProjeto(data: ProjetoMapa) {
+  const pontosProjeto = normalizarPontos(data.pontos)
+  const perimetroAtivo = normalizarVertices(data.perimetro_ativo?.vertices)
+  const polygon = perimetroAtivo.length > 0 ? perimetroAtivo : pontosParaVertices(pontosProjeto)
+  return { pontosProjeto, polygon }
 }
 
 function coordKey(lon: number, lat: number) {
@@ -544,18 +586,35 @@ export default function MapaProjetoScreen() {
   )
 
   useEffect(() => {
-    fetch(`${API_URL}/projetos/${id}`)
-      .then(r => r.json())
-      .then(data => {
-        const pontosProjeto = (data.pontos || []).filter((p: any) => p.lon != null && p.lat != null)
-        const perimetroAtivo = (data.perimetro_ativo?.vertices || []).filter((v: any) => v.lon != null && v.lat != null)
-
+    let vivo = true
+    const carregarProjeto = async () => {
+      try {
+        await initDB()
+        const data = await apiGet<ProjetoMapa>(`/projetos/${id}`)
+        if (!vivo) return
+        const { pontosProjeto, polygon } = extrairGeometriaProjeto(data)
         setProjeto(data)
         setPontos(pontosProjeto)
-        setPolygonVerts(perimetroAtivo.length > 0 ? perimetroAtivo : pontosParaVertices(pontosProjeto))
-      })
-      .catch(() => Alert.alert('Erro', 'Não foi possível carregar o projeto.'))
-      .finally(() => setLoading(false))
+        setPolygonVerts(polygon)
+        await cacheProjetoDetalhe(String(id), data)
+      } catch {
+        const cached = await getCachedProjetoDetalhe(String(id))
+        if (!vivo) return
+        if (cached) {
+          const { pontosProjeto, polygon } = extrairGeometriaProjeto(cached)
+          setProjeto(cached)
+          setPontos(pontosProjeto)
+          setPolygonVerts(polygon)
+          Alert.alert('Modo offline', 'Exibindo o último perímetro salvo no cache local.')
+        } else {
+          Alert.alert('Erro', 'Não foi possível carregar o projeto.')
+        }
+      } finally {
+        if (vivo) setLoading(false)
+      }
+    }
+    carregarProjeto()
+    return () => { vivo = false }
   }, [id])
 
   const region = useMemo(() => {
@@ -586,18 +645,14 @@ export default function MapaProjetoScreen() {
     setEditTool('mover')
     setEditMode(true)
     try {
-      await fetch(`${API_URL}/perimetros/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projeto_id: id,
-          nome: (projeto?.projeto_nome || id) + ' — original',
-          tipo: 'original',
-          vertices: verts,
-        }),
+      await apiPost('/perimetros/', {
+        projeto_id: String(id),
+        nome: (projeto?.projeto_nome || projeto?.nome || id) + ' - original',
+        tipo: 'original',
+        vertices: verts,
       })
     } catch (err: any) {
-      Alert.alert('Aviso', 'Não foi possível registrar o perímetro original: ' + (err?.message || 'erro desconhecido'))
+      console.warn('Nao foi possivel registrar o perimetro original:', err?.message || err)
     }
   }, [polygonVerts, projeto, id])
 
@@ -652,27 +707,28 @@ export default function MapaProjetoScreen() {
   const salvarEdit = useCallback(() => {
     const doSave = async () => {
       try {
-        const res = await fetch(`${API_URL}/perimetros/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            projeto_id: id,
-            nome: (projeto?.projeto_nome || id) + ' — editado',
-            tipo: 'editado',
-            vertices: editVerts,
-          }),
+        const salvo = await apiPost<any>('/perimetros/', {
+          projeto_id: String(id),
+          nome: (projeto?.projeto_nome || projeto?.nome || id) + ' - editado',
+          tipo: 'editado',
+          vertices: editVerts,
         })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const salvo = await res.json().catch(() => null)
         const proximosVertices = (salvo?.vertices || editVerts).map((v: Vertice) => ({ ...v }))
 
         setPolygonVerts(proximosVertices)
+        const proximoProjeto = projeto ? {
+          ...projeto,
+          perimetro_ativo: salvo
+            ? { ...salvo, vertices: proximosVertices }
+            : projeto.perimetro_ativo,
+        } : null
         setProjeto((atual: any) => atual ? {
           ...atual,
           perimetro_ativo: salvo
             ? { ...salvo, vertices: proximosVertices }
             : atual.perimetro_ativo,
         } : atual)
+        if (proximoProjeto) await cacheProjetoDetalhe(String(id), proximoProjeto)
         setOrigVerts(proximosVertices.map((v: Vertice) => ({ ...v })))
         setEditVerts(proximosVertices.map((v: Vertice) => ({ ...v })))
         setEditHist([])

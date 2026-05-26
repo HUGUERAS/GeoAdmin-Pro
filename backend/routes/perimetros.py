@@ -30,6 +30,10 @@ def _get_supabase():
 def _serialize_perimetro(row: Optional[dict]) -> Optional[dict]:
     if not row:
         return None
+    if isinstance(row, list):
+        row = row[0] if row else None
+    if not row:
+        return None
 
     return {
         "id": row.get("id"),
@@ -78,6 +82,27 @@ def _query_perimetros_por_tipo(c, projeto_id: str, tipo: str):
             .eq("tipo", tipo)
             .order("criado_em", desc=True)
             .limit(1)
+            .execute()
+        )
+
+
+def _query_perimetro_por_id(c, perimetro_id: str):
+    try:
+        return (
+            c.table("perimetros")
+            .select("id, nome, tipo, vertices_json, criado_em")
+            .eq("id", perimetro_id)
+            .maybe_single()
+            .execute()
+        )
+    except Exception as exc:
+        if not _is_schema_error(exc):
+            raise
+        return (
+            c.table("perimetros")
+            .select("id, projeto_id, area_id, tipo, vertices, criado_em")
+            .eq("id", perimetro_id)
+            .maybe_single()
             .execute()
         )
 
@@ -163,13 +188,7 @@ def salvar_perimetro(payload: PerimetroCreate, supabase=None):
             )
         if existe.data:
             # Retorna o existente sem duplicar
-            atual = (
-                c.table("perimetros")
-                .select("id, nome, tipo, vertices_json, criado_em")
-                .eq("id", existe.data[0]["id"])
-                .maybe_single()
-                .execute()
-            )
+            atual = _query_perimetro_por_id(c, existe.data[0]["id"])
             perimetro = _serialize_perimetro(atual.data)
             return {**(perimetro or {"id": existe.data[0]["id"]}), "status": "ja_existe"}
 

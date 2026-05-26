@@ -33,6 +33,9 @@ class FakeQuery:
     def limit(self, *_args, **_kwargs):
         return self
 
+    def maybe_single(self):
+        return self
+
     def insert(self, payload):
         self.action = "insert"
         self.payload = payload
@@ -117,3 +120,33 @@ def test_salvar_perimetro_regrava_payload_no_schema_vertex_quando_legado_falha()
         "vertices": [{"lon": -56.1, "lat": -15.6, "nome": None}],
     }]
     assert perimetro["vertices"] == [{"lon": -56.1, "lat": -15.6, "nome": None}]
+
+
+def test_salvar_original_existente_retorna_schema_vertex_sem_duplicar():
+    def resolver(query):
+        assert query.table == "perimetros"
+        if query.action == "select":
+            if any(f[:3] == ("eq", "tipo", "original") for f in query.filters):
+                return [{"id": "per-original"}]
+            if "vertices_json" in query.selection or "nome" in query.selection:
+                raise Exception("column does not exist")
+            return [{
+                "id": "per-original",
+                "projeto_id": "projeto-1",
+                "tipo": "original",
+                "vertices": [{"lon": -56.1, "lat": -15.6, "nome": "V1"}],
+                "criado_em": "2026-05-02T00:00:00Z",
+            }]
+        raise AssertionError("Nao deveria inserir quando original ja existe")
+
+    payload = perimetros_mod.PerimetroCreate(
+        projeto_id="projeto-1",
+        nome="Perimetro original",
+        tipo="original",
+        vertices=[perimetros_mod.Vertice(lon=-56.1, lat=-15.6, nome="V1")],
+    )
+
+    perimetro = perimetros_mod.salvar_perimetro(payload, supabase=FakeSupabase(resolver))
+
+    assert perimetro["status"] == "ja_existe"
+    assert perimetro["vertices"] == [{"lon": -56.1, "lat": -15.6, "nome": "V1"}]
