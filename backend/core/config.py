@@ -82,10 +82,6 @@ class Settings:
                 raise ValueError(
                     "SUPABASE_SERVICE_ROLE_KEY é obrigatório em produção."
                 )
-            if not self.SUPABASE_JWT_SECRET:
-                raise ValueError(
-                    "SUPABASE_JWT_SECRET é obrigatório em produção."
-                )
 
 
 settings = Settings()
