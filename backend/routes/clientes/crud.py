@@ -13,20 +13,97 @@ from .utils import (
 )
 
 
+def _is_schema_error(exc: Exception) -> bool:
+    texto = str(exc).lower()
+    return any(
+        marcador in texto
+        for marcador in (
+            "column",
+            "does not exist",
+            "pgrst204",
+            "pgrst205",
+            "42703",
+            "area_ha",
+            "cliente_id",
+            "deleted_at",
+        )
+    )
+
+
 def carregar_projetos(sb, cliente_ids: list[str]) -> list[dict[str, Any]]:
     """Carrega projetos relacionados aos clientes."""
     if not cliente_ids:
         return []
 
-    return (
-        sb.table("vw_projetos_completo")
-        .select("id, cliente_id, projeto_nome, status, municipio, estado, area_ha, total_pontos, criado_em")
-        .in_("cliente_id", cliente_ids)
-        .order("criado_em", desc=True)
-        .execute()
-        .data
-        or []
+    try:
+        return (
+            sb.table("vw_projetos_completo")
+            .select("id, cliente_id, projeto_nome, status, municipio, estado, area_ha, total_pontos, criado_em")
+            .in_("cliente_id", cliente_ids)
+            .order("criado_em", desc=True)
+            .execute()
+            .data
+            or []
+        )
+    except Exception as exc:
+        if not _is_schema_error(exc):
+            raise
+
+    vinculados = query_segura(
+        lambda: (
+            sb.table("vw_projeto_clientes")
+            .select("projeto_id, projeto_nome, cliente_id, vinculo, principal, area_id")
+            .in_("cliente_id", cliente_ids)
+            .execute()
+            .data
+            or []
+        ),
+        [],
     )
+    if not vinculados:
+        return []
+
+    projeto_ids = sorted({item["projeto_id"] for item in vinculados if item.get("projeto_id")})
+    if not projeto_ids:
+        return []
+
+    projetos_por_id = {}
+    projetos = query_segura(
+        lambda: (
+            sb.table("projetos")
+            .select("id, nome, projeto_nome, status, municipio, uf, estado, total_pontos, criado_em, created_at")
+            .in_("id", projeto_ids)
+            .execute()
+            .data
+            or []
+        ),
+        [],
+    )
+    for projeto in projetos:
+        if projeto.get("id"):
+            projetos_por_id[projeto["id"]] = projeto
+
+    resultado = []
+    for vinculo in vinculados:
+        projeto = projetos_por_id.get(vinculo.get("projeto_id"), {})
+        criado_em = projeto.get("criado_em") or projeto.get("created_at")
+        resultado.append({
+            "id": vinculo.get("projeto_id"),
+            "cliente_id": vinculo.get("cliente_id"),
+            "projeto_nome": projeto.get("projeto_nome") or projeto.get("nome") or vinculo.get("projeto_nome"),
+            "status": projeto.get("status") or "medicao",
+            "municipio": projeto.get("municipio"),
+            "estado": projeto.get("estado") or projeto.get("uf"),
+            "area_ha": projeto.get("area_ha"),
+            "total_pontos": projeto.get("total_pontos"),
+            "criado_em": criado_em,
+            "vinculo": vinculo.get("vinculo"),
+            "principal": vinculo.get("principal"),
+            "area_id": vinculo.get("area_id"),
+        })
+
+    resultado.sort(key=lambda item: item.get("criado_em") or "", reverse=True)
+    return resultado
 
 
 def carregar_formularios(sb, cliente_ids: list[str]) -> list[dict[str, Any]]:

@@ -8,6 +8,7 @@ import pytest
 from fastapi import HTTPException
 
 import routes.clientes.routes as clientes_mod
+from routes.clientes.crud import carregar_projetos
 
 
 class FakeResponse:
@@ -22,9 +23,11 @@ class FakeQuery:
         self.action = "select"
         self.payload = None
         self.filters: list[tuple[str, Any, Any]] = []
+        self.selection = None
 
-    def select(self, *_args, **_kwargs):
+    def select(self, *args, **_kwargs):
         self.action = "select"
+        self.selection = args[0] if args else None
         return self
 
     def eq(self, campo, valor):
@@ -142,6 +145,49 @@ def test_montar_resumos_clientes_e_checklist():
     assert checklist["concluidos"] == 5
     assert alertas == []
     assert any(evento["tipo"] == "confrontante" for evento in timeline)
+
+
+def test_carregar_projetos_faz_fallback_para_vw_projeto_clientes():
+    def resolver(query):
+        if query.table == "vw_projetos_completo":
+            raise Exception("column vw_projetos_completo.area_ha does not exist")
+        if query.table == "vw_projeto_clientes":
+            return [{
+                "projeto_id": "projeto-1",
+                "projeto_nome": "Fazenda A",
+                "cliente_id": "cliente-1",
+                "vinculo": "principal",
+                "principal": True,
+                "area_id": None,
+            }]
+        if query.table == "projetos":
+            return [{
+                "id": "projeto-1",
+                "nome": "Fazenda A",
+                "status": "medicao",
+                "municipio": "Goiania",
+                "uf": "GO",
+                "total_pontos": 4,
+                "criado_em": "2026-05-26T10:00:00+00:00",
+            }]
+        raise AssertionError(f"Consulta inesperada: {query.table}")
+
+    projetos = carregar_projetos(FakeSupabase(resolver), ["cliente-1"])
+
+    assert projetos == [{
+        "id": "projeto-1",
+        "cliente_id": "cliente-1",
+        "projeto_nome": "Fazenda A",
+        "status": "medicao",
+        "municipio": "Goiania",
+        "estado": "GO",
+        "area_ha": None,
+        "total_pontos": 4,
+        "criado_em": "2026-05-26T10:00:00+00:00",
+        "vinculo": "principal",
+        "principal": True,
+        "area_id": None,
+    }]
 
 
 def test_detalhar_cliente_agrega_dados_documentais(monkeypatch):
