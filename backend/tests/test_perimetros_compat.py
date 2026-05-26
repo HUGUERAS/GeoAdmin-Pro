@@ -150,3 +150,26 @@ def test_salvar_original_existente_retorna_schema_vertex_sem_duplicar():
 
     assert perimetro["status"] == "ja_existe"
     assert perimetro["vertices"] == [{"lon": -56.1, "lat": -15.6, "nome": "V1"}]
+
+
+def test_salvar_original_ignora_constraint_quando_schema_nao_aceita_tipo():
+    def resolver(query):
+        assert query.table == "perimetros"
+        if query.action == "select":
+            return []
+        if query.action == "insert":
+            raise Exception("perimetros_tipo_check violates check constraint 23514")
+        raise AssertionError("Acao inesperada")
+
+    payload = perimetros_mod.PerimetroCreate(
+        projeto_id="projeto-1",
+        nome="Perimetro original",
+        tipo="original",
+        vertices=[perimetros_mod.Vertice(lon=-56.1, lat=-15.6, nome="V1")],
+    )
+
+    perimetro = perimetros_mod.salvar_perimetro(payload, supabase=FakeSupabase(resolver))
+
+    assert perimetro["status"] == "ignorado_schema"
+    assert perimetro["tipo"] == "original"
+    assert perimetro["vertices"] == [{"lon": -56.1, "lat": -15.6, "nome": "V1"}]

@@ -60,6 +60,11 @@ def _is_schema_error(exc: Exception) -> bool:
     )
 
 
+def _is_tipo_constraint_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "perimetros_tipo_check" in text or "'23514'" in text or "violates check constraint" in text
+
+
 def _query_perimetros_por_tipo(c, projeto_id: str, tipo: str):
     try:
         return (
@@ -219,19 +224,36 @@ def salvar_perimetro(payload: PerimetroCreate, supabase=None):
             .execute()
         )
     except Exception as exc:
+        if payload.tipo == "original" and _is_tipo_constraint_error(exc):
+            return {
+                "status": "ignorado_schema",
+                "tipo": "original",
+                "nome": payload.nome,
+                "vertices": vertices_json,
+            }
         if not _is_schema_error(exc):
             raise
-        res = (
-            c.table("perimetros")
-            .insert(
-                {
-                    "projeto_id": payload.projeto_id,
-                    "tipo": payload.tipo,
+        try:
+            res = (
+                c.table("perimetros")
+                .insert(
+                    {
+                        "projeto_id": payload.projeto_id,
+                        "tipo": payload.tipo,
+                        "vertices": vertices_json,
+                    }
+                )
+                .execute()
+            )
+        except Exception as fallback_exc:
+            if payload.tipo == "original" and _is_tipo_constraint_error(fallback_exc):
+                return {
+                    "status": "ignorado_schema",
+                    "tipo": "original",
+                    "nome": payload.nome,
                     "vertices": vertices_json,
                 }
-            )
-            .execute()
-        )
+            raise
     return _serialize_perimetro(res.data[0]) if res.data else {"status": "ok"}
 
 
