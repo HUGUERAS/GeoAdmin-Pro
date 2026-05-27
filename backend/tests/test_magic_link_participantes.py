@@ -145,6 +145,33 @@ def test_token_legado_ambiguo_pede_novo_link(monkeypatch):
     assert excinfo.value.detail["codigo"] == 603
 
 
+def test_token_invalido_com_maybe_single_sem_resposta_vira_404(monkeypatch):
+    monkeypatch.setattr(documentos_mod, "obter_vinculo_por_token", lambda _sb, _token: None)
+
+    class QuerySemResposta:
+        def select(self, *_args, **_kwargs):
+            return self
+
+        def eq(self, *_args, **_kwargs):
+            return self
+
+        def maybe_single(self):
+            return self
+
+        def execute(self):
+            return None
+
+    class SupabaseSemResposta:
+        def table(self, _nome: str):
+            return QuerySemResposta()
+
+    with pytest.raises(HTTPException) as excinfo:
+        documentos_mod._validar_token(SupabaseSemResposta(), "token-invalido")
+
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail["codigo"] == 601
+
+
 def test_gerar_magic_link_participante_registra_evento(monkeypatch):
     eventos = []
 

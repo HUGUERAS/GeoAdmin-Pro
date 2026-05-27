@@ -472,26 +472,26 @@ def _validar_token(sb, token: str) -> tuple[dict[str, Any], str | None, dict[str
     """
     vinculo = obter_vinculo_por_token(sb, token)
     if vinculo:
-        cliente = (
+        resposta_cliente = (
             sb.table("clientes")
             .select("*")
             .eq("id", vinculo.get("cliente_id"))
             .maybe_single()
             .execute()
-            .data
         )
+        cliente = getattr(resposta_cliente, "data", None)
         if not cliente:
             raise HTTPException(404, {"erro": "[ERRO-601] Link invalido.", "codigo": 601})
         return cliente, vinculo.get("projeto_id"), vinculo
 
-    cliente = (
+    resposta_cliente = (
         sb.table("clientes")
         .select("*")
         .eq("magic_link_token", token)
         .maybe_single()
         .execute()
-        .data
     )
+    cliente = getattr(resposta_cliente, "data", None)
     if not cliente:
         raise HTTPException(404, {"erro": "[ERRO-601] Link invalido ou expirado.", "codigo": 601})
 
@@ -532,7 +532,7 @@ def _carregar_area_contexto(sb, area_id: str | None) -> dict[str, Any] | None:
             if _erro_schema_compat(exc_fallback) or "areas_projeto" in str(exc_fallback).lower():
                 return None
             raise
-    area = resposta.data
+    area = getattr(resposta, "data", None)
     if not area:
         return None
     identificacao = " · ".join([
@@ -560,14 +560,14 @@ def _contexto_token(sb, token: str) -> dict[str, Any]:
     cliente, projeto_id, vinculo = _validar_token(sb, token)
     projeto = None
     if projeto_id:
-        projeto = (
+        resposta_projeto = (
             sb.table("vw_projetos_completo")
             .select("id, projeto_nome, municipio, estado, status")
             .eq("id", projeto_id)
             .maybe_single()
             .execute()
-            .data
         )
+        projeto = getattr(resposta_projeto, "data", None)
     area = _carregar_area_contexto(sb, vinculo.get("area_id") if vinculo else None)
     lote = None
     if area:
