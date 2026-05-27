@@ -252,6 +252,52 @@
     display: grid;
     gap: 12px;
   }
+  .client-map {
+    border: 1px solid rgba(47,165,106,.36);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #101512 0%, #141b17 100%);
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .client-map[hidden] { display: none; }
+  .client-map-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .client-map-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .client-map-meta {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .client-map-chip {
+    border: 1px solid rgba(47,165,106,.42);
+    border-radius: 999px;
+    padding: 5px 9px;
+    color: #7fe0a8;
+    background: rgba(47,165,106,.10);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .client-map-board {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(47,165,106,.22);
+    background: #0a0f0d;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+  }
   .sketch-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -576,6 +622,20 @@
           <p class="step-subtitle">Faça um croqui rápido só para nos orientar. Se você tiver coordenadas, KML, GeoJSON, CSV, TXT ou um croqui em foto/PDF, envie também.</p>
         </div>
 
+        <div class="client-map" id="client-map" hidden>
+          <div class="client-map-head">
+            <div>
+              <span class="client-map-title">Mapa do seu recorte</span>
+              <span class="client-map-meta" id="client-map-meta">Carregando área vinculada ao seu link.</span>
+            </div>
+            <span class="client-map-chip" id="client-map-chip">Recorte</span>
+          </div>
+          <div class="client-map-board">
+            <svg id="client-map-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+          <div class="hint" id="client-map-status">Este mapa mostra apenas a área vinculada ao seu link.</div>
+        </div>
+
         <div class="sketch-shell">
           <div class="sketch-toolbar">
             <button type="button" class="ghost-btn" id="btn-clear-sketch">Limpar desenho</button>
@@ -669,6 +729,11 @@ const steps = [...document.querySelectorAll('.step-card')]
 const sketchSvg = document.getElementById('sketch-svg')
 const sketchStatus = document.getElementById('sketch-status')
 const croquiSvgInput = document.getElementById('croqui_svg')
+const clientMap = document.getElementById('client-map')
+const clientMapSvg = document.getElementById('client-map-svg')
+const clientMapMeta = document.getElementById('client-map-meta')
+const clientMapChip = document.getElementById('client-map-chip')
+const clientMapStatus = document.getElementById('client-map-status')
 const listaMunicipios = document.getElementById('lista-municipios')
 const municipioImovelInput = document.getElementById('municipio_imovel')
 const municipioEnderecoInput = document.getElementById('municipio')
@@ -984,6 +1049,88 @@ function registrarPonto(event) {
   desenharSketch()
 }
 
+function verticesValidos(vertices) {
+  return (vertices || [])
+    .map((item) => ({ lon: Number(item.lon), lat: Number(item.lat) }))
+    .filter((item) => Number.isFinite(item.lon) && Number.isFinite(item.lat))
+}
+
+function geometriaDoRecorte(area) {
+  const final = verticesValidos(area?.geometria_final)
+  if (final.length >= 3) {
+    return { vertices: final, tipo: 'Perímetro', descricao: 'Perímetro técnico ou final vinculado ao lote.' }
+  }
+  const esboco = verticesValidos(area?.geometria_esboco)
+  if (esboco.length >= 3) {
+    return { vertices: esboco, tipo: 'Esboço', descricao: 'Esboço de referência vinculado ao lote.' }
+  }
+  return null
+}
+
+function pontosMapa(vertices) {
+  const lons = vertices.map((item) => item.lon)
+  const lats = vertices.map((item) => item.lat)
+  const minLon = Math.min(...lons)
+  const maxLon = Math.max(...lons)
+  const minLat = Math.min(...lats)
+  const maxLat = Math.max(...lats)
+  const rangeLon = maxLon - minLon || 0.0001
+  const rangeLat = maxLat - minLat || 0.0001
+  const escala = Math.min(84 / rangeLon, 76 / rangeLat)
+  const drawW = rangeLon * escala
+  const drawH = rangeLat * escala
+  const offX = (100 - drawW) / 2
+  const offY = (100 - drawH) / 2
+  return vertices.map((item) => {
+    const x = offX + (item.lon - minLon) * escala
+    const y = 100 - offY - (item.lat - minLat) * escala
+    return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) }
+  })
+}
+
+function renderMapaCliente(area) {
+  clientMap.hidden = false
+  const geometria = geometriaDoRecorte(area)
+  const identificacao = area?.identificacao_lote || area?.nome || 'Área vinculada ao link'
+  clientMapMeta.textContent = identificacao
+
+  if (!geometria) {
+    clientMapChip.textContent = 'Sem mapa'
+    clientMapStatus.textContent = 'Ainda não há perímetro ou esboço salvo para este recorte.'
+    clientMapSvg.innerHTML = `
+      <rect x="0" y="0" width="100" height="100" fill="#0a0f0d" />
+      <text x="50" y="48" text-anchor="middle" font-size="5" fill="#a8b8ad">Mapa indisponível</text>
+      <text x="50" y="57" text-anchor="middle" font-size="3.5" fill="#6f8175">use o croqui abaixo</text>
+    `
+    return
+  }
+
+  clientMapChip.textContent = geometria.tipo
+  clientMapStatus.textContent = `${geometria.vertices.length} vértices. ${geometria.descricao}`
+  const pontos = pontosMapa(geometria.vertices)
+  const coords = pontos.map((p) => `${p.x},${p.y}`).join(' ')
+  const labels = pontos.map((p, index) => `
+    <g>
+      <circle cx="${p.x}" cy="${p.y}" r="1.8" fill="#46c07e" stroke="#e6f1ea" stroke-width="0.35" />
+      <text x="${p.x + 2.4}" y="${p.y - 2.4}" font-size="3.2" fill="#d8efe2">${index + 1}</text>
+    </g>
+  `).join('')
+  clientMapSvg.innerHTML = `
+    <rect x="0" y="0" width="100" height="100" fill="#07100c" />
+    <g opacity="0.22">
+      <line x1="20" y1="0" x2="20" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
+      <line x1="40" y1="0" x2="40" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
+      <line x1="60" y1="0" x2="60" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
+      <line x1="80" y1="0" x2="80" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
+      <line x1="0" y1="25" x2="100" y2="25" stroke="#7fe0a8" stroke-width="0.25" />
+      <line x1="0" y1="50" x2="100" y2="50" stroke="#7fe0a8" stroke-width="0.25" />
+      <line x1="0" y1="75" x2="100" y2="75" stroke="#7fe0a8" stroke-width="0.25" />
+    </g>
+    <polygon points="${coords}" fill="rgba(70,192,126,.22)" stroke="#46c07e" stroke-width="1.1" />
+    ${labels}
+  `
+}
+
 async function carregarContexto() {
   try {
     const res = await fetch(`/formulario/cliente/contexto?token=${token}`)
@@ -1002,6 +1149,7 @@ async function carregarContexto() {
     if (data.mensagem) {
       document.getElementById('hero-subtitle').textContent = `${data.mensagem} Você não tem acesso aos demais lotes ou imóveis do projeto.`
     }
+    renderMapaCliente(data.area)
 
     const municipioImovelContexto = normalizarMunicipio(
       data.projeto?.municipio ||
@@ -1029,6 +1177,7 @@ async function carregarContexto() {
     document.getElementById('meta-papel').textContent = 'Papel indisponível'
     document.getElementById('meta-lote').textContent = 'Lote indisponível'
     document.getElementById('meta-validade').textContent = 'Verifique o link'
+    renderMapaCliente(null)
     montarListaMunicipios()
   }
 }

@@ -18,11 +18,13 @@ class FakeQuery:
         self.table = table
         self.action = "select"
         self.payload = None
+        self.select_fields = ""
         self.filters: list[tuple[str, Any, Any]] = []
         self.limit_value: int | None = None
 
-    def select(self, _campos: str):
+    def select(self, campos: str):
         self.action = "select"
+        self.select_fields = campos
         return self
 
     def update(self, payload):
@@ -45,6 +47,9 @@ class FakeQuery:
 
     def limit(self, valor: int):
         self.limit_value = valor
+        return self
+
+    def maybe_single(self):
         return self
 
     def execute(self):
@@ -92,6 +97,32 @@ def test_payload_cliente_formulario_normaliza_documentos():
 
     assert payload["cpf_cnpj"] == "12345678901"
     assert payload["conjuge_cpf"] == "98765432100"
+
+
+def test_carregar_area_contexto_inclui_geometria_para_mapa_cliente():
+    def resolver(query: FakeQuery):
+        if query.table == "areas_projeto" and query.action == "select":
+            assert "geometria_final" in query.select_fields
+            assert "geometria_esboco" in query.select_fields
+            return {
+                "id": "area-1",
+                "nome": "Lote 01",
+                "codigo_lote": "01",
+                "quadra": "A",
+                "setor": "Norte",
+                "geometria_final": [
+                    {"lon": -49.1, "lat": -14.1},
+                    {"lon": -49.0, "lat": -14.1},
+                    {"lon": -49.0, "lat": -14.0},
+                ],
+                "geometria_esboco": [],
+            }
+        raise AssertionError("Consulta inesperada")
+
+    area = documentos_mod._carregar_area_contexto(FakeSupabase(resolver), "area-1")
+
+    assert area["geometria_final"]
+    assert area["identificacao_lote"] == "Qd. A · Lt. 01 · Norte"
 
 
 def test_busca_cliente_por_documento_encontra_soft_delete_com_cpf_mascarado():

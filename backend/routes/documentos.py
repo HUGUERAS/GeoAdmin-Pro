@@ -512,7 +512,7 @@ def _carregar_area_contexto(sb, area_id: str | None) -> dict[str, Any] | None:
     try:
         resposta = (
             sb.table("areas_projeto")
-            .select("id, nome, municipio, estado, proprietario_nome, origem_tipo, resumo_esboco, resumo_final, codigo_lote, quadra, setor, status_operacional, status_documental")
+            .select("id, nome, municipio, estado, proprietario_nome, origem_tipo, geometria_final, geometria_esboco, resumo_esboco, resumo_final, codigo_lote, quadra, setor, status_operacional, status_documental")
             .eq("id", area_id)
             .maybe_single()
             .execute()
