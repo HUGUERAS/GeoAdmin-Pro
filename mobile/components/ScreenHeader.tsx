@@ -60,8 +60,8 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
   },
-  textos: { flex: 1 },
-  titulo: { fontSize: 24, fontWeight: '700', lineHeight: 30 },
-  sub:    { fontSize: 13, marginTop: 2, lineHeight: 18 },
+  textos: { flex: 1, flexShrink: 1, minWidth: 0 },
+  titulo: { fontSize: 24, fontWeight: '700', lineHeight: 30, flexShrink: 1 },
+  sub:    { fontSize: 13, marginTop: 2, lineHeight: 18, flexShrink: 1 },
   direitaWrap: { flexShrink: 0, paddingTop: 2 },
 })

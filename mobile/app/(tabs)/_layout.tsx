@@ -28,16 +28,12 @@ export default function TabLayout() {
       <Tabs.Screen name="projeto/novo" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="projeto/[id]" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="mapa/index" options={{
-        title: 'Mapa',
+        title: 'Mapa/CAD',
         tabBarIcon: ({ color }) => <Feather name="map" size={22} color={color} />,
         headerShown: false,
       }} />
       <Tabs.Screen name="mapa/[id]" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="calculos/index" options={{
-        title: 'Cálculos',
-        tabBarIcon: ({ color }) => <Feather name="cpu" size={22} color={color} />,
-        headerShown: false,
-      }} />
+      <Tabs.Screen name="calculos/index" options={{ href: null, headerShown: false }} />
       <Tabs.Screen name="calculos/inverso" options={{ href: null }} />
       <Tabs.Screen name="calculos/area" options={{ href: null }} />
       <Tabs.Screen name="calculos/conversao" options={{ href: null }} />

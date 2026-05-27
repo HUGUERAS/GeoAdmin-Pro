@@ -7,6 +7,7 @@ import {
 import WebViewCompat from '../../../components/WebViewCompat'
 import Svg, { G, Line, Text as SvgText, Polyline as SvgPolyline, Circle } from 'react-native-svg'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import * as Clipboard from 'expo-clipboard'
 import { Feather } from '@expo/vector-icons'
 import { Colors } from '../../../constants/Colors'
 import { apiGet, apiPost } from '../../../lib/api'
@@ -18,7 +19,7 @@ type Layers   = { pontos: boolean; poligono: boolean; rotulos: boolean }
 type Mode     = 'mapa' | 'cad'
 type EditTool = 'mover' | 'adicionar' | 'deletar'
 
-type NomeFerramenta = 'area' | 'inverso' | 'irradiacao' | 'intersecao' | 'distpl' | 'deflexao' | 'mediaPts' | 'conversao' | 'rotacao' | 'subdivisao'
+type NomeFerramenta = 'area' | 'inverso' | 'irradiacao' | 'intersecao' | 'distpl' | 'deflexao' | 'mediaPts' | 'conversao' | 'rotacao' | 'subdivisao' | 'nomenclatura' | 'pacote'
 
 type ProjetoMapa = {
   id?: string
@@ -231,6 +232,45 @@ function latLonParaUTM(lat: number, lon: number): { norte: number; este: number;
   return { norte: Math.round(norte * 1000) / 1000, este: Math.round(este * 1000) / 1000, fuso }
 }
 
+function gerarNomesVertices(prefixo: string, inicio: string, quantidade: number): string[] {
+  const primeiro = Math.max(parseInt(inicio, 10) || 1, 1)
+  const base = prefixo.trim().toUpperCase() || 'M'
+  return Array.from({ length: quantidade }, (_, i) => `${base}-${String(primeiro + i).padStart(2, '0')}`)
+}
+
+function montarPacoteFreeCAD(projeto: any, vertices: Vertice[]) {
+  const nomeProjeto = projeto?.projeto_nome || projeto?.nome || 'Projeto sem nome'
+  const segmentos = vertices.map((v, i) => {
+    const proximo = vertices[(i + 1) % vertices.length]
+    return {
+      de: v.nome || `V${i + 1}`,
+      para: proximo?.nome || `V${((i + 1) % vertices.length) + 1}`,
+      distancia_m: proximo ? Number(haversine(v.lat, v.lon, proximo.lat, proximo.lon).toFixed(3)) : 0,
+      azimute: proximo ? azimute(v.lat, v.lon, proximo.lat, proximo.lon) : null,
+    }
+  })
+
+  return {
+    formato: 'vertex-freecad-v1',
+    origem: 'GeoAdmin-Pro',
+    projeto_id: projeto?.id || null,
+    projeto_nome: nomeProjeto,
+    resumo: {
+      vertices: vertices.length,
+      segmentos: segmentos.length,
+      area_m2: Number(calcArea(vertices).toFixed(2)),
+      perimetro_m: Number(calcPerimetro(vertices).toFixed(3)),
+    },
+    vertices: vertices.map((v, i) => ({
+      ordem: i + 1,
+      nome: v.nome || `V${i + 1}`,
+      lat: Number(v.lat.toFixed(8)),
+      lon: Number(v.lon.toFixed(8)),
+    })),
+    segmentos,
+  }
+}
+
 function vxNecessarios(ferr: NomeFerramenta): number {
   switch (ferr) {
     case 'inverso':    return 2
@@ -243,21 +283,17 @@ function vxNecessarios(ferr: NomeFerramenta): number {
     case 'area':       return 0
     case 'rotacao':    return 0
     case 'subdivisao': return 0
+    case 'nomenclatura': return 0
+    case 'pacote': return 0
     default:           return 0
   }
 }
 
 const FERRAMENTAS: { id: NomeFerramenta; icone: string; label: string }[] = [
-  { id: 'area',       icone: '⬟', label: 'Área' },
-  { id: 'inverso',    icone: '↔', label: 'Inverso' },
-  { id: 'irradiacao', icone: '📡', label: 'Irradiação' },
-  { id: 'intersecao', icone: '✕', label: 'Interseção' },
-  { id: 'distpl',     icone: '⊥', label: 'Dist. P-L' },
-  { id: 'deflexao',   icone: '↗', label: 'Deflexão' },
-  { id: 'mediaPts',   icone: '⊕', label: 'Média Pts' },
-  { id: 'conversao',  icone: '🔄', label: 'Conversão' },
-  { id: 'rotacao',    icone: '↻', label: 'Rotação' },
-  { id: 'subdivisao', icone: '✂', label: 'Subdivisão' },
+  { id: 'inverso',       icone: '／', label: 'Linha' },
+  { id: 'area',          icone: '⌁', label: 'Polilinha' },
+  { id: 'nomenclatura',  icone: 'M', label: 'Nomes' },
+  { id: 'pacote',        icone: 'FC', label: 'FreeCAD' },
 ]
 
 // ── Leaflet HTML ──────────────────────────────────────────────────────────────
@@ -575,6 +611,8 @@ export default function MapaProjetoScreen() {
   const [rotOrigemLon, setRotOrigemLon] = useState('')
   const [subArea,      setSubArea]      = useState('')
   const [subUnidade,   setSubUnidade]   = useState<'ha' | 'm2'>('ha')
+  const [nomePrefixo,  setNomePrefixo]  = useState('M')
+  const [nomeInicio,   setNomeInicio]   = useState('1')
 
   // resultados
   const [resultado,    setResultado]    = useState<any>(null)
@@ -779,6 +817,7 @@ export default function MapaProjetoScreen() {
     setDeflAngulo(''); setDeflLado('D')
     setRotAngulo(''); setRotOrigemAuto(true); setRotOrigemLat(''); setRotOrigemLon('')
     setSubArea(''); setSubUnidade('ha')
+    setNomePrefixo('M'); setNomeInicio('1')
   }, [])
 
   const abrirFerramenta = useCallback((ferr: NomeFerramenta) => {
@@ -808,6 +847,8 @@ export default function MapaProjetoScreen() {
       'conversao',
       'rotacao',
       'subdivisao',
+      'nomenclatura',
+      'pacote',
     ])
 
     if (!ferramentasSuportadas.has(tool)) return
@@ -854,6 +895,16 @@ export default function MapaProjetoScreen() {
   const calcular = useCallback(() => {
     if (!ferrAtiva) return
     const selecionados = vxSelecionados.map(i => editVerts[i])
+
+    if (ferrAtiva === 'nomenclatura') {
+      setResultado({ nomes: gerarNomesVertices(nomePrefixo, nomeInicio, editVerts.length) })
+      return
+    }
+
+    if (ferrAtiva === 'pacote') {
+      setResultado({ pacote: montarPacoteFreeCAD(projeto, editVerts) })
+      return
+    }
 
     if (ferrAtiva === 'area') {
       const areaM2 = calcArea(editVerts)
@@ -1014,7 +1065,7 @@ export default function MapaProjetoScreen() {
       const subVerts = [...editVerts.slice(0, melhorAresta + 1), pCorte, editVerts[0]]
       setResultado({ pCorte, areaSub: calcArea(subVerts), areaResto: totalM2 - calcArea(subVerts), aresta: melhorAresta, t: melhorT })
     }
-  }, [ferrAtiva, vxSelecionados, editVerts, irrAzimute, irrDist, intAz1, intAz2, deflAngulo, deflLado, rotAngulo, rotOrigemAuto, rotOrigemLat, rotOrigemLon, subArea, subUnidade])
+  }, [ferrAtiva, vxSelecionados, editVerts, projeto, nomePrefixo, nomeInicio, irrAzimute, irrDist, intAz1, intAz2, deflAngulo, deflLado, rotAngulo, rotOrigemAuto, rotOrigemLat, rotOrigemLon, subArea, subUnidade])
 
   const inserirNoPeriemtro = useCallback(() => {
     if (!resultado || !ferrAtiva) return
@@ -1058,6 +1109,20 @@ export default function MapaProjetoScreen() {
     setEditVerts(resultado.rotacionados)
     limparFerramenta()
   }, [resultado, editVerts, pushHist, limparFerramenta])
+
+  const aplicarNomenclatura = useCallback(() => {
+    const nomes: string[] | undefined = resultado?.nomes
+    if (!nomes?.length) return
+    pushHist(editVerts)
+    setEditVerts(prev => prev.map((v, i) => ({ ...v, nome: nomes[i] || v.nome })))
+    limparFerramenta()
+  }, [resultado, editVerts, pushHist, limparFerramenta])
+
+  const copiarPacoteFreeCAD = useCallback(async () => {
+    if (!resultado?.pacote) return
+    await Clipboard.setStringAsync(JSON.stringify(resultado.pacote, null, 2))
+    Alert.alert('Pacote copiado', 'Pacote JSON copiado para enviar ao FreeCAD.')
+  }, [resultado])
 
   const selecaoAtiva = ferrAtiva !== null && vxNecessarios(ferrAtiva) !== 0
   const hasGeometry = visiblePoints.length > 0 || polygonVerts.length > 0
@@ -1133,8 +1198,8 @@ export default function MapaProjetoScreen() {
           {/* Botão ferramentas ⚙ */}
           <TouchableOpacity style={[s.etool, { borderColor: C.primary }]}
             onPress={() => setFerrPickerVisible(true)}
-            accessibilityRole="button" accessibilityLabel="Ferramentas de cálculo">
-            <Text style={{ color: C.primary, fontSize: 13 }}>⚙</Text>
+            accessibilityRole="button" accessibilityLabel="Ferramentas simples">
+            <Text style={{ color: C.primary, fontSize: 12, fontWeight: '700' }}>FC</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.etool, { marginLeft: 'auto' }]} onPress={cancelarEdit}>
             <Text style={{ color: C.muted, fontSize: 11 }}>Cancelar</Text>
@@ -1174,7 +1239,9 @@ export default function MapaProjetoScreen() {
         {editMode && ferrAtiva && vxNecessarios(ferrAtiva) !== 0 && (
           <View style={s.selecaoOverlay}>
             <Text style={s.selecaoTxt}>
-              {ferrAtiva === 'mediaPts'
+              {ferrAtiva === 'inverso'
+                ? `Linha: toque em 2 vértices • ${vxSelecionados.length}/2`
+                : ferrAtiva === 'mediaPts'
                 ? `Toque nos vértices • ${vxSelecionados.length} selecionados`
                 : `Toque nos vértices • ${vxSelecionados.length}/${vxNecessarios(ferrAtiva)} selecionados`}
             </Text>
@@ -1234,7 +1301,7 @@ export default function MapaProjetoScreen() {
         <View style={s.ferrModal}>
           <View style={[s.ferrSheet, { backgroundColor: C.card }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={[s.ferrSheetTitle, { color: C.text }]}>Ferramentas de Cálculo</Text>
+              <Text style={[s.ferrSheetTitle, { color: C.text }]}>Linha, polilinha e FreeCAD</Text>
               <TouchableOpacity onPress={() => setFerrPickerVisible(false)}>
                 <Feather name="x" size={20} color={C.muted} />
               </TouchableOpacity>
@@ -1295,6 +1362,36 @@ export default function MapaProjetoScreen() {
               )}
 
               {/* Inputs por ferramenta */}
+              {ferrAtiva === 'nomenclatura' && (
+                <View style={{ gap: 10, marginBottom: 12 }}>
+                  <View>
+                    <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Prefixo</Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {['M', 'P', 'E', 'MM'].map(prefixo => (
+                        <TouchableOpacity key={prefixo}
+                          style={[s.etool, nomePrefixo === prefixo && { backgroundColor: C.primary, borderColor: C.primary }]}
+                          onPress={() => setNomePrefixo(prefixo)}>
+                          <Text style={{ color: nomePrefixo === prefixo ? C.primaryText : C.muted, fontWeight: '700' }}>{prefixo}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <View>
+                    <Text style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>Número inicial</Text>
+                    <TextInput style={[s.input, { color: C.text, borderColor: C.cardBorder }]}
+                      placeholderTextColor={C.muted} placeholder="Ex: 1"
+                      value={nomeInicio} onChangeText={setNomeInicio} keyboardType="number-pad" />
+                  </View>
+                </View>
+              )}
+
+              {ferrAtiva === 'pacote' && (
+                <View style={{ backgroundColor: C.background, borderRadius: 10, padding: 12, gap: 4, marginBottom: 12 }}>
+                  <Text style={{ color: C.text, fontSize: 14, fontWeight: '700' }}>Pacote do perímetro editado</Text>
+                  <Text style={{ color: C.muted, fontSize: 12 }}>{editVerts.length} vértices, {editVerts.length} segmentos e nomes atuais.</Text>
+                </View>
+              )}
+
               {ferrAtiva === 'irradiacao' && (
                 <View style={{ gap: 10, marginBottom: 12 }}>
                   <View>
@@ -1419,13 +1516,34 @@ export default function MapaProjetoScreen() {
               <TouchableOpacity
                 style={{ backgroundColor: C.primary, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 12 }}
                 onPress={calcular}>
-                <Text style={{ color: C.primaryText, fontWeight: '700', fontSize: 15 }}>Calcular</Text>
+                <Text style={{ color: C.primaryText, fontWeight: '700', fontSize: 15 }}>
+                  {ferrAtiva === 'nomenclatura' ? 'Gerar nomes'
+                    : ferrAtiva === 'pacote' ? 'Preparar pacote'
+                      : ferrAtiva === 'area' ? 'Conferir polilinha'
+                        : 'Calcular'}
+                </Text>
               </TouchableOpacity>
 
               {/* Resultados */}
               {resultado && (
                 <View style={{ backgroundColor: C.background, borderRadius: 10, padding: 14, gap: 6, marginBottom: 12 }}>
                   <Text style={{ color: C.primary, fontWeight: '700', fontSize: 13, marginBottom: 4 }}>Resultado</Text>
+
+                  {ferrAtiva === 'nomenclatura' && resultado.nomes && (
+                    <>
+                      <Text style={{ color: C.text, fontSize: 14 }}>{resultado.nomes.length} vértices nomeados.</Text>
+                      <Text style={{ color: C.text, fontSize: 13 }}>{resultado.nomes.slice(0, 8).join('  ')}</Text>
+                    </>
+                  )}
+
+                  {ferrAtiva === 'pacote' && resultado.pacote && (
+                    <>
+                      <Text style={{ color: C.text, fontSize: 14 }}>Vértices: {resultado.pacote.resumo.vertices}</Text>
+                      <Text style={{ color: C.text, fontSize: 14 }}>Segmentos: {resultado.pacote.resumo.segmentos}</Text>
+                      <Text style={{ color: C.text, fontSize: 14 }}>Área: {resultado.pacote.resumo.area_m2} m²</Text>
+                      <Text style={{ color: C.text, fontSize: 14 }}>Perímetro: {resultado.pacote.resumo.perimetro_m} m</Text>
+                    </>
+                  )}
 
                   {ferrAtiva === 'area' && (
                     <>
@@ -1510,6 +1628,22 @@ export default function MapaProjetoScreen() {
               )}
 
               {/* Botões de ação */}
+              {resultado && ferrAtiva === 'nomenclatura' && resultado.nomes && (
+                <TouchableOpacity
+                  style={{ backgroundColor: '#1D9E75', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 8 }}
+                  onPress={aplicarNomenclatura}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Aplicar nomes ao perímetro</Text>
+                </TouchableOpacity>
+              )}
+
+              {resultado && ferrAtiva === 'pacote' && resultado.pacote && (
+                <TouchableOpacity
+                  style={{ backgroundColor: '#378ADD', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 8 }}
+                  onPress={copiarPacoteFreeCAD}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Copiar pacote FreeCAD</Text>
+                </TouchableOpacity>
+              )}
+
               {resultado && (ferrAtiva === 'irradiacao' || ferrAtiva === 'intersecao' || ferrAtiva === 'mediaPts') && (
                 <TouchableOpacity
                   style={{ backgroundColor: '#378ADD', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 8 }}

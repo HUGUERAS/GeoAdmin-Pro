@@ -22,7 +22,7 @@ export function FerramentaBtn({
 }
 
 const s = StyleSheet.create({
-  btn:   { borderRadius: 10, borderWidth: 0.5, padding: 12, alignItems: 'center', justifyContent: 'center', minHeight: 80, flex: 1, margin: 4 },
+  btn:   { borderRadius: 10, borderWidth: 0.5, padding: 12, alignItems: 'center', justifyContent: 'center', minHeight: 80, flex: 1, flexBasis: 0, minWidth: 0, margin: 4 },
   icone: { marginBottom: 6 },
   label: { fontSize: 12, fontWeight: '500', textAlign: 'center' },
 })

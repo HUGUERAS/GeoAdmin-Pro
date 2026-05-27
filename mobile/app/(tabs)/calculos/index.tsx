@@ -12,7 +12,7 @@ type FerramentaDef = {
   id: string
   label: string
   icone: string
-  rota: string
+  rota?: string
   toolMapa?: string
 }
 
@@ -25,38 +25,24 @@ type SecaoDef = {
 
 const SECOES: SecaoDef[] = [
   {
-    id: 'peca-tecnica',
-    titulo: 'Peça técnica',
-    descricao: 'Ferramentas para conferir área, gerar coordenadas auxiliares e fechar o raciocínio topográfico.',
+    id: 'campo-simples',
+    titulo: 'Campo simples',
+    descricao: 'Linha, polilinha e nomes. Só o que precisa ficar pronto antes de abrir no FreeCAD.',
     ferramentas: [
-      { id: 'inverso', label: 'Inverso', icone: 'arrow-up-right', rota: '/calculos/inverso', toolMapa: 'inverso' },
-      { id: 'area', label: 'Área', icone: 'square', rota: '/calculos/area', toolMapa: 'area' },
-      { id: 'intersecao', label: 'Interseção', icone: 'git-merge', rota: '/calculos/intersecao', toolMapa: 'intersecao' },
-      { id: 'distancia', label: 'Dist. P-L', icone: 'move', rota: '/calculos/distancia', toolMapa: 'distpl' },
-      { id: 'subdivisao', label: 'Subdivisão', icone: 'scissors', rota: '/calculos/subdivisao', toolMapa: 'subdivisao' },
-      { id: 'rotacao', label: 'Rotação', icone: 'rotate-cw', rota: '/calculos/rotacao', toolMapa: 'rotacao' },
-    ],
-  },
-  {
-    id: 'apoio-cad',
-    titulo: 'Apoio ao CAD',
-    descricao: 'Use para montar, conferir e ajustar vértices antes de voltar ao mapa/CAD do projeto.',
-    ferramentas: [
-      { id: 'conversao', label: 'Conversão', icone: 'refresh-cw', rota: '/calculos/conversao', toolMapa: 'conversao' },
-      { id: 'deflexao', label: 'Deflexão', icone: 'corner-down-right', rota: '/calculos/deflexao', toolMapa: 'deflexao' },
-      { id: 'media', label: 'Média Pts', icone: 'target', rota: '/calculos/media', toolMapa: 'mediaPts' },
-      { id: 'irradiacao', label: 'Irradiação', icone: 'navigation', rota: '/calculos/irradiacao', toolMapa: 'irradiacao' },
-    ],
-  },
-  {
-    id: 'pontos-linhas',
-    titulo: 'Pontos e Linhas',
-    descricao: 'Bloco de notas de campo, travessia de segmentos e nomenclatura de vértices.',
-    ferramentas: [
-      { id: 'pontos', label: 'Pontos', icone: 'grid', rota: '/calculos/pontos' },
-      { id: 'linha', label: 'Linha', icone: 'arrow-up-right', rota: '/calculos/linha' },
+      { id: 'linha', label: 'Linha', icone: 'slash', rota: '/calculos/linha' },
       { id: 'polilinha', label: 'Polilinha', icone: 'trending-up', rota: '/calculos/polilinha' },
-      { id: 'nomenclatura', label: 'Nomenclatura', icone: 'tag', rota: '/calculos/nomenclatura' },
+      { id: 'nomenclatura', label: 'Nomes', icone: 'tag', rota: '/calculos/nomenclatura' },
+    ],
+  },
+  {
+    id: 'cad-freecad',
+    titulo: 'No CAD do projeto',
+    descricao: 'Com projeto ativo, trabalha no perímetro real e deixa mastigado para o FreeCAD.',
+    ferramentas: [
+      { id: 'cad-linha', label: 'Linha CAD', icone: 'slash', toolMapa: 'inverso' },
+      { id: 'cad-polilinha', label: 'Polilinha CAD', icone: 'trending-up', toolMapa: 'area' },
+      { id: 'cad-nomes', label: 'Nomear vértices', icone: 'tag', toolMapa: 'nomenclatura' },
+      { id: 'cad-freecad', label: 'Pacote FreeCAD', icone: 'box', toolMapa: 'pacote' },
     ],
   },
 ]
@@ -117,7 +103,7 @@ export default function CalculosScreen() {
 
   const mensagemContexto = useMemo(() => {
     if (carregandoContexto) return 'Recuperando o projeto ativo do mapa...'
-    if (!projetoAtivo) return 'Sem projeto ativo no CAD. Abra um projeto e toque em "Ver no mapa" para transformar esta aba em apoio real ao trabalho.'
+    if (!projetoAtivo) return 'Sem projeto ativo. Use as ferramentas livres ou abra um projeto para preparar o perímetro real.'
     return `Projeto ativo: ${projetoAtivo.projeto_nome || 'Projeto sem nome'}${projetoAtivo.cliente_nome ? ` · Cliente ${projetoAtivo.cliente_nome}` : ''}${projetoAtivo.total_pontos ? ` · ${projetoAtivo.total_pontos} ponto(s)` : ''}`
   }, [carregandoContexto, projetoAtivo])
 
@@ -134,8 +120,8 @@ export default function CalculosScreen() {
   return (
     <View style={[s.container, { backgroundColor: C.background }]}>
       <ScreenHeader
-        titulo="Cálculos técnicos"
-        subtitulo="Essas ferramentas existem para alimentar o CAD e a peça técnica, não para virar um fluxo paralelo."
+        titulo="Linha, polilinha e nomes"
+        subtitulo="Ferramentas simples para organizar o perímetro antes do FreeCAD."
       />
       <ScrollView contentContainerStyle={s.grid}>
         <View style={[s.contextoCard, { backgroundColor: C.card, borderColor: projetoAtivo ? C.primary : C.cardBorder }]}>
@@ -165,13 +151,13 @@ export default function CalculosScreen() {
 
         {SECOES.map((secao) => {
           const rows = []
-          for (let i = 0; i < secao.ferramentas.length; i += 3) rows.push(secao.ferramentas.slice(i, i + 3))
+          for (let i = 0; i < secao.ferramentas.length; i += 2) rows.push(secao.ferramentas.slice(i, i + 2))
           return (
             <View key={secao.id} style={[s.secao, { backgroundColor: C.card, borderColor: C.cardBorder }]}>
               <Text style={[s.secaoTitulo, { color: C.text }]}>{secao.titulo}</Text>
               <Text style={[s.secaoSub, { color: C.muted }]}>
                 {projetoAtivo
-                  ? `${secao.descricao} Com projeto ativo, o toque abre direto no CAD deste projeto.`
+                  ? `${secao.descricao} Toque para abrir no CAD deste projeto.`
                   : secao.descricao}
               </Text>
               {rows.map((row, ri) => (
@@ -190,7 +176,7 @@ export default function CalculosScreen() {
             </View>
           )
         })}
-        <Text style={[s.rodape, { color: C.muted }]}>Fluxo ideal: abrir o projeto, entrar no CAD, calcular em contexto e só usar o modo livre quando estiver fazendo rascunho ou conferência isolada.</Text>
+        <Text style={[s.rodape, { color: C.muted }]}>FreeCAD entra depois: o app prepara linha, polilinha, nomes e pacote do projeto.</Text>
       </ScrollView>
     </View>
   )
