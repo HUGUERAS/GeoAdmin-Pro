@@ -7,6 +7,8 @@ expo-env.d.ts
 
 node_modules/
 .expo/
+.eas-inspect/
+.expo-apk-export-test/
 .DS_Store
 .vercel/
 

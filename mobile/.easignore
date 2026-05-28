@@ -1,6 +1,8 @@
 # Keep build uploads lean.
 node_modules/
 .expo/
+.eas-inspect/
+.expo-apk-export-test/
 dist/
 .DS_Store
 
