@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from hashlib import sha256
+
 import integracoes.projeto_clientes as projeto_clientes_mod
 
 
@@ -60,6 +62,11 @@ class FakeQuery:
         return self
 
     def order(self, *_args, **_kwargs):
+        return self
+
+    def insert(self, payload):
+        self.action = 'insert'
+        self.payload = payload
         return self
 
     def execute(self):
@@ -208,3 +215,31 @@ def test_salvar_participantes_projeto_em_lote_mescla_projeto_e_area():
 
     assert len(resultado['participantes_projeto']) == 2
     assert resultado['participantes_area']['area-1'][0]['cliente_id'] == 'cli-2'
+
+
+def test_registrar_evento_magic_link_envia_token_hash_sem_token_bruto():
+    eventos = []
+
+    def resolver(query: FakeQuery):
+        if query.table == 'eventos_magic_link' and query.action == 'insert':
+            eventos.append(query.payload)
+            return [{**query.payload, 'id': 'evt-1'}]
+        raise AssertionError(f'Tabela inesperada: {query.table} {query.action}')
+
+    resultado = projeto_clientes_mod.registrar_evento_magic_link(
+        FakeSupabase(resolver),
+        projeto_id='proj-1',
+        projeto_cliente_id='pc-1',
+        cliente_id='cli-1',
+        area_id='area-1',
+        token='token-secreto',
+        tipo_evento='consumido',
+        canal='interno',
+        autor='teste',
+        payload={'vertices_recebidos': 3},
+    )
+
+    assert resultado['id'] == 'evt-1'
+    assert eventos[0]['token_hash'] == sha256(b'token-secreto').hexdigest()
+    assert 'token' not in eventos[0]
+    assert eventos[0]['payload_json'] == {'vertices_recebidos': 3}

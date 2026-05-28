@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+from hashlib import sha256
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -49,6 +50,10 @@ def _normalizar_tipo_evento(valor: str | None) -> str:
 def _normalizar_canal(valor: str | None) -> str:
     chave = (valor or 'whatsapp').strip().lower()
     return chave if chave in CANAIS_MAGIC_LINK_VALIDOS else 'whatsapp'
+
+
+def _hash_token_magic_link(token: str | None) -> str:
+    return sha256(str(token or '').encode('utf-8')).hexdigest()
 
 
 def _buscar_cliente_por_documento(sb, cpf: str | None) -> dict[str, Any] | None:
@@ -578,7 +583,7 @@ def registrar_evento_magic_link(
         'projeto_cliente_id': projeto_cliente_id,
         'cliente_id': cliente_id,
         'area_id': area_id,
-        'token': token,
+        'token_hash': _hash_token_magic_link(token),
         'tipo_evento': _normalizar_tipo_evento(tipo_evento),
         'canal': _normalizar_canal(canal),
         'autor': autor,
@@ -591,9 +596,20 @@ def registrar_evento_magic_link(
         dados = _dados(resposta)
         return dados[0] if dados else registro
     except Exception as exc:
+        texto = str(exc).lower()
+        if 'token_hash' in texto and ('schema cache' in texto or 'column' in texto):
+            registro_compat = {chave: valor for chave, valor in registro.items() if chave != 'token_hash'}
+            try:
+                resposta = sb.table('eventos_magic_link').insert(registro_compat).execute()
+                dados = _dados(resposta)
+                return dados[0] if dados else registro_compat
+            except Exception as exc_compat:
+                logger.warning("Falha ao registrar evento de magic link: %s", exc_compat)
+                return registro_compat
+        logger.warning("Falha ao registrar evento de magic link: %s", exc)
         if 'eventos_magic_link' in str(exc).lower():
             return registro
-        raise
+        return registro
 
 
 def listar_eventos_magic_link(
