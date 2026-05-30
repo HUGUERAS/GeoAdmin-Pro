@@ -38,9 +38,10 @@ from integracoes.referencia_cliente import (
 )
 from routes.perimetros import buscar_perimetro_ativo
 from services.magic_link import MagicLinkService
+from services.ocr_vision import ocr_documentos
 
 logger = logging.getLogger("geoadmin.documentos")
-router = APIRouter(tags=["Documentos GPRF"], dependencies=[Depends(verificar_token)])
+router = APIRouter(tags=["Documentos GPRF"])
 
 
 class GerarMagicLinksLotePayload(BaseModel):
@@ -621,6 +622,27 @@ def _extensao_para_formato(filename: str | None) -> str | None:
     return None
 
 
+def _complementar_payload_de_anexos(
+    payload: dict[str, Any],
+    uploads: list[tuple[str, bytes, str | None]],
+) -> None:
+    """Complemento interno: tenta extrair CPF/RG/nome das fotos enviadas."""
+    imagens = [b for (_n, b, ct) in uploads if b]
+    if not imagens:
+        return
+    try:
+        campos = ocr_documentos(imagens)
+    except Exception as exc:
+        logger.warning("complemento documento falhou: %s", exc)
+        return
+    if campos.get("cpf") and not str(payload.get("cpf") or "").strip():
+        payload["cpf"] = campos["cpf"]
+    if campos.get("rg") and not str(payload.get("rg") or "").strip():
+        payload["rg"] = campos["rg"]
+    if campos.get("nome") and not str(payload.get("nome") or "").strip():
+        payload["nome"] = campos["nome"]
+
+
 async def _extrair_payload_request(request: Request) -> tuple[dict[str, Any], list[tuple[str, bytes, str | None]], tuple[str, bytes, str | None] | None]:
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
@@ -746,6 +768,7 @@ def gerar_magic_link(
     canal: str = "whatsapp",
     autor: str | None = None,
     supabase=None,
+    _usuario: dict = Depends(verificar_token),
 ):
     """
     Endpoint interno para gerar Magic Link.
@@ -806,7 +829,12 @@ def gerar_magic_link(
 
 
 @router.post("/projetos/{projeto_id}/magic-links/lote", summary="Gerar magic links em lote por participante/lote")
-def gerar_magic_links_lote(projeto_id: str, payload: GerarMagicLinksLotePayload, supabase=None):
+def gerar_magic_links_lote(
+    projeto_id: str,
+    payload: GerarMagicLinksLotePayload,
+    supabase=None,
+    _usuario: dict = Depends(verificar_token),
+):
     sb = supabase or _get_supabase()
     try:
         projeto = sb.table("vw_projetos_completo").select("id, projeto_nome").eq("id", projeto_id).single().execute().data
@@ -868,7 +896,14 @@ def gerar_magic_links_lote(projeto_id: str, payload: GerarMagicLinksLotePayload,
 
 
 @router.get("/projetos/{projeto_id}/magic-links/eventos", summary="Listar histórico de envio de magic links")
-def listar_historico_magic_links(projeto_id: str, projeto_cliente_id: str | None = None, area_id: str | None = None, limite: int = 100, supabase=None):
+def listar_historico_magic_links(
+    projeto_id: str,
+    projeto_cliente_id: str | None = None,
+    area_id: str | None = None,
+    limite: int = 100,
+    supabase=None,
+    _usuario: dict = Depends(verificar_token),
+):
     """
     Lista eventos de Magic Link usando o serviço centralizado.
     """
@@ -908,6 +943,7 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
     cliente_id = cliente["id"]
 
     payload_raw, uploads, geo_upload = await _extrair_payload_request(request)
+    _complementar_payload_de_anexos(payload_raw, uploads)
     try:
         dados = _normalizar_payload(payload_raw)
     except ValidationError as exc:
@@ -1027,7 +1063,7 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
 
 
 @router.post("/projetos/{projeto_id}/gerar-documentos", summary="Gerar ZIP com os 7 documentos GPRF", response_class=Response)
-def gerar_documentos(projeto_id: str, supabase=None):
+def gerar_documentos(projeto_id: str, supabase=None, _usuario: dict = Depends(verificar_token)):
     from integracoes.gerador_documentos import gerar_todos_documentos
 
     sb = supabase or _get_supabase()
@@ -1062,7 +1098,7 @@ def gerar_documentos(projeto_id: str, supabase=None):
 
 
 @router.get("/projetos/{projeto_id}/documentos", summary="Listar documentos gerados do projeto")
-def listar_documentos(projeto_id: str, supabase=None):
+def listar_documentos(projeto_id: str, supabase=None, _usuario: dict = Depends(verificar_token)):
     sb = supabase or _get_supabase()
 
     try:

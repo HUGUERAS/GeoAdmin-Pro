@@ -14,7 +14,6 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "credentialsSource": "local",
         "buildType": "apk"
       }
     },

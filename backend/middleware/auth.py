@@ -18,7 +18,16 @@ logger = logging.getLogger(__name__)
 _seguranca = HTTPBearer(auto_error=False)
 
 # Endpoints que não exigem autenticação
-ROTAS_PUBLICAS = {"/health", "/docs", "/openapi.json", "/redoc"}
+ROTAS_PUBLICAS = {
+    "/health",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/formulario/cliente",
+    "/formulario/cliente/contexto",
+    "/formulario/foto",
+    "/vertex/lead",
+}
 
 
 async def verificar_token(

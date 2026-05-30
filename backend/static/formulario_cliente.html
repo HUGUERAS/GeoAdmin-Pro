@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GeoAdmin Pro — Formulário do Cliente</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root {
     --bg: #0d110f;
@@ -244,65 +245,36 @@
     line-height: 1.5;
     margin-bottom: 16px;
   }
-  .sketch-shell {
-    border: 1px dashed rgba(133, 89, 21, .45);
-    border-radius: 18px;
-    background: linear-gradient(180deg, #111613 0%, #161d19 100%);
-    padding: 14px;
+  .satellite-shell {
+    border: 1px solid rgba(197,139,43,.35);
+    border-radius: 16px;
+    background: #111613;
+    padding: 12px;
     display: grid;
-    gap: 12px;
-  }
-  .client-map {
-    border: 1px solid rgba(47,165,106,.36);
-    border-radius: 18px;
-    background: linear-gradient(180deg, #101512 0%, #141b17 100%);
-    padding: 14px;
-    display: grid;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 16px;
   }
-  .client-map[hidden] { display: none; }
-  .client-map-head {
+  .satellite-toolbar {
     display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
   }
-  .client-map-title {
-    display: block;
-    font-size: 15px;
-    font-weight: 700;
+  .satellite-board {
+    width: 100%;
+    height: 320px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.12);
+    background: #0a0f0d;
   }
-  .client-map-meta {
-    display: block;
-    margin-top: 3px;
+  .satellite-board .leaflet-container {
+    width: 100%;
+    height: 100%;
+  }
+  .satellite-status {
     font-size: 12px;
     color: var(--muted);
     line-height: 1.4;
-  }
-  .client-map-chip {
-    border: 1px solid rgba(47,165,106,.42);
-    border-radius: 999px;
-    padding: 5px 9px;
-    color: #7fe0a8;
-    background: rgba(47,165,106,.10);
-    font-size: 11px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  .client-map-board {
-    width: 100%;
-    border-radius: 14px;
-    border: 1px solid rgba(47,165,106,.22);
-    background: #0a0f0d;
-    aspect-ratio: 16 / 10;
-    overflow: hidden;
-  }
-  .sketch-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
   }
   .ghost-btn, .primary-btn, .secondary-btn {
     border: none;
@@ -326,16 +298,6 @@
   .nav-row .secondary-btn,
   .nav-row .primary-btn { min-width: 140px; }
   .nav-row .spacer { flex: 1; }
-  .sketch-board {
-    width: 100%;
-    background: #101512;
-    border-radius: 14px;
-    border: 1px solid rgba(47,165,106,.22);
-    aspect-ratio: 16 / 10;
-    overflow: hidden;
-    position: relative;
-  }
-  svg { width: 100%; height: 100%; display: block; touch-action: none; }
   .upload-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -511,6 +473,46 @@
           </div>
         </div>
 
+        <div class="note" style="margin-top:16px;">Fotos dos documentos</div>
+        <div class="upload-grid" style="margin-top:14px;">
+          <div class="upload-box">
+            <label for="doc_identidade_frente">RG ou CPF (frente)</label>
+            <input
+              id="doc_identidade_frente"
+              name="doc_identidade_frente"
+              type="file"
+              autocomplete="off"
+              accept="image/*,.pdf"
+              capture="environment"
+            />
+            <div class="hint">Tire a foto nítida da frente do documento.</div>
+          </div>
+          <div class="upload-box">
+            <label for="doc_identidade_verso">RG ou CPF (verso)</label>
+            <input
+              id="doc_identidade_verso"
+              name="doc_identidade_verso"
+              type="file"
+              autocomplete="off"
+              accept="image/*,.pdf"
+              capture="environment"
+            />
+            <div class="hint">Opcional, mas ajuda na conferência.</div>
+          </div>
+          <div class="upload-box">
+            <label for="doc_rural">CCIR, CAR ou ITR</label>
+            <input
+              id="doc_rural"
+              name="doc_rural"
+              type="file"
+              autocomplete="off"
+              accept="image/*,.pdf"
+              capture="environment"
+            />
+            <div class="hint">Se tiver, envie uma foto ou PDF.</div>
+          </div>
+        </div>
+
         <div class="nav-row">
           <div class="spacer"></div>
           <button type="button" class="primary-btn" data-next>Continuar</button>
@@ -619,32 +621,20 @@
       <div class="step-card" data-step="2" hidden>
         <div class="step-header">
           <h2 class="step-title">3. Esboço aproximado da área</h2>
-          <p class="step-subtitle">Faça um croqui rápido só para nos orientar. Se você tiver coordenadas, KML, GeoJSON, CSV, TXT ou um croqui em foto/PDF, envie também.</p>
+          <p class="step-subtitle">Marque a localização aproximada no mapa satélite e, se quiser, complemente com croqui e anexos.</p>
         </div>
 
-        <div class="client-map" id="client-map" hidden>
-          <div class="client-map-head">
-            <div>
-              <span class="client-map-title">Mapa do seu recorte</span>
-              <span class="client-map-meta" id="client-map-meta">Carregando área vinculada ao seu link.</span>
-            </div>
-            <span class="client-map-chip" id="client-map-chip">Recorte</span>
+        <div class="satellite-shell">
+          <div class="satellite-toolbar">
+            <button type="button" class="ghost-btn" id="btn-map-style">Ativar satélite</button>
+            <button type="button" class="ghost-btn" id="btn-map-locate">Usar minha localização</button>
+            <button type="button" class="ghost-btn" id="btn-map-undo">Desfazer vértice</button>
+            <button type="button" class="ghost-btn" id="btn-map-clear">Limpar marcação</button>
           </div>
-          <div class="client-map-board">
-            <svg id="client-map-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="satellite-board">
+            <div id="satellite-map"></div>
           </div>
-          <div class="hint" id="client-map-status">Este mapa mostra apenas a área vinculada ao seu link.</div>
-        </div>
-
-        <div class="sketch-shell">
-          <div class="sketch-toolbar">
-            <button type="button" class="ghost-btn" id="btn-clear-sketch">Limpar desenho</button>
-            <span class="hint">Toque no quadro abaixo para marcar os vértices do croqui. Isso é só um esboço, não precisa ficar perfeito.</span>
-          </div>
-          <div class="sketch-board">
-            <svg id="sketch-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
-          </div>
-          <div class="hint" id="sketch-status">Nenhum vértice desenhado ainda.</div>
+          <div class="satellite-status" id="satellite-map-status">Toque no mapa para adicionar os vértices do polígono da área.</div>
         </div>
 
         <div class="grid" style="margin-top:16px;">
@@ -669,6 +659,7 @@
         </div>
 
         <input type="hidden" id="croqui_svg" name="croqui_svg" autocomplete="off" />
+        <input type="hidden" id="mapa_latlng" name="mapa_latlng" autocomplete="off" />
 
         <div class="nav-row">
           <button type="button" class="secondary-btn" data-prev>Voltar</button>
@@ -704,6 +695,7 @@
     <p class="footer-note">Este formulário foi preparado para ser simples no celular. O desenho é apenas um apoio visual e não substitui o levantamento técnico final.</p>
   </main>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const passos = [
   { titulo: 'Dados pessoais', descricao: 'Identificação do proprietário' },
@@ -713,7 +705,6 @@ const passos = [
 ]
 const estado = {
   passoAtual: 0,
-  sketchPoints: [],
   confrontantes: [
     { lado: 'Norte', nome: '', cpf: '', nome_imovel: '', matricula: '', tipo: 'particular' },
     { lado: 'Sul', nome: '', cpf: '', nome_imovel: '', matricula: '', tipo: 'particular' },
@@ -726,14 +717,10 @@ const errorBanner = document.getElementById('error-banner')
 const successCard = document.getElementById('success-card')
 const progress = document.getElementById('progress')
 const steps = [...document.querySelectorAll('.step-card')]
-const sketchSvg = document.getElementById('sketch-svg')
-const sketchStatus = document.getElementById('sketch-status')
-const croquiSvgInput = document.getElementById('croqui_svg')
-const clientMap = document.getElementById('client-map')
-const clientMapSvg = document.getElementById('client-map-svg')
-const clientMapMeta = document.getElementById('client-map-meta')
-const clientMapChip = document.getElementById('client-map-chip')
-const clientMapStatus = document.getElementById('client-map-status')
+const croquiCoordsInput = document.getElementById('croqui_coords')
+const satelliteMapStatus = document.getElementById('satellite-map-status')
+const mapaLatLngInput = document.getElementById('mapa_latlng')
+const btnMapStyle = document.getElementById('btn-map-style')
 const listaMunicipios = document.getElementById('lista-municipios')
 const municipioImovelInput = document.getElementById('municipio_imovel')
 const municipioEnderecoInput = document.getElementById('municipio')
@@ -755,6 +742,167 @@ const municipiosSugeridos = [
   'Rio Verde','Sanclerlândia','Santa Helena de Goiás','Santa Rita do Araguaia','São João d\'Aliança','São Luís de Montes Belos','São Miguel do Araguaia','Senador Canedo','Silvânia','Simolândia',
   'Sítio d\'Abadia','Trindade','Uruaçu','Uruana','Valparaíso de Goiás','Vicentinópolis','Vila Boa','Vila Propício','Brasília'
 ]
+let satelliteMap = null
+let streetLayer = null
+let satelliteLayer = null
+let usandoSatelite = false
+let satelliteAreaLayer = null
+let satelliteDrawLayer = null
+let satelliteVertexLayer = null
+let satelliteVertices = []
+let contextoAreaMapa = null
+
+function atualizarDesenhoMapa() {
+  if (!satelliteMap || !window.L) return
+
+  if (satelliteDrawLayer) {
+    satelliteMap.removeLayer(satelliteDrawLayer)
+    satelliteDrawLayer = null
+  }
+  if (satelliteVertexLayer) {
+    satelliteMap.removeLayer(satelliteVertexLayer)
+    satelliteVertexLayer = null
+  }
+
+  if (!satelliteVertices.length) {
+    satelliteMapStatus.textContent = 'Toque no mapa para adicionar os vértices do polígono da área.'
+    if (mapaLatLngInput) mapaLatLngInput.value = ''
+    if (croquiCoordsInput) croquiCoordsInput.value = ''
+    return
+  }
+
+  const latlngs = satelliteVertices.map((p) => [p.lat, p.lng])
+  satelliteVertexLayer = L.layerGroup(
+    satelliteVertices.map((p, index) => L.marker([p.lat, p.lng], {
+      icon: L.divIcon({
+        className: 'map-vertex-label',
+        html: `<div style="background:#111;color:#fff;border:1px solid #fff;border-radius:10px;padding:2px 6px;font-size:11px;">${index + 1}</div>`,
+      }),
+    }))
+  ).addTo(satelliteMap)
+
+  if (satelliteVertices.length >= 3) {
+    satelliteDrawLayer = L.polygon(latlngs, {
+      color: '#f5c267',
+      weight: 2,
+      fillColor: '#f5c267',
+      fillOpacity: 0.22,
+    }).addTo(satelliteMap)
+    satelliteMapStatus.textContent = `${satelliteVertices.length} vértices no polígono.`
+  } else {
+    satelliteDrawLayer = L.polyline(latlngs, {
+      color: '#f5c267',
+      weight: 2,
+    }).addTo(satelliteMap)
+    satelliteMapStatus.textContent = `${satelliteVertices.length} vértice(s). Continue tocando para fechar a área.`
+  }
+
+  if (mapaLatLngInput) {
+    const centro = satelliteVertices[0]
+    mapaLatLngInput.value = `${centro.lat.toFixed(6)},${centro.lng.toFixed(6)}`
+  }
+  if (croquiCoordsInput) {
+    croquiCoordsInput.value = satelliteVertices
+      .map((p) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`)
+      .join('\n')
+  }
+}
+
+function adicionarVerticeMapa(lat, lng) {
+  satelliteVertices.push({ lat, lng })
+  atualizarDesenhoMapa()
+}
+
+function desfazerVerticeMapa() {
+  if (!satelliteVertices.length) return
+  satelliteVertices.pop()
+  atualizarDesenhoMapa()
+}
+
+function limparMarcacaoMapa() {
+  satelliteVertices = []
+  atualizarDesenhoMapa()
+}
+
+function verticesRecorte(area) {
+  const bruto = area?.geometria_final || area?.geometria_esboco || []
+  return (bruto || [])
+    .map((item) => ({ lat: Number(item.lat), lon: Number(item.lon) }))
+    .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon))
+}
+
+function desenharRecorteNoMapa(area) {
+  if (!satelliteMap || !window.L) return
+  if (satelliteAreaLayer) {
+    satelliteMap.removeLayer(satelliteAreaLayer)
+    satelliteAreaLayer = null
+  }
+  const vertices = verticesRecorte(area)
+  if (vertices.length < 3) return
+  const latlngs = vertices.map((v) => [v.lat, v.lon])
+  satelliteAreaLayer = L.polygon(latlngs, {
+    color: '#46c07e',
+    weight: 2,
+    dashArray: '4 4',
+    fillColor: '#46c07e',
+    fillOpacity: 0.14,
+  }).addTo(satelliteMap)
+  satelliteMap.fitBounds(satelliteAreaLayer.getBounds(), { padding: [18, 18] })
+}
+
+function alternarCamadaMapa(forceSatellite = null) {
+  if (!satelliteMap || !streetLayer || !satelliteLayer) return
+  const ativarSatelite = forceSatellite === null ? !usandoSatelite : !!forceSatellite
+  usandoSatelite = ativarSatelite
+  if (ativarSatelite) {
+    if (satelliteMap.hasLayer(streetLayer)) satelliteMap.removeLayer(streetLayer)
+    if (!satelliteMap.hasLayer(satelliteLayer)) satelliteLayer.addTo(satelliteMap)
+    if (btnMapStyle) btnMapStyle.textContent = 'Usar mapa leve'
+  } else {
+    if (satelliteMap.hasLayer(satelliteLayer)) satelliteMap.removeLayer(satelliteLayer)
+    if (!satelliteMap.hasLayer(streetLayer)) streetLayer.addTo(satelliteMap)
+    if (btnMapStyle) btnMapStyle.textContent = 'Ativar satélite'
+  }
+}
+
+function inicializarMapaSatelite() {
+  if (satelliteMap || !window.L) {
+    if (!window.L) {
+      satelliteMapStatus.textContent = 'Não foi possível carregar o mapa satélite. Você pode seguir com o croqui e os demais dados.'
+    }
+    return
+  }
+  satelliteMap = L.map('satellite-map', { zoomControl: true })
+  streetLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap',
+    }
+  ).addTo(satelliteMap)
+  satelliteLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+      maxZoom: 19,
+      attribution: 'Tiles © Esri',
+    }
+  )
+  satelliteMap.setView([-15.793889, -47.882778], 12)
+  satelliteMap.on('click', (event) => {
+    adicionarVerticeMapa(event.latlng.lat, event.latlng.lng)
+  })
+  alternarCamadaMapa(false)
+}
+
+function garantirMapaPronto() {
+  inicializarMapaSatelite()
+  if (satelliteMap) {
+    satelliteMap.invalidateSize()
+    if (contextoAreaMapa) {
+      desenharRecorteNoMapa(contextoAreaMapa)
+    }
+  }
+}
 
 function normalizarMunicipio(valor) {
   return (valor || '').trim()
@@ -880,6 +1028,9 @@ function mostrarPasso(index) {
   steps.forEach((step, stepIndex) => {
     step.hidden = stepIndex !== estado.passoAtual
   })
+  if (estado.passoAtual === 2) {
+    garantirMapaPronto()
+  }
   renderProgress()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -1011,133 +1162,13 @@ function removeConfrontante(index) {
   renderConfrontantes()
 }
 
-function desenharSketch() {
-  const gridLines = []
-  for (let i = 10; i < 100; i += 10) {
-    gridLines.push(`<line x1="${i}" y1="0" x2="${i}" y2="100" stroke="#f0e3ca" stroke-width="0.4" />`)
-    gridLines.push(`<line x1="0" y1="${i}" x2="100" y2="${i}" stroke="#f0e3ca" stroke-width="0.4" />`)
-  }
-  const points = estado.sketchPoints
-  const polyline = points.length
-    ? `<polyline fill="${points.length >= 3 ? 'rgba(197,139,43,.20)' : 'none'}" stroke="#b27014" stroke-width="1.5" points="${points.map(p => `${p.x},${p.y}`).join(' ')}${points.length >= 3 ? ' ' + points[0].x + ',' + points[0].y : ''}" />`
-    : ''
-  const circles = points.map((point, index) => `
-    <g>
-      <circle cx="${point.x}" cy="${point.y}" r="2.1" fill="#7d4f0b" />
-      <text x="${point.x + 2.8}" y="${point.y - 2.8}" font-size="4" fill="#5b4630">${index + 1}</text>
-    </g>
-  `).join('')
-  sketchSvg.innerHTML = `
-    <rect x="0" y="0" width="100" height="100" fill="#fffdf8" />
-    ${gridLines.join('')}
-    ${polyline}
-    ${circles}
-  `
-  sketchStatus.textContent = points.length
-    ? `${points.length} vértice(s) marcados. Este desenho é apenas um croqui de referência.`
-    : 'Nenhum vértice desenhado ainda.'
-  croquiSvgInput.value = points.length ? sketchSvg.outerHTML : ''
-}
-
-function registrarPonto(event) {
-  const box = sketchSvg.getBoundingClientRect()
-  const clientX = event.touches ? event.touches[0].clientX : event.clientX
-  const clientY = event.touches ? event.touches[0].clientY : event.clientY
-  const x = ((clientX - box.left) / box.width) * 100
-  const y = ((clientY - box.top) / box.height) * 100
-  estado.sketchPoints.push({ x: Math.max(2, Math.min(98, Number(x.toFixed(2)))), y: Math.max(2, Math.min(98, Number(y.toFixed(2)))) })
-  desenharSketch()
-}
-
-function verticesValidos(vertices) {
-  return (vertices || [])
-    .map((item) => ({ lon: Number(item.lon), lat: Number(item.lat) }))
-    .filter((item) => Number.isFinite(item.lon) && Number.isFinite(item.lat))
-}
-
-function geometriaDoRecorte(area) {
-  const final = verticesValidos(area?.geometria_final)
-  if (final.length >= 3) {
-    return { vertices: final, tipo: 'Perímetro', descricao: 'Perímetro técnico ou final vinculado ao lote.' }
-  }
-  const esboco = verticesValidos(area?.geometria_esboco)
-  if (esboco.length >= 3) {
-    return { vertices: esboco, tipo: 'Esboço', descricao: 'Esboço de referência vinculado ao lote.' }
-  }
-  return null
-}
-
-function pontosMapa(vertices) {
-  const lons = vertices.map((item) => item.lon)
-  const lats = vertices.map((item) => item.lat)
-  const minLon = Math.min(...lons)
-  const maxLon = Math.max(...lons)
-  const minLat = Math.min(...lats)
-  const maxLat = Math.max(...lats)
-  const rangeLon = maxLon - minLon || 0.0001
-  const rangeLat = maxLat - minLat || 0.0001
-  const escala = Math.min(84 / rangeLon, 76 / rangeLat)
-  const drawW = rangeLon * escala
-  const drawH = rangeLat * escala
-  const offX = (100 - drawW) / 2
-  const offY = (100 - drawH) / 2
-  return vertices.map((item) => {
-    const x = offX + (item.lon - minLon) * escala
-    const y = 100 - offY - (item.lat - minLat) * escala
-    return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) }
-  })
-}
-
-function renderMapaCliente(area) {
-  clientMap.hidden = false
-  const geometria = geometriaDoRecorte(area)
-  const identificacao = area?.identificacao_lote || area?.nome || 'Área vinculada ao link'
-  clientMapMeta.textContent = identificacao
-
-  if (!geometria) {
-    clientMapChip.textContent = 'Sem mapa'
-    clientMapStatus.textContent = 'Ainda não há perímetro ou esboço salvo para este recorte.'
-    clientMapSvg.innerHTML = `
-      <rect x="0" y="0" width="100" height="100" fill="#0a0f0d" />
-      <text x="50" y="48" text-anchor="middle" font-size="5" fill="#a8b8ad">Mapa indisponível</text>
-      <text x="50" y="57" text-anchor="middle" font-size="3.5" fill="#6f8175">use o croqui abaixo</text>
-    `
-    return
-  }
-
-  clientMapChip.textContent = geometria.tipo
-  clientMapStatus.textContent = `${geometria.vertices.length} vértices. ${geometria.descricao}`
-  const pontos = pontosMapa(geometria.vertices)
-  const coords = pontos.map((p) => `${p.x},${p.y}`).join(' ')
-  const labels = pontos.map((p, index) => `
-    <g>
-      <circle cx="${p.x}" cy="${p.y}" r="1.8" fill="#46c07e" stroke="#e6f1ea" stroke-width="0.35" />
-      <text x="${p.x + 2.4}" y="${p.y - 2.4}" font-size="3.2" fill="#d8efe2">${index + 1}</text>
-    </g>
-  `).join('')
-  clientMapSvg.innerHTML = `
-    <rect x="0" y="0" width="100" height="100" fill="#07100c" />
-    <g opacity="0.22">
-      <line x1="20" y1="0" x2="20" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="40" y1="0" x2="40" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="60" y1="0" x2="60" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="80" y1="0" x2="80" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="0" y1="25" x2="100" y2="25" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="0" y1="50" x2="100" y2="50" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="0" y1="75" x2="100" y2="75" stroke="#7fe0a8" stroke-width="0.25" />
-    </g>
-    <polygon points="${coords}" fill="rgba(70,192,126,.22)" stroke="#46c07e" stroke-width="1.1" />
-    ${labels}
-  `
-}
-
 async function carregarContexto() {
   try {
     const res = await fetch(`/formulario/cliente/contexto?token=${token}`)
     if (!res.ok) throw new Error('Falha ao carregar contexto')
     const data = await res.json()
     document.getElementById('meta-projeto').textContent = data.projeto?.projeto_nome || 'Projeto em preparação'
-    document.getElementById('meta-cliente').textContent = data.cliente?.nome || 'Participante'
+    document.getElementById('meta-cliente').textContent = 'Participante'
     document.getElementById('meta-papel').textContent = data.participante?.papel || 'Participante do processo'
     document.getElementById('meta-lote').textContent = data.lote?.identificacao || data.area?.nome || 'Recorte sem lote específico'
     document.getElementById('meta-validade').textContent = data.cliente?.magic_link_expira
@@ -1149,8 +1180,7 @@ async function carregarContexto() {
     if (data.mensagem) {
       document.getElementById('hero-subtitle').textContent = `${data.mensagem} Você não tem acesso aos demais lotes ou imóveis do projeto.`
     }
-    renderMapaCliente(data.area)
-
+    contextoAreaMapa = data.area || null
     const municipioImovelContexto = normalizarMunicipio(
       data.projeto?.municipio ||
       data.projeto?.imovel_municipio
@@ -1177,7 +1207,7 @@ async function carregarContexto() {
     document.getElementById('meta-papel').textContent = 'Papel indisponível'
     document.getElementById('meta-lote').textContent = 'Lote indisponível'
     document.getElementById('meta-validade').textContent = 'Verifique o link'
-    renderMapaCliente(null)
+    contextoAreaMapa = null
     montarListaMunicipios()
   }
 }
@@ -1220,16 +1250,30 @@ form.addEventListener('submit', async (event) => {
 document.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', nextStep))
 document.querySelectorAll('[data-prev]').forEach(button => button.addEventListener('click', prevStep))
 document.getElementById('btn-add-conf').addEventListener('click', addConfrontante)
-document.getElementById('btn-clear-sketch').addEventListener('click', () => {
-  estado.sketchPoints = []
-  desenharSketch()
+btnMapStyle?.addEventListener('click', () => alternarCamadaMapa())
+document.getElementById('btn-map-undo')?.addEventListener('click', desfazerVerticeMapa)
+document.getElementById('btn-map-clear')?.addEventListener('click', limparMarcacaoMapa)
+document.getElementById('btn-map-locate')?.addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    satelliteMapStatus.textContent = 'Geolocalização indisponível neste aparelho.'
+    return
+  }
+  satelliteMapStatus.textContent = 'Obtendo sua localização...'
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      garantirMapaPronto()
+      if (!satelliteMap) return
+      satelliteMap.setView([pos.coords.latitude, pos.coords.longitude], Math.max(satelliteMap?.getZoom() || 12, 16))
+      if (!satelliteVertices.length) {
+        adicionarVerticeMapa(pos.coords.latitude, pos.coords.longitude)
+      }
+    },
+    () => {
+      satelliteMapStatus.textContent = 'Não consegui obter sua localização. Toque no mapa para marcar manualmente.'
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  )
 })
-
-sketchSvg.addEventListener('click', registrarPonto)
-sketchSvg.addEventListener('touchstart', (event) => {
-  event.preventDefault()
-  registrarPonto(event)
-}, { passive: false })
 
 document.addEventListener('input', (event) => {
   const target = event.target
@@ -1273,7 +1317,6 @@ cepImovelInput?.addEventListener('blur', buscarCepImovel)
 
 renderProgress()
 renderConfrontantes()
-desenharSketch()
 montarListaMunicipios()
 carregarContexto()
 </script>
