@@ -61,14 +61,23 @@ def test_registrar_job_cad_fallback():
     sb_mock.table.side_effect = Exception("Table 'jobs_cad' not found")
     
     with patch("integracoes.jobs_cad.registrar_evento_cartografico") as mock_evento:
-        res = registrar_job_cad(sb_mock, "projeto-uuid", "vertex-job-abc")
+        res = registrar_job_cad(
+            sb_mock, 
+            "projeto-uuid", 
+            "arquivo-uuid", 
+            "vertex-job-abc", 
+            "validar_dxf", 
+            {"dados": "teste"}
+        )
         
         # O retorno deve ser o dict do job
         assert res["vertex_job_id"] == "vertex-job-abc"
+        assert res["tipo_job"] == "validar_dxf"
         
         # Deve ter ativado o fallback e registrado o evento cartográfico de auditoria
         mock_evento.assert_called_once()
         args, kwargs = mock_evento.call_args
         assert kwargs["projeto_id"] == "projeto-uuid"
+        assert kwargs["arquivo_id"] == "arquivo-uuid"
         assert kwargs["payload"]["vertex_job_id"] == "vertex-job-abc"
         assert kwargs["payload"]["jobs_cad_sucesso"] is False

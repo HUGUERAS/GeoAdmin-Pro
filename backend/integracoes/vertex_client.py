@@ -68,45 +68,52 @@ class VertexClient:
                 logger.error("Erro desconhecido ao chamar VERTEXROSEA: %s", e, exc_info=True)
                 raise RuntimeError(f"Falha na integração com VERTEXROSEA: {e}")
 
-    async def validar_dxf(self, conteudo: bytes, filename: str) -> Dict[str, Any]:
+    async def validar_dxf(self, conteudo: bytes, filename: str, layer: Optional[str] = None) -> Dict[str, Any]:
         """
         Solicita validação técnica de um DXF no VERTEXROSEA enviando os bytes via multipart.
         
         Retorna dicionário informando se é válido, avisos e metadados.
         """
-        files = {"file": (filename, conteudo, "application/octet-stream")}
-        return await self._request("POST", "/cad/dxf/validar", files=files)
+        files = {"arquivo": (filename, conteudo, "application/octet-stream")}
+        data = {}
+        if layer:
+            data["layer"] = layer
+        return await self._request("POST", "/cad/dxf/validar", files=files, data=data)
 
-    async def extrair_pontos_dxf(self, conteudo: bytes, filename: str) -> List[Dict[str, Any]]:
+    async def extrair_pontos_dxf(self, conteudo: bytes, filename: str, fuso: str, hemisferio: str, layer: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Solicita extração das coordenadas dos pontos de um DXF enviando os bytes via multipart.
         """
-        files = {"file": (filename, conteudo, "application/octet-stream")}
-        resultado = await self._request("POST", "/cad/dxf/pontos", files=files)
+        files = {"arquivo": (filename, conteudo, "application/octet-stream")}
+        data = {"fuso": fuso, "hemisferio": hemisferio}
+        if layer:
+            data["layer"] = layer
+        resultado = await self._request("POST", "/cad/dxf/pontos", files=files, data=data)
         return resultado.get("pontos", [])
 
-    async def parse_txt_coletora(self, conteudo: bytes, filename: str, formato: str = "metrica_topo") -> Dict[str, Any]:
+    async def parse_txt_coletora(self, conteudo: bytes, filename: str, fuso: Optional[str] = None, hemisferio: Optional[str] = None, formato: str = "metrica_topo") -> Dict[str, Any]:
         """
         Faz o parseamento e normalização técnica de arquivo de coletora (LandStar/Métrica) via multipart.
         """
-        files = {"file": (filename, conteudo, "application/octet-stream")}
+        files = {"arquivo": (filename, conteudo, "application/octet-stream")}
         data = {"formato": formato}
+        if fuso:
+            data["fuso"] = fuso
+        if hemisferio:
+            data["hemisferio"] = hemisferio
         return await self._request("POST", "/cad/txt/parse", files=files, data=data)
 
-    async def disparar_job_freecad(self, project_id: str, codigo_projeto: str, vertices: List[Dict[str, Any]], download_url_dxf: Optional[str] = None) -> Dict[str, Any]:
+    async def disparar_job_freecad(self, contrato_vertex: Dict[str, Any], project_ref: str, save_fcstd: bool = True, output_dir: Optional[str] = None) -> Dict[str, Any]:
         """
-        Inicia um heavy job assíncrono para geração de peças técnicas via FreeCAD.
+        Inicia um heavy job assíncrono para geração de peças técnicas via FreeCAD no VERTEXROSEA.
         """
         payload = {
-            "project_ref": {"id": project_id, "codigo": codigo_projeto},
-            "perimeter": {
-                "source": "client_confirmed",
-                "vertices": vertices
-            },
-            "outputs": ["fcstd", "dxf", "report"]
+            "contrato_vertex": contrato_vertex,
+            "project_ref": project_ref,
+            "save_fcstd": save_fcstd
         }
-        if download_url_dxf:
-            payload["source_files"] = [{"kind": "dxf", "download_url": download_url_dxf}]
+        if output_dir:
+            payload["output_dir"] = output_dir
             
         # O timeout para criação do job é baixo, pois o processamento é delegado assincronamente
         return await self._request("POST", "/cad/jobs/freecad", json_data=payload, timeout=5.0)

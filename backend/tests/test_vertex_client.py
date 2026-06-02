@@ -13,14 +13,11 @@ from integracoes.vertex_client import VertexClient
 async def test_validar_dxf_sucesso():
     """Valida chamada com sucesso para validação de DXF."""
     client = VertexClient()
-    
-    # Mock do método interno _request
     mock_resposta = {"valido": True, "avisos": [], "versao": "AutoCAD 2013"}
     
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
         mock_req.return_value = mock_resposta
-        
-        resultado = await client.validar_dxf(b"conteudo dxf", "teste.dxf")
+        resultado = await client.validar_dxf(b"conteudo dxf", "teste.dxf", layer="PERIMETRO")
         
         assert resultado["valido"] is True
         assert resultado["versao"] == "AutoCAD 2013"
@@ -38,12 +35,24 @@ async def test_extrair_pontos_dxf_sucesso():
     
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
         mock_req.return_value = mock_resposta
-        
-        pontos = await client.extrair_pontos_dxf(b"conteudo dxf", "teste.dxf")
+        pontos = await client.extrair_pontos_dxf(b"conteudo dxf", "teste.dxf", "23", "S", layer="PERIMETRO")
         
         assert len(pontos) == 1
         assert pontos[0]["codigo"] == "V01"
         assert pontos[0]["norte"] == 7500000.1
+
+@pytest.mark.anyio
+async def test_parse_txt_coletora_sucesso():
+    """Valida parseamento de arquivo da coletora."""
+    client = VertexClient()
+    mock_resposta = {"pontos": [{"codigo": "V01", "norte": 7500000.1}]}
+    
+    with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
+        mock_req.return_value = mock_resposta
+        res = await client.parse_txt_coletora(b"txt data", "teste.txt", "23", "S", "metrica_topo")
+        
+        assert "pontos" in res
+        mock_req.assert_called_once()
 
 @pytest.mark.anyio
 async def test_vertex_indisponivel():

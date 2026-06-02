@@ -1368,3 +1368,205 @@ def baixar_cartas_confrontacao(projeto_id: str, area_ids: list[str] | None = Non
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{nome}"'},
     )
+
+
+# ============================================================
+# ROTAS DA BANDEJA CARTOGRÁFICA (INTEGRAÇÃO VERTEXROSEA)
+# ============================================================
+
+class ExtrairPontosPayload(BaseModel):
+    fuso: str
+    hemisferio: str
+    layer: Optional[str] = None
+
+
+class ParseTxtPayload(BaseModel):
+    fuso: Optional[str] = None
+    hemisferio: Optional[str] = None
+    formato: str = "metrica_topo"
+
+
+class JobFreeCadPayload(BaseModel):
+    save_fcstd: bool = True
+    output_dir: Optional[str] = None
+
+
+@router.post("/{projeto_id}/arquivos/{arquivo_id}/cad/validar-dxf", summary="Validar arquivo DXF na CAD Engine")
+async def api_validar_dxf(projeto_id: str, arquivo_id: str, layer: Optional[str] = None):
+    from integracoes.arquivos_projeto import obter_arquivo_projeto, _ler_bytes_arquivo
+    from integracoes.vertex_client import vertex_client
+    from integracoes.jobs_cad import registrar_job_cad
+    
+    sb = _get_supabase()
+    arquivo = obter_arquivo_projeto(sb, projeto_id, arquivo_id)
+    if not arquivo:
+        raise HTTPException(status_code=404, detail={"erro": "Arquivo não encontrado", "codigo": 404})
+        
+    conteudo = _ler_bytes_arquivo(sb, arquivo)
+    if not conteudo:
+        raise HTTPException(status_code=400, detail={"erro": "Falha ao ler conteúdo do arquivo", "codigo": 400})
+        
+    try:
+        resultado = await vertex_client.validar_dxf(conteudo, arquivo.get("nome_original", "arquivo.dxf"), layer=layer)
+        registrar_job_cad(
+            sb,
+            projeto_id=projeto_id,
+            arquivo_id_origem=arquivo_id,
+            vertex_job_id=resultado.get("job_id") or f"val-{arquivo_id}",
+            tipo_job="validar_dxf",
+            payload_json={"layer": layer},
+            status="done" if not resultado.get("job_id") else "running"
+        )
+        return resultado
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"erro": f"Falha na validação Vertex: {e}", "codigo": 500})
+
+
+@router.post("/{projeto_id}/arquivos/{arquivo_id}/cad/extrair-pontos", summary="Extrair pontos de um DXF na CAD Engine")
+async def api_extrair_pontos(projeto_id: str, arquivo_id: str, payload: ExtrairPontosPayload):
+    from integracoes.arquivos_projeto import obter_arquivo_projeto, _ler_bytes_arquivo
+    from integracoes.vertex_client import vertex_client
+    from integracoes.jobs_cad import registrar_job_cad
+    
+    sb = _get_supabase()
+    arquivo = obter_arquivo_projeto(sb, projeto_id, arquivo_id)
+    if not arquivo:
+        raise HTTPException(status_code=404, detail={"erro": "Arquivo não encontrado", "codigo": 404})
+        
+    conteudo = _ler_bytes_arquivo(sb, arquivo)
+    if not conteudo:
+        raise HTTPException(status_code=400, detail={"erro": "Falha ao ler conteúdo do arquivo", "codigo": 400})
+        
+    try:
+        resultado = await vertex_client.extrair_pontos_dxf(
+            conteudo,
+            arquivo.get("nome_original", "arquivo.dxf"),
+            payload.fuso,
+            payload.hemisferio,
+            layer=payload.layer
+        )
+        registrar_job_cad(
+            sb,
+            projeto_id=projeto_id,
+            arquivo_id_origem=arquivo_id,
+            vertex_job_id=f"ext-{arquivo_id}",
+            tipo_job="extrair_pontos",
+            payload_json=payload.model_dump(),
+            status="done"
+        )
+        return {"pontos": resultado}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"erro": f"Falha na extração Vertex: {e}", "codigo": 500})
+
+
+@router.post("/{projeto_id}/arquivos/{arquivo_id}/cad/parse-txt", summary="Fazer parse de TXT de coletora na CAD Engine")
+async def api_parse_txt(projeto_id: str, arquivo_id: str, payload: ParseTxtPayload):
+    from integracoes.arquivos_projeto import obter_arquivo_projeto, _ler_bytes_arquivo
+    from integracoes.vertex_client import vertex_client
+    from integracoes.jobs_cad import registrar_job_cad
+    
+    sb = _get_supabase()
+    arquivo = obter_arquivo_projeto(sb, projeto_id, arquivo_id)
+    if not arquivo:
+        raise HTTPException(status_code=404, detail={"erro": "Arquivo não encontrado", "codigo": 404})
+        
+    conteudo = _ler_bytes_arquivo(sb, arquivo)
+    if not conteudo:
+        raise HTTPException(status_code=400, detail={"erro": "Falha ao ler conteúdo do arquivo", "codigo": 400})
+        
+    try:
+        resultado = await vertex_client.parse_txt_coletora(
+            conteudo,
+            arquivo.get("nome_original", "arquivo.txt"),
+            fuso=payload.fuso,
+            hemisferio=payload.hemisferio,
+            formato=payload.formato
+        )
+        registrar_job_cad(
+            sb,
+            projeto_id=projeto_id,
+            arquivo_id_origem=arquivo_id,
+            vertex_job_id=f"parse-{arquivo_id}",
+            tipo_job="parse_txt",
+            payload_json=payload.model_dump(),
+            status="done"
+        )
+        return resultado
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"erro": f"Falha no parseamento Vertex: {e}", "codigo": 500})
+
+
+@router.post("/{projeto_id}/cad/jobs/freecad", summary="Disparar Job assíncrono do FreeCAD na CAD Engine")
+async def api_disparar_job_freecad(projeto_id: str, payload: JobFreeCadPayload):
+    from integracoes.freecad.generador_plantas import _buscar_dados_planta
+    from integracoes.contrato_vertex import montar_contrato_vertex
+    from integracoes.vertex_client import vertex_client
+    from integracoes.jobs_cad import registrar_job_cad
+    
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    
+    try:
+        # 1. Buscar todos os dados da planta no Supabase
+        dados = _buscar_dados_planta(sb, projeto_id)
+        
+        # 2. Montar o contrato_vertex
+        contrato = montar_contrato_vertex(dados)
+        
+        # 3. Disparar o Job assíncrono no VERTEXROSEA
+        resultado = await vertex_client.disparar_job_freecad(
+            contrato_vertex=contrato,
+            project_ref=projeto_id,
+            save_fcstd=payload.save_fcstd,
+            output_dir=payload.output_dir
+        )
+        
+        job_id = resultado.get("job_id")
+        if not job_id:
+            raise ValueError("VERTEXROSEA não retornou job_id")
+            
+        # 4. Registrar o Job assíncrono na tabela jobs_cad
+        registrar_job_cad(
+            sb,
+            projeto_id=projeto_id,
+            arquivo_id_origem=None,
+            vertex_job_id=job_id,
+            tipo_job="freecad",
+            payload_json=contrato,
+            status="running"
+        )
+        
+        return resultado
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"erro": f"Falha ao disparar Job FreeCAD: {e}", "codigo": 500})
+
+
+@router.get("/{projeto_id}/cad/jobs/{job_id}", summary="Consultar status de Job assíncrono na CAD Engine")
+async def api_obter_status_job(projeto_id: str, job_id: str):
+    from integracoes.vertex_client import vertex_client
+    from integracoes.jobs_cad import atualizar_status_job_cad
+    
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    
+    try:
+        # Consultar status do Job no VERTEXROSEA
+        status_info = await vertex_client.obter_status_job(job_id)
+        status = status_info.get("status", "pending")
+        warnings = status_info.get("warnings", [])
+        erro = status_info.get("erro") or (status_info.get("warnings")[0] if status == "failed" and warnings else None)
+        artefatos = status_info.get("artifacts", [])
+        
+        # Atualizar tabela jobs_cad
+        atualizar_status_job_cad(
+            sb,
+            vertex_job_id=job_id,
+            status=status,
+            erro=erro,
+            warnings=warnings,
+            artefatos_json={"artifacts": artefatos}
+        )
+        
+        return status_info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"erro": f"Falha ao consultar status do Job: {e}", "codigo": 500})

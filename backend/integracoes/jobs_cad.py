@@ -2,7 +2,7 @@
 GeoAdmin Pro - Serviços de Persistência e Auditoria de Jobs CAD
 
 Oferece armazenamento unificado para o status dos jobs cartográficos assíncronos
-enviados para a engine VERTEXROSEA, com contingência automática.
+enviados para a engine VERTEXROSEA, com contingência automática e controle rígido de auditoria.
 """
 
 import logging
@@ -15,9 +15,11 @@ logger = logging.getLogger("geoadmin.jobs_cad")
 def registrar_job_cad(
     sb,
     projeto_id: str,
+    arquivo_id_origem: Optional[str],
     vertex_job_id: str,
-    status: str = "pending",
-    formatos: List[str] = None
+    tipo_job: str,
+    payload_json: Dict[str, Any],
+    status: str = "pending"
 ) -> Dict[str, Any]:
     """
     Registra um novo Job CAD no banco de dados.
@@ -25,14 +27,13 @@ def registrar_job_cad(
     1. Tenta gravar na tabela dedicada public.jobs_cad (Médio/Longo Prazo).
     2. Como contingência/auditoria (Curto Prazo), registra um evento_cartografico.
     """
-    if formatos is None:
-        formatos = ["dxf", "fcstd"]
-        
     job_registro = {
         "projeto_id": projeto_id,
+        "arquivo_id_origem": arquivo_id_origem,
         "vertex_job_id": vertex_job_id,
+        "tipo_job": tipo_job,
+        "payload_json": payload_json,
         "status": status,
-        "formato_saida": formatos,
     }
     
     sucesso_tabela = False
@@ -56,14 +57,15 @@ def registrar_job_cad(
         registrar_evento_cartografico(
             sb,
             projeto_id=projeto_id,
-            arquivo_id=None,
+            arquivo_id=arquivo_id_origem,
             tipo_evento="promocao_base_oficial",
             origem="sistema",
-            observacao=f"Job CAD registrado via VERTEXROSEA. Status: {status}",
+            observacao=f"Job CAD registrado ({tipo_job}) via VERTEXROSEA. Status: {status}",
             payload={
                 "vertex_job_id": vertex_job_id,
                 "status": status,
-                "formatos": formatos,
+                "tipo_job": tipo_job,
+                "payload_json": payload_json,
                 "jobs_cad_sucesso": sucesso_tabela
             }
         )
@@ -77,16 +79,23 @@ def atualizar_status_job_cad(
     sb,
     vertex_job_id: str,
     status: str,
-    warnings: Optional[List[str]] = None
+    erro: Optional[str] = None,
+    warnings: Optional[List[str]] = None,
+    artefatos_json: Optional[Dict[str, Any]] = None
 ) -> bool:
     """
     Atualiza o status de processamento de um Job CAD.
     """
+    agora = datetime.now(timezone.utc).isoformat()
     atualizacao = {
         "status": status,
         "warnings": warnings or [],
-        "atualizado_em": datetime.now(timezone.utc).isoformat()
+        "erro": erro,
+        "artefatos_json": artefatos_json,
+        "atualizado_em": agora
     }
+    if status in ("done", "failed"):
+        atualizacao["concluido_em"] = agora
     
     # ─── 1. Atualizar tabela dedicada jobs_cad ─────────────────────
     try:
