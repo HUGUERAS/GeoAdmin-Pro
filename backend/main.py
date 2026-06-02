@@ -58,6 +58,7 @@ from routes.pontos import router as pontos_router
 from routes.perimetros import router as perimetros_router
 from routes.geo import router as geo_router
 from routes.importar import router as importar_router
+from routes.importar_generico import router as importar_generico_router
 from routes.catalogo import router as catalogo_router
 from routes.vertex_lead import router as vertex_lead_router
 from routes.vertex_form import router as vertex_form_router
@@ -90,6 +91,7 @@ app.include_router(pontos_router)
 app.include_router(perimetros_router)
 app.include_router(geo_router)
 app.include_router(importar_router)
+app.include_router(importar_generico_router)
 app.include_router(catalogo_router)
 app.include_router(vertex_lead_router)
 app.include_router(vertex_form_router)

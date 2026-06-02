@@ -256,6 +256,7 @@ export default function DetalheProjetoScreen() {
   const [secao, setSecao]           = useState<SecaoProjeto>('visao')
   const [gerandoLinksLote, setGerandoLinksLote] = useState(false)
   const [importandoLotes, setImportandoLotes] = useState(false)
+  const [importandoPontos, setImportandoPontos] = useState(false)
   const [migrandoArquivos, setMigrandoArquivos] = useState(false)
   const [revisandoConfrontoId, setRevisandoConfrontoId] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -406,6 +407,29 @@ export default function DetalheProjetoScreen() {
       Alert.alert('Falha ao importar lotes', error?.message || 'Não foi possível importar o arquivo agora.')
     } finally {
       setImportandoLotes(false)
+    }
+  }
+
+  const importarArquivoPontos = async () => {
+    try {
+      const resultado = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, base64: false })
+      if (resultado.canceled || !resultado.assets?.length) return
+      const asset = resultado.assets[0]
+      setImportandoPontos(true)
+      const formData = new FormData()
+      await anexarArquivoNoFormData(formData, asset)
+      formData.append('aplicar_geoide', 'true')
+      
+      const resposta = await apiPostFormData<any>(`/importar/pontos/${id}`, formData)
+      await carregarProjeto()
+      Alert.alert(
+        'Importação de pontos concluída',
+        `${resposta.inseridos || 0} ponto(s) importado(s) com sucesso, ${resposta.duplicados || 0} duplicado(s) e ${resposta.erros_parse?.length || 0} erro(s) de processamento.`,
+      )
+    } catch (error: any) {
+      Alert.alert('Falha ao importar pontos', error?.message || 'Não foi possível processar o arquivo de pontos agora.')
+    } finally {
+      setImportandoPontos(false)
     }
   }
 
@@ -682,6 +706,11 @@ export default function DetalheProjetoScreen() {
             <Feather name="package" size={18} color={C.success} />
             <Text style={[s.actionTitle, { color: C.text }]}>Preparar para Métrica</Text>
             <Text style={[s.actionDesc, { color: C.muted }]}>Baixar pacote do bridge</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.actionCard, { backgroundColor: C.card, borderColor: C.cardBorder }]} onPress={importarArquivoPontos} disabled={importandoPontos}>
+            {importandoPontos ? <ActivityIndicator color={C.primary} /> : <Feather name="upload" size={18} color={C.primary} />}
+            <Text style={[s.actionTitle, { color: C.text }]}>Importar pontos</Text>
+            <Text style={[s.actionDesc, { color: C.muted }]}>TXT, CSV, KML ou DXF</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.actionCard, { backgroundColor: C.card, borderColor: C.cardBorder }]} onPress={abrirManifestoMetrica}>
             <Feather name="compass" size={18} color={C.primary} />
