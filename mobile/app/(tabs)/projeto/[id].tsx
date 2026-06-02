@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View,
@@ -10,6 +11,7 @@ import {
   Alert,
   Clipboard,
   Platform,
+  RefreshControl,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import * as DocumentPicker from 'expo-document-picker'
@@ -256,6 +258,7 @@ export default function DetalheProjetoScreen() {
   const [importandoLotes, setImportandoLotes] = useState(false)
   const [migrandoArquivos, setMigrandoArquivos] = useState(false)
   const [revisandoConfrontoId, setRevisandoConfrontoId] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
   const atualizarPendentes = useCallback(async () => {
     const n = await contarPendentes(id)
@@ -311,9 +314,18 @@ export default function DetalheProjetoScreen() {
     await handleSync()
   }
 
-  useEffect(() => {
-    carregarProjeto()
-    atualizarPendentes()
+  useFocusEffect(
+    useCallback(() => {
+      carregarProjeto()
+      atualizarPendentes()
+    }, [carregarProjeto, atualizarPendentes])
+  )
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await carregarProjeto()
+    await atualizarPendentes()
+    setRefreshing(false)
   }, [carregarProjeto, atualizarPendentes])
 
   const gerarMagicLink = async () => {
@@ -590,7 +602,12 @@ export default function DetalheProjetoScreen() {
   })()
 
   return (
-    <ScrollView style={[s.container, { backgroundColor: C.background }]}>
+    <ScrollView 
+      style={[s.container, { backgroundColor: C.background }]}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />
+      }
+    >
       {offline && (
         <View style={s.bannerOffline}>
           <Text style={s.bannerTxt}>Offline — exibindo dados em cache</Text>

@@ -776,14 +776,14 @@ def gerar_magic_link(
     Utiliza o serviço MagicLinkService para centralizar a lógica de geração.
     """
     sb = supabase or _get_supabase()
-    projeto = (
+    res_proj = (
         sb.table("vw_projetos_completo")
         .select("*")
         .eq("id", projeto_id)
-        .single()
+        .maybe_single()
         .execute()
-        .data
     )
+    projeto = res_proj.data if res_proj else None
     if not projeto:
         raise HTTPException(404, {"erro": "[ERRO-401] Projeto nao encontrado.", "codigo": 401})
 
@@ -803,6 +803,27 @@ def gerar_magic_link(
     expira = participante.get("magic_link_expira")
     link = f"{_resolver_app_url()}/formulario/cliente?token={token}"
 
+    # Obter nome do cliente para a mensagem do WhatsApp
+    cliente_nome = projeto.get("cliente_nome") or ""
+    if participante.get("nome"):
+        cliente_nome = participante.get("nome")
+    elif cliente_final:
+        try:
+            cliente_info = sb.table("clientes").select("nome").eq("id", cliente_final).maybe_single().execute().data
+            if cliente_info:
+                cliente_nome = cliente_info.get("nome") or cliente_nome
+        except Exception:
+            pass
+
+    mensagem_whatsapp = (
+        f"Olá {cliente_nome or ''}!\n\n"
+        f"Para darmos andamento ao processo de regularização do imóvel *{projeto.get('projeto_nome', '')}*, "
+        "preciso que você preencha um formulário com seus dados e um esboço simples da área.\n\n"
+        f"Acesse pelo celular: {link}\n\n"
+        "O link expira em 7 dias.\n\n"
+        "Qualquer dúvida é só chamar!"
+    )
+
     registrar_evento_magic_link(
         sb,
         projeto_id=projeto_id,
@@ -818,6 +839,8 @@ def gerar_magic_link(
     )
     return {
         "url": link,
+        "link": link,
+        "mensagem_whatsapp": mensagem_whatsapp,
         "token": token,
         "expira_em": expira,
         "projeto_id": projeto_id,

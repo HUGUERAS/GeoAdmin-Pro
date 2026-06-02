@@ -1,0 +1,54 @@
+version: '3.3'
+
+services:
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    container_name: evolution-api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_URL=http://SEU_IP_DA_VPS:8080 # Troque pelo IP da sua VPS
+      - AUTH_TYPE=apikey
+      - AUTH_API_KEY=MudeIssoParaUmaSenhaForte_GeoAdmin2026 # Senha para o seu sistema falar com a API
+      # Configurações de Banco de Dados (PostgreSQL)
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://postgres:senha_banco_forte@postgres:5432/evolution?schema=public
+      # Configurações de Cache (Redis)
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379
+      # Whatsapp Web configs
+      - WA_SESSION_ID=geoadmin
+      # Logs
+      - LOG_LEVEL=ERROR
+      - DEL_INSTANCE=false
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: evolution-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=senha_banco_forte # Deve ser igual a do DATABASE_CONNECTION_URI acima
+      - POSTGRES_DB=evolution
+    volumes:
+      - evolution_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: evolution-redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - evolution_redis_data:/data
+    ports:
+      - "6379:6379"
+
+volumes:
+  evolution_db_data:
+  evolution_redis_data:

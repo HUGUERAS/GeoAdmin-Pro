@@ -22,17 +22,21 @@ function getExplicitApiBaseUrl(): string | null {
   return explicitUrl ? explicitUrl.replace(/\/+$/, '') : null;
 }
 
-function getRequiredPublicApiBaseUrl(): string {
+function getApiBaseUrlWeb(): string {
   const explicitUrl = getExplicitApiBaseUrl();
   if (explicitUrl) {
     return explicitUrl;
   }
 
-  return DEFAULT_API_BASE_URL;
-}
+  // Detecção dinâmica de localhost em desenvolvimento Web
+  if (typeof window !== 'undefined' && window.location) {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
+      return 'http://localhost:8000';
+    }
+  }
 
-function getApiBaseUrlWeb(): string {
-  return getRequiredPublicApiBaseUrl();
+  return DEFAULT_API_BASE_URL;
 }
 
 export function getApiBaseUrl(): string {
@@ -45,8 +49,10 @@ export function getApiBaseUrl(): string {
     return getApiBaseUrlWeb();
   }
 
-  if (Platform.OS === 'android') {
-    return DEFAULT_API_BASE_URL;
+  // Fallback seguro em desenvolvimento local para emuladores
+  if (__DEV__) {
+    // 10.0.2.2 é o IP padrão do host no emulador Android
+    return 'http://10.0.2.2:8000';
   }
 
   return DEFAULT_API_BASE_URL;

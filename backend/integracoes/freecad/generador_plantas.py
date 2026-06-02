@@ -33,8 +33,18 @@ import io
 import tempfile
 import subprocess
 import os
+import sys
 
 logger = logging.getLogger("geoadmin.freecad")
+
+# Evita abertura de janelas de console no Windows (background)
+creation_flags = 0
+if sys.platform == "win32":
+    try:
+        creation_flags = subprocess.CREATE_NO_WINDOW
+    except AttributeError:
+        creation_flags = 0x08000000
+
 
 
 @dataclass
@@ -148,7 +158,8 @@ def _verificar_freecad_disponivel(config: ConfiguracaoFreeCAD) -> bool:
             [config.freecad_path, "--version"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            creationflags=creation_flags
         )
         if result.returncode == 0:
             logger.info(f"FreeCAD detectado: {result.stdout.strip()}")
@@ -452,13 +463,13 @@ def criar_tabela_coordenadas(vertices, posicao_base, altura_linha=5.0, largura_c
     cabecalho = ["CÓDIGO", "COORD. X (m)", "COORD. Y (m)", "COTA (m)", "DISTÂNCIA (m)"]
     for idx, col in enumerate(cabecalho):
         x = x_base + sum(largura_colunas[:idx])
-        criar_texto(col, (x, y_base), altura=2.0, nome=f"Header_{idx}")
+        criar_texto(col, (x, y_base), altura=2.0, nome=f"Header_{{idx}}")
     
     y_atual = y_base - altura_linha
     
     # Linhas de dados
     for idx, v in enumerate(vertices):
-        codigo = v.get('codigo', f'V{idx+1:03d}')
+        codigo = v.get('codigo', f'V{{idx+1:03d}}')
         x = v.get('x', 0)
         y = v.get('y', 0)
         z = v.get('z', 0)
@@ -475,15 +486,15 @@ def criar_tabela_coordenadas(vertices, posicao_base, altura_linha=5.0, largura_c
         
         dados_linha = [
             codigo,
-            f"{x:.3f}",
-            f"{y:.3f}",
-            f"{z:.3f}",
-            f"{dist:.3f}"
+            f"{{x:.3f}}",
+            f"{{y:.3f}}",
+            f"{{z:.3f}}",
+            f"{{dist:.3f}}"
         ]
         
         for j, valor in enumerate(dados_linha):
             x = x_base + sum(largura_colunas[:j])
-            criar_texto(valor, (x, y_atual), altura=1.8, nome=f"Vertex_{idx}_Col{j}")
+            criar_texto(valor, (x, y_atual), altura=1.8, nome=f"Vertex_{{idx}}_Col{{j}}")
         
         y_atual -= altura_linha
     
@@ -537,9 +548,9 @@ def criar_seta_norte(posicao, tamanho=20):
     
     # Criar triângulo da seta
     pontos_seta = [
-        {'x': x, 'y': y},
-        {'x': x - tamanho/3, 'y': y - tamanho*0.8},
-        {'x': x + tamanho/3, 'y': y - tamanho*0.8},
+        {{'x': x, 'y': y}},
+        {{'x': x - tamanho/3, 'y': y - tamanho*0.8}},
+        {{'x': x + tamanho/3, 'y': y - tamanho*0.8}},
     ]
     criar_poligono(pontos_seta, fechado=True, cor=(0.0, 0.0, 0.0), espessura=0.5, nome="Norte_Seta")
     
@@ -567,9 +578,9 @@ def criar_legenda(posicao, confrontantes):
     y -= 4
     
     for i, conf in enumerate(confrontantes[:5]):  # Limitar a 5 confrontantes
-        lado = conf.get('lado', f'Lado {i+1}')
+        lado = conf.get('lado', f'Lado {{i+1}}')
         nome = conf.get('nome', 'Não informado')
-        criar_texto(f"→ {lado}: {{nome}}", (x, y), altura=1.8, nome=f"Legenda_Conf_{i}")
+        criar_texto(f"→ {{lado}}: {{nome}}", (x, y), altura=1.8, nome=f"Legenda_Conf_{{i}}")
         y -= 4
     
     return (x, y - 5)
@@ -701,7 +712,8 @@ def executar_script_freecad(
                 capture_output=True,
                 text=True,
                 timeout=120,
-                cwd=tmpdir
+                cwd=tmpdir,
+                creationflags=creation_flags
             )
             
             if result.returncode != 0:
@@ -830,14 +842,14 @@ def _gerar_fallback_dxf(dados: DadosPlantaTecnica, formatos: List[str]) -> Dict[
         ).set_placement(pos)
     
     # Exportar DXF
-    buffer_dxf = io.BytesIO()
-    doc.saveas(buffer_dxf)
-    buffer_dxf.seek(0)
-    resultados["planta_tecnica.dxf"] = buffer_dxf.getvalue()
+    texto_buffer = io.StringIO()
+    doc.write(texto_buffer)
+    dxf_bytes = texto_buffer.getvalue().encode("utf-8")
+    resultados["planta_tecnica.dxf"] = dxf_bytes
     
     # Se solicitado DWG, usar mesmo conteúdo (na prática precisaria de conversor)
     if 'dwg' in formatos:
-        resultados["planta_tecnica.dwg"] = buffer_dxf.getvalue()
+        resultados["planta_tecnica.dwg"] = dxf_bytes
     
     return resultados
 
@@ -881,13 +893,95 @@ def gerar_planta_tecnica(
     logger.info(f"Gerando planta técnica para projeto {dados.projeto_nome}")
     logger.info(f"Formatos solicitados: {formatos_saida}")
     
+    # ─── Tentar processar remotamente no VERTEXROSEA (CAD Engine Stateless) ─────
+    try:
+        import asyncio
+        import httpx
+        from integracoes.vertex_client import vertex_client
+        
+        async def chamar_vertex():
+            # Converte vértices para o formato esperado pelo Vertex
+            vertices_payload = [
+                {
+                    "codigo": v.get("codigo", f"V{idx+1:02d}"),
+                    "x": float(v.get("x") or 0.0),
+                    "y": float(v.get("y") or 0.0),
+                    "z": float(v.get("z") or 0.0)
+                }
+                for idx, v in enumerate(dados.vertices)
+            ]
+            
+            logger.info("Enviando job FreeCAD para VERTEXROSEA...")
+            job_info = await vertex_client.disparar_job_freecad(
+                project_id=dados.projeto_id,
+                codigo_projeto=dados.projeto_nome,
+                vertices=vertices_payload
+            )
+            
+            job_id = job_info.get("job_id")
+            if not job_id:
+                raise ValueError("Job ID não retornado pelo VERTEXROSEA")
+                
+            logger.info("Job %s submetido com sucesso. Aguardando conclusão no Vertex...", job_id)
+            
+            # Polling rápido (máximo de 15 segundos para fins síncronos)
+            for _ in range(15):
+                await asyncio.sleep(1.0)
+                status_info = await vertex_client.obter_status_job(job_id)
+                status = status_info.get("status")
+                
+                if status == "done":
+                    artifacts = status_info.get("artifacts", [])
+                    logger.info("Job %s concluído pelo VERTEXROSEA com %d artefatos.", job_id, len(artifacts))
+                    
+                    # Baixa os arquivos resultantes em bytes para manter compatibilidade
+                    arquivos_bytes = {}
+                    async with httpx.AsyncClient() as client:
+                        for art in artifacts:
+                            url_download = art.get("url")
+                            kind = art.get("kind")
+                            if url_download and kind:
+                                resp = await client.get(url_download)
+                                if resp.status_code == 200:
+                                    ext = "fcstd" if kind.lower() == "fcstd" else kind.lower()
+                                    arquivos_bytes[f"planta_tecnica.{ext}"] = resp.content
+                    
+                    if arquivos_bytes:
+                        return arquivos_bytes
+                    raise ValueError("Nenhum arquivo de artefato pôde ser baixado com sucesso")
+                    
+                elif status == "failed":
+                    warnings = status_info.get("warnings", [])
+                    raise RuntimeError(f"Job falhou no VERTEXROSEA: {warnings}")
+            
+            raise TimeoutError("Tempo limite esgotado para o job no VERTEXROSEA")
+
+        # Executa no event loop de forma isolada e segura
+        try:
+            loop = asyncio.new_event_loop()
+            resultados = loop.run_until_complete(chamar_vertex())
+            loop.close()
+        except Exception:
+            resultados = asyncio.run(chamar_vertex())
+            
+        logger.info(f"Plantas geradas via VERTEXROSEA com sucesso: {list(resultados.keys())}")
+        return resultados
+
+    except Exception as e:
+        logger.warning(
+            "Conexão com VERTEXROSEA indisponível ou falhou (%s). Usando processamento local como fallback...",
+            e,
+            exc_info=True
+        )
+
+    # ─── Fallback Legado: Geração de Script e Execução Local ──────────────────
     # Gerar script FreeCAD
     script = gerar_script_freecad(dados)
     
     # Executar e obter resultados
     resultados = executar_script_freecad(script, dados, formatos_saida)
     
-    logger.info(f"Plantas geradas: {list(resultados.keys())}")
+    logger.info(f"Plantas geradas via Fallback Local: {list(resultados.keys())}")
     
     return resultados
 
@@ -955,7 +1049,7 @@ def _testar_geracao_mock():
     resultados = _gerar_fallback_dxf(dados_mock, ["dxf", "dwg"])
     
     for nome, conteudo in resultados.items():
-        print(f"  ✓ {nome}: {len(conteudo)} bytes")
+        print(f"  [OK] {nome}: {len(conteudo)} bytes")
     
     print("\n" + "=" * 60)
     print("TESTE CONCLUÍDO")

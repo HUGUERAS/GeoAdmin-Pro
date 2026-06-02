@@ -209,15 +209,20 @@ export async function cacheProjetos(projetos: any[]): Promise<void> {
 
 export async function getCachedProjetos(): Promise<any[]> {
   const db = getDb()
-  const rows = await db.getAllAsync<{ dados: string }>(
-    `SELECT dados FROM projetos_cache ORDER BY cached_em DESC`
+  const rows = await db.getAllAsync<{ id: string, dados: string }>(
+    `SELECT id, dados FROM projetos_cache ORDER BY cached_em DESC`
   )
-  try {
-    return rows.map(r => JSON.parse(r.dados))
-  } catch (erro) {
-    console.warn('Erro ao parsear projetos do cache:', erro)
-    return []
+  
+  const projetos = []
+  for (const r of rows) {
+    try {
+      projetos.push(JSON.parse(r.dados))
+    } catch (erro) {
+      console.warn(`Erro ao parsear projeto ${r.id} do cache, removendo...`, erro)
+      await db.runAsync(`DELETE FROM projetos_cache WHERE id = ?`, [r.id])
+    }
   }
+  return projetos
 }
 
 export async function cacheProjetoDetalhe(id: string, projeto: any): Promise<void> {
@@ -238,7 +243,8 @@ export async function getCachedProjetoDetalhe(id: string): Promise<any | null> {
   try {
     return JSON.parse(row.dados)
   } catch (erro) {
-    console.warn(`Erro ao parsear projeto ${id} do cache:`, erro)
+    console.warn(`Erro ao parsear projeto ${id} do cache, removendo...`, erro)
+    await db.runAsync(`DELETE FROM projetos_cache WHERE id = ?`, [id])
     return null
   }
 }

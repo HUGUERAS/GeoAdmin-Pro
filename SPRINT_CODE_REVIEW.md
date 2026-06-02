@@ -1,5 +1,7 @@
 # Sprint Code Review — Distribuição por Agentes
 
+> **STATUS ATUALIZADO:** Todos os achados descritos neste documento foram verificados e concluídos no "Pente Fino" (29/05/2026). A autenticação, paginação, correções de segurança (defusedxml, limite de upload) e sincronização offline em batch estão operacionais e auditados.
+
 **Origem:** Code Review completo do GeoAdmin-Pro (26/03/2026)
 **Objetivo:** Resolver todos os achados do review distribuindo tarefas pelos 6 agentes definidos no `AGENTS.md`
 **Estimativa total:** ~3 a 5 sessões de trabalho focado
