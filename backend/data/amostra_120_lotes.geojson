@@ -1,0 +1,5285 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-01",
+        "proprietario_nome": "Proprietário Lote A-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.85
+            ],
+            [
+              -48.95982,
+              -15.85
+            ],
+            [
+              -48.95982,
+              -15.84973
+            ],
+            [
+              -48.96,
+              -15.84973
+            ],
+            [
+              -48.96,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-02",
+        "proprietario_nome": "Proprietário Lote A-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.85
+            ],
+            [
+              -48.95964,
+              -15.85
+            ],
+            [
+              -48.95964,
+              -15.84973
+            ],
+            [
+              -48.95982,
+              -15.84973
+            ],
+            [
+              -48.95982,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-03",
+        "proprietario_nome": "Proprietário Lote A-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.85
+            ],
+            [
+              -48.95946,
+              -15.85
+            ],
+            [
+              -48.95946,
+              -15.84973
+            ],
+            [
+              -48.95964,
+              -15.84973
+            ],
+            [
+              -48.95964,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-04",
+        "proprietario_nome": "Proprietário Lote A-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.85
+            ],
+            [
+              -48.95928,
+              -15.85
+            ],
+            [
+              -48.95928,
+              -15.84973
+            ],
+            [
+              -48.95946,
+              -15.84973
+            ],
+            [
+              -48.95946,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-05",
+        "proprietario_nome": "Proprietário Lote A-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.85
+            ],
+            [
+              -48.9591,
+              -15.85
+            ],
+            [
+              -48.9591,
+              -15.84973
+            ],
+            [
+              -48.95928,
+              -15.84973
+            ],
+            [
+              -48.95928,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-06",
+        "proprietario_nome": "Proprietário Lote A-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.85
+            ],
+            [
+              -48.95892,
+              -15.85
+            ],
+            [
+              -48.95892,
+              -15.84973
+            ],
+            [
+              -48.9591,
+              -15.84973
+            ],
+            [
+              -48.9591,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-07",
+        "proprietario_nome": "Proprietário Lote A-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.85
+            ],
+            [
+              -48.95874,
+              -15.85
+            ],
+            [
+              -48.95874,
+              -15.84973
+            ],
+            [
+              -48.95892,
+              -15.84973
+            ],
+            [
+              -48.95892,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-08",
+        "proprietario_nome": "Proprietário Lote A-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.85
+            ],
+            [
+              -48.95856,
+              -15.85
+            ],
+            [
+              -48.95856,
+              -15.84973
+            ],
+            [
+              -48.95874,
+              -15.84973
+            ],
+            [
+              -48.95874,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-09",
+        "proprietario_nome": "Proprietário Lote A-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.85
+            ],
+            [
+              -48.95838,
+              -15.85
+            ],
+            [
+              -48.95838,
+              -15.84973
+            ],
+            [
+              -48.95856,
+              -15.84973
+            ],
+            [
+              -48.95856,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-10",
+        "proprietario_nome": "Proprietário Lote A-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.85
+            ],
+            [
+              -48.9582,
+              -15.85
+            ],
+            [
+              -48.9582,
+              -15.84973
+            ],
+            [
+              -48.95838,
+              -15.84973
+            ],
+            [
+              -48.95838,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-11",
+        "proprietario_nome": "Proprietário Lote A-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.85
+            ],
+            [
+              -48.95802,
+              -15.85
+            ],
+            [
+              -48.95802,
+              -15.84973
+            ],
+            [
+              -48.9582,
+              -15.84973
+            ],
+            [
+              -48.9582,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "A",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote A-12",
+        "proprietario_nome": "Proprietário Lote A-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-A-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.85
+            ],
+            [
+              -48.95784,
+              -15.85
+            ],
+            [
+              -48.95784,
+              -15.84973
+            ],
+            [
+              -48.95802,
+              -15.84973
+            ],
+            [
+              -48.95802,
+              -15.85
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-01",
+        "proprietario_nome": "Proprietário Lote B-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.84963
+            ],
+            [
+              -48.95982,
+              -15.84963
+            ],
+            [
+              -48.95982,
+              -15.849359999999999
+            ],
+            [
+              -48.96,
+              -15.849359999999999
+            ],
+            [
+              -48.96,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-02",
+        "proprietario_nome": "Proprietário Lote B-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.84963
+            ],
+            [
+              -48.95964,
+              -15.84963
+            ],
+            [
+              -48.95964,
+              -15.849359999999999
+            ],
+            [
+              -48.95982,
+              -15.849359999999999
+            ],
+            [
+              -48.95982,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-03",
+        "proprietario_nome": "Proprietário Lote B-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.84963
+            ],
+            [
+              -48.95946,
+              -15.84963
+            ],
+            [
+              -48.95946,
+              -15.849359999999999
+            ],
+            [
+              -48.95964,
+              -15.849359999999999
+            ],
+            [
+              -48.95964,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-04",
+        "proprietario_nome": "Proprietário Lote B-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.84963
+            ],
+            [
+              -48.95928,
+              -15.84963
+            ],
+            [
+              -48.95928,
+              -15.849359999999999
+            ],
+            [
+              -48.95946,
+              -15.849359999999999
+            ],
+            [
+              -48.95946,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-05",
+        "proprietario_nome": "Proprietário Lote B-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.84963
+            ],
+            [
+              -48.9591,
+              -15.84963
+            ],
+            [
+              -48.9591,
+              -15.849359999999999
+            ],
+            [
+              -48.95928,
+              -15.849359999999999
+            ],
+            [
+              -48.95928,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-06",
+        "proprietario_nome": "Proprietário Lote B-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.84963
+            ],
+            [
+              -48.95892,
+              -15.84963
+            ],
+            [
+              -48.95892,
+              -15.849359999999999
+            ],
+            [
+              -48.9591,
+              -15.849359999999999
+            ],
+            [
+              -48.9591,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-07",
+        "proprietario_nome": "Proprietário Lote B-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.84963
+            ],
+            [
+              -48.95874,
+              -15.84963
+            ],
+            [
+              -48.95874,
+              -15.849359999999999
+            ],
+            [
+              -48.95892,
+              -15.849359999999999
+            ],
+            [
+              -48.95892,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-08",
+        "proprietario_nome": "Proprietário Lote B-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.84963
+            ],
+            [
+              -48.95856,
+              -15.84963
+            ],
+            [
+              -48.95856,
+              -15.849359999999999
+            ],
+            [
+              -48.95874,
+              -15.849359999999999
+            ],
+            [
+              -48.95874,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-09",
+        "proprietario_nome": "Proprietário Lote B-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.84963
+            ],
+            [
+              -48.95838,
+              -15.84963
+            ],
+            [
+              -48.95838,
+              -15.849359999999999
+            ],
+            [
+              -48.95856,
+              -15.849359999999999
+            ],
+            [
+              -48.95856,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-10",
+        "proprietario_nome": "Proprietário Lote B-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.84963
+            ],
+            [
+              -48.9582,
+              -15.84963
+            ],
+            [
+              -48.9582,
+              -15.849359999999999
+            ],
+            [
+              -48.95838,
+              -15.849359999999999
+            ],
+            [
+              -48.95838,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-11",
+        "proprietario_nome": "Proprietário Lote B-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.84963
+            ],
+            [
+              -48.95802,
+              -15.84963
+            ],
+            [
+              -48.95802,
+              -15.849359999999999
+            ],
+            [
+              -48.9582,
+              -15.849359999999999
+            ],
+            [
+              -48.9582,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "B",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote B-12",
+        "proprietario_nome": "Proprietário Lote B-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-B-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.84963
+            ],
+            [
+              -48.95784,
+              -15.84963
+            ],
+            [
+              -48.95784,
+              -15.849359999999999
+            ],
+            [
+              -48.95802,
+              -15.849359999999999
+            ],
+            [
+              -48.95802,
+              -15.84963
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-01",
+        "proprietario_nome": "Proprietário Lote C-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.84926
+            ],
+            [
+              -48.95982,
+              -15.84926
+            ],
+            [
+              -48.95982,
+              -15.848989999999999
+            ],
+            [
+              -48.96,
+              -15.848989999999999
+            ],
+            [
+              -48.96,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-02",
+        "proprietario_nome": "Proprietário Lote C-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.84926
+            ],
+            [
+              -48.95964,
+              -15.84926
+            ],
+            [
+              -48.95964,
+              -15.848989999999999
+            ],
+            [
+              -48.95982,
+              -15.848989999999999
+            ],
+            [
+              -48.95982,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-03",
+        "proprietario_nome": "Proprietário Lote C-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.84926
+            ],
+            [
+              -48.95946,
+              -15.84926
+            ],
+            [
+              -48.95946,
+              -15.848989999999999
+            ],
+            [
+              -48.95964,
+              -15.848989999999999
+            ],
+            [
+              -48.95964,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-04",
+        "proprietario_nome": "Proprietário Lote C-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.84926
+            ],
+            [
+              -48.95928,
+              -15.84926
+            ],
+            [
+              -48.95928,
+              -15.848989999999999
+            ],
+            [
+              -48.95946,
+              -15.848989999999999
+            ],
+            [
+              -48.95946,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-05",
+        "proprietario_nome": "Proprietário Lote C-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.84926
+            ],
+            [
+              -48.9591,
+              -15.84926
+            ],
+            [
+              -48.9591,
+              -15.848989999999999
+            ],
+            [
+              -48.95928,
+              -15.848989999999999
+            ],
+            [
+              -48.95928,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-06",
+        "proprietario_nome": "Proprietário Lote C-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.84926
+            ],
+            [
+              -48.95892,
+              -15.84926
+            ],
+            [
+              -48.95892,
+              -15.848989999999999
+            ],
+            [
+              -48.9591,
+              -15.848989999999999
+            ],
+            [
+              -48.9591,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-07",
+        "proprietario_nome": "Proprietário Lote C-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.84926
+            ],
+            [
+              -48.95874,
+              -15.84926
+            ],
+            [
+              -48.95874,
+              -15.848989999999999
+            ],
+            [
+              -48.95892,
+              -15.848989999999999
+            ],
+            [
+              -48.95892,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-08",
+        "proprietario_nome": "Proprietário Lote C-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.84926
+            ],
+            [
+              -48.95856,
+              -15.84926
+            ],
+            [
+              -48.95856,
+              -15.848989999999999
+            ],
+            [
+              -48.95874,
+              -15.848989999999999
+            ],
+            [
+              -48.95874,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-09",
+        "proprietario_nome": "Proprietário Lote C-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.84926
+            ],
+            [
+              -48.95838,
+              -15.84926
+            ],
+            [
+              -48.95838,
+              -15.848989999999999
+            ],
+            [
+              -48.95856,
+              -15.848989999999999
+            ],
+            [
+              -48.95856,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-10",
+        "proprietario_nome": "Proprietário Lote C-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.84926
+            ],
+            [
+              -48.9582,
+              -15.84926
+            ],
+            [
+              -48.9582,
+              -15.848989999999999
+            ],
+            [
+              -48.95838,
+              -15.848989999999999
+            ],
+            [
+              -48.95838,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-11",
+        "proprietario_nome": "Proprietário Lote C-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.84926
+            ],
+            [
+              -48.95802,
+              -15.84926
+            ],
+            [
+              -48.95802,
+              -15.848989999999999
+            ],
+            [
+              -48.9582,
+              -15.848989999999999
+            ],
+            [
+              -48.9582,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "C",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote C-12",
+        "proprietario_nome": "Proprietário Lote C-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-C-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.84926
+            ],
+            [
+              -48.95784,
+              -15.84926
+            ],
+            [
+              -48.95784,
+              -15.848989999999999
+            ],
+            [
+              -48.95802,
+              -15.848989999999999
+            ],
+            [
+              -48.95802,
+              -15.84926
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-01",
+        "proprietario_nome": "Proprietário Lote D-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.848889999999999
+            ],
+            [
+              -48.95982,
+              -15.848889999999999
+            ],
+            [
+              -48.95982,
+              -15.848619999999999
+            ],
+            [
+              -48.96,
+              -15.848619999999999
+            ],
+            [
+              -48.96,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-02",
+        "proprietario_nome": "Proprietário Lote D-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.848889999999999
+            ],
+            [
+              -48.95964,
+              -15.848889999999999
+            ],
+            [
+              -48.95964,
+              -15.848619999999999
+            ],
+            [
+              -48.95982,
+              -15.848619999999999
+            ],
+            [
+              -48.95982,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-03",
+        "proprietario_nome": "Proprietário Lote D-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.848889999999999
+            ],
+            [
+              -48.95946,
+              -15.848889999999999
+            ],
+            [
+              -48.95946,
+              -15.848619999999999
+            ],
+            [
+              -48.95964,
+              -15.848619999999999
+            ],
+            [
+              -48.95964,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-04",
+        "proprietario_nome": "Proprietário Lote D-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.848889999999999
+            ],
+            [
+              -48.95928,
+              -15.848889999999999
+            ],
+            [
+              -48.95928,
+              -15.848619999999999
+            ],
+            [
+              -48.95946,
+              -15.848619999999999
+            ],
+            [
+              -48.95946,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-05",
+        "proprietario_nome": "Proprietário Lote D-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.848889999999999
+            ],
+            [
+              -48.9591,
+              -15.848889999999999
+            ],
+            [
+              -48.9591,
+              -15.848619999999999
+            ],
+            [
+              -48.95928,
+              -15.848619999999999
+            ],
+            [
+              -48.95928,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-06",
+        "proprietario_nome": "Proprietário Lote D-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.848889999999999
+            ],
+            [
+              -48.95892,
+              -15.848889999999999
+            ],
+            [
+              -48.95892,
+              -15.848619999999999
+            ],
+            [
+              -48.9591,
+              -15.848619999999999
+            ],
+            [
+              -48.9591,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-07",
+        "proprietario_nome": "Proprietário Lote D-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.848889999999999
+            ],
+            [
+              -48.95874,
+              -15.848889999999999
+            ],
+            [
+              -48.95874,
+              -15.848619999999999
+            ],
+            [
+              -48.95892,
+              -15.848619999999999
+            ],
+            [
+              -48.95892,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-08",
+        "proprietario_nome": "Proprietário Lote D-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.848889999999999
+            ],
+            [
+              -48.95856,
+              -15.848889999999999
+            ],
+            [
+              -48.95856,
+              -15.848619999999999
+            ],
+            [
+              -48.95874,
+              -15.848619999999999
+            ],
+            [
+              -48.95874,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-09",
+        "proprietario_nome": "Proprietário Lote D-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.848889999999999
+            ],
+            [
+              -48.95838,
+              -15.848889999999999
+            ],
+            [
+              -48.95838,
+              -15.848619999999999
+            ],
+            [
+              -48.95856,
+              -15.848619999999999
+            ],
+            [
+              -48.95856,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-10",
+        "proprietario_nome": "Proprietário Lote D-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.848889999999999
+            ],
+            [
+              -48.9582,
+              -15.848889999999999
+            ],
+            [
+              -48.9582,
+              -15.848619999999999
+            ],
+            [
+              -48.95838,
+              -15.848619999999999
+            ],
+            [
+              -48.95838,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-11",
+        "proprietario_nome": "Proprietário Lote D-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.848889999999999
+            ],
+            [
+              -48.95802,
+              -15.848889999999999
+            ],
+            [
+              -48.95802,
+              -15.848619999999999
+            ],
+            [
+              -48.9582,
+              -15.848619999999999
+            ],
+            [
+              -48.9582,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "D",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote D-12",
+        "proprietario_nome": "Proprietário Lote D-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-D-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.848889999999999
+            ],
+            [
+              -48.95784,
+              -15.848889999999999
+            ],
+            [
+              -48.95784,
+              -15.848619999999999
+            ],
+            [
+              -48.95802,
+              -15.848619999999999
+            ],
+            [
+              -48.95802,
+              -15.848889999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-01",
+        "proprietario_nome": "Proprietário Lote E-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.848519999999999
+            ],
+            [
+              -48.95982,
+              -15.848519999999999
+            ],
+            [
+              -48.95982,
+              -15.848249999999998
+            ],
+            [
+              -48.96,
+              -15.848249999999998
+            ],
+            [
+              -48.96,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-02",
+        "proprietario_nome": "Proprietário Lote E-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.848519999999999
+            ],
+            [
+              -48.95964,
+              -15.848519999999999
+            ],
+            [
+              -48.95964,
+              -15.848249999999998
+            ],
+            [
+              -48.95982,
+              -15.848249999999998
+            ],
+            [
+              -48.95982,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-03",
+        "proprietario_nome": "Proprietário Lote E-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.848519999999999
+            ],
+            [
+              -48.95946,
+              -15.848519999999999
+            ],
+            [
+              -48.95946,
+              -15.848249999999998
+            ],
+            [
+              -48.95964,
+              -15.848249999999998
+            ],
+            [
+              -48.95964,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-04",
+        "proprietario_nome": "Proprietário Lote E-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.848519999999999
+            ],
+            [
+              -48.95928,
+              -15.848519999999999
+            ],
+            [
+              -48.95928,
+              -15.848249999999998
+            ],
+            [
+              -48.95946,
+              -15.848249999999998
+            ],
+            [
+              -48.95946,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-05",
+        "proprietario_nome": "Proprietário Lote E-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.848519999999999
+            ],
+            [
+              -48.9591,
+              -15.848519999999999
+            ],
+            [
+              -48.9591,
+              -15.848249999999998
+            ],
+            [
+              -48.95928,
+              -15.848249999999998
+            ],
+            [
+              -48.95928,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-06",
+        "proprietario_nome": "Proprietário Lote E-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.848519999999999
+            ],
+            [
+              -48.95892,
+              -15.848519999999999
+            ],
+            [
+              -48.95892,
+              -15.848249999999998
+            ],
+            [
+              -48.9591,
+              -15.848249999999998
+            ],
+            [
+              -48.9591,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-07",
+        "proprietario_nome": "Proprietário Lote E-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.848519999999999
+            ],
+            [
+              -48.95874,
+              -15.848519999999999
+            ],
+            [
+              -48.95874,
+              -15.848249999999998
+            ],
+            [
+              -48.95892,
+              -15.848249999999998
+            ],
+            [
+              -48.95892,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-08",
+        "proprietario_nome": "Proprietário Lote E-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.848519999999999
+            ],
+            [
+              -48.95856,
+              -15.848519999999999
+            ],
+            [
+              -48.95856,
+              -15.848249999999998
+            ],
+            [
+              -48.95874,
+              -15.848249999999998
+            ],
+            [
+              -48.95874,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-09",
+        "proprietario_nome": "Proprietário Lote E-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.848519999999999
+            ],
+            [
+              -48.95838,
+              -15.848519999999999
+            ],
+            [
+              -48.95838,
+              -15.848249999999998
+            ],
+            [
+              -48.95856,
+              -15.848249999999998
+            ],
+            [
+              -48.95856,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-10",
+        "proprietario_nome": "Proprietário Lote E-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.848519999999999
+            ],
+            [
+              -48.9582,
+              -15.848519999999999
+            ],
+            [
+              -48.9582,
+              -15.848249999999998
+            ],
+            [
+              -48.95838,
+              -15.848249999999998
+            ],
+            [
+              -48.95838,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-11",
+        "proprietario_nome": "Proprietário Lote E-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.848519999999999
+            ],
+            [
+              -48.95802,
+              -15.848519999999999
+            ],
+            [
+              -48.95802,
+              -15.848249999999998
+            ],
+            [
+              -48.9582,
+              -15.848249999999998
+            ],
+            [
+              -48.9582,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "E",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote E-12",
+        "proprietario_nome": "Proprietário Lote E-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-E-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.848519999999999
+            ],
+            [
+              -48.95784,
+              -15.848519999999999
+            ],
+            [
+              -48.95784,
+              -15.848249999999998
+            ],
+            [
+              -48.95802,
+              -15.848249999999998
+            ],
+            [
+              -48.95802,
+              -15.848519999999999
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-01",
+        "proprietario_nome": "Proprietário Lote F-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.84815
+            ],
+            [
+              -48.95982,
+              -15.84815
+            ],
+            [
+              -48.95982,
+              -15.84788
+            ],
+            [
+              -48.96,
+              -15.84788
+            ],
+            [
+              -48.96,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-02",
+        "proprietario_nome": "Proprietário Lote F-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.84815
+            ],
+            [
+              -48.95964,
+              -15.84815
+            ],
+            [
+              -48.95964,
+              -15.84788
+            ],
+            [
+              -48.95982,
+              -15.84788
+            ],
+            [
+              -48.95982,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-03",
+        "proprietario_nome": "Proprietário Lote F-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.84815
+            ],
+            [
+              -48.95946,
+              -15.84815
+            ],
+            [
+              -48.95946,
+              -15.84788
+            ],
+            [
+              -48.95964,
+              -15.84788
+            ],
+            [
+              -48.95964,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-04",
+        "proprietario_nome": "Proprietário Lote F-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.84815
+            ],
+            [
+              -48.95928,
+              -15.84815
+            ],
+            [
+              -48.95928,
+              -15.84788
+            ],
+            [
+              -48.95946,
+              -15.84788
+            ],
+            [
+              -48.95946,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-05",
+        "proprietario_nome": "Proprietário Lote F-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.84815
+            ],
+            [
+              -48.9591,
+              -15.84815
+            ],
+            [
+              -48.9591,
+              -15.84788
+            ],
+            [
+              -48.95928,
+              -15.84788
+            ],
+            [
+              -48.95928,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-06",
+        "proprietario_nome": "Proprietário Lote F-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.84815
+            ],
+            [
+              -48.95892,
+              -15.84815
+            ],
+            [
+              -48.95892,
+              -15.84788
+            ],
+            [
+              -48.9591,
+              -15.84788
+            ],
+            [
+              -48.9591,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-07",
+        "proprietario_nome": "Proprietário Lote F-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.84815
+            ],
+            [
+              -48.95874,
+              -15.84815
+            ],
+            [
+              -48.95874,
+              -15.84788
+            ],
+            [
+              -48.95892,
+              -15.84788
+            ],
+            [
+              -48.95892,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-08",
+        "proprietario_nome": "Proprietário Lote F-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.84815
+            ],
+            [
+              -48.95856,
+              -15.84815
+            ],
+            [
+              -48.95856,
+              -15.84788
+            ],
+            [
+              -48.95874,
+              -15.84788
+            ],
+            [
+              -48.95874,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-09",
+        "proprietario_nome": "Proprietário Lote F-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.84815
+            ],
+            [
+              -48.95838,
+              -15.84815
+            ],
+            [
+              -48.95838,
+              -15.84788
+            ],
+            [
+              -48.95856,
+              -15.84788
+            ],
+            [
+              -48.95856,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-10",
+        "proprietario_nome": "Proprietário Lote F-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.84815
+            ],
+            [
+              -48.9582,
+              -15.84815
+            ],
+            [
+              -48.9582,
+              -15.84788
+            ],
+            [
+              -48.95838,
+              -15.84788
+            ],
+            [
+              -48.95838,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-11",
+        "proprietario_nome": "Proprietário Lote F-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.84815
+            ],
+            [
+              -48.95802,
+              -15.84815
+            ],
+            [
+              -48.95802,
+              -15.84788
+            ],
+            [
+              -48.9582,
+              -15.84788
+            ],
+            [
+              -48.9582,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "F",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote F-12",
+        "proprietario_nome": "Proprietário Lote F-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-F-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.84815
+            ],
+            [
+              -48.95784,
+              -15.84815
+            ],
+            [
+              -48.95784,
+              -15.84788
+            ],
+            [
+              -48.95802,
+              -15.84788
+            ],
+            [
+              -48.95802,
+              -15.84815
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-01",
+        "proprietario_nome": "Proprietário Lote G-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.84778
+            ],
+            [
+              -48.95982,
+              -15.84778
+            ],
+            [
+              -48.95982,
+              -15.84751
+            ],
+            [
+              -48.96,
+              -15.84751
+            ],
+            [
+              -48.96,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-02",
+        "proprietario_nome": "Proprietário Lote G-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.84778
+            ],
+            [
+              -48.95964,
+              -15.84778
+            ],
+            [
+              -48.95964,
+              -15.84751
+            ],
+            [
+              -48.95982,
+              -15.84751
+            ],
+            [
+              -48.95982,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-03",
+        "proprietario_nome": "Proprietário Lote G-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.84778
+            ],
+            [
+              -48.95946,
+              -15.84778
+            ],
+            [
+              -48.95946,
+              -15.84751
+            ],
+            [
+              -48.95964,
+              -15.84751
+            ],
+            [
+              -48.95964,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-04",
+        "proprietario_nome": "Proprietário Lote G-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.84778
+            ],
+            [
+              -48.95928,
+              -15.84778
+            ],
+            [
+              -48.95928,
+              -15.84751
+            ],
+            [
+              -48.95946,
+              -15.84751
+            ],
+            [
+              -48.95946,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-05",
+        "proprietario_nome": "Proprietário Lote G-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.84778
+            ],
+            [
+              -48.9591,
+              -15.84778
+            ],
+            [
+              -48.9591,
+              -15.84751
+            ],
+            [
+              -48.95928,
+              -15.84751
+            ],
+            [
+              -48.95928,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-06",
+        "proprietario_nome": "Proprietário Lote G-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.84778
+            ],
+            [
+              -48.95892,
+              -15.84778
+            ],
+            [
+              -48.95892,
+              -15.84751
+            ],
+            [
+              -48.9591,
+              -15.84751
+            ],
+            [
+              -48.9591,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-07",
+        "proprietario_nome": "Proprietário Lote G-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.84778
+            ],
+            [
+              -48.95874,
+              -15.84778
+            ],
+            [
+              -48.95874,
+              -15.84751
+            ],
+            [
+              -48.95892,
+              -15.84751
+            ],
+            [
+              -48.95892,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-08",
+        "proprietario_nome": "Proprietário Lote G-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.84778
+            ],
+            [
+              -48.95856,
+              -15.84778
+            ],
+            [
+              -48.95856,
+              -15.84751
+            ],
+            [
+              -48.95874,
+              -15.84751
+            ],
+            [
+              -48.95874,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-09",
+        "proprietario_nome": "Proprietário Lote G-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.84778
+            ],
+            [
+              -48.95838,
+              -15.84778
+            ],
+            [
+              -48.95838,
+              -15.84751
+            ],
+            [
+              -48.95856,
+              -15.84751
+            ],
+            [
+              -48.95856,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-10",
+        "proprietario_nome": "Proprietário Lote G-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.84778
+            ],
+            [
+              -48.9582,
+              -15.84778
+            ],
+            [
+              -48.9582,
+              -15.84751
+            ],
+            [
+              -48.95838,
+              -15.84751
+            ],
+            [
+              -48.95838,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-11",
+        "proprietario_nome": "Proprietário Lote G-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.84778
+            ],
+            [
+              -48.95802,
+              -15.84778
+            ],
+            [
+              -48.95802,
+              -15.84751
+            ],
+            [
+              -48.9582,
+              -15.84751
+            ],
+            [
+              -48.9582,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "G",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote G-12",
+        "proprietario_nome": "Proprietário Lote G-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-G-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.84778
+            ],
+            [
+              -48.95784,
+              -15.84778
+            ],
+            [
+              -48.95784,
+              -15.84751
+            ],
+            [
+              -48.95802,
+              -15.84751
+            ],
+            [
+              -48.95802,
+              -15.84778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-01",
+        "proprietario_nome": "Proprietário Lote H-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.84741
+            ],
+            [
+              -48.95982,
+              -15.84741
+            ],
+            [
+              -48.95982,
+              -15.84714
+            ],
+            [
+              -48.96,
+              -15.84714
+            ],
+            [
+              -48.96,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-02",
+        "proprietario_nome": "Proprietário Lote H-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.84741
+            ],
+            [
+              -48.95964,
+              -15.84741
+            ],
+            [
+              -48.95964,
+              -15.84714
+            ],
+            [
+              -48.95982,
+              -15.84714
+            ],
+            [
+              -48.95982,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-03",
+        "proprietario_nome": "Proprietário Lote H-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.84741
+            ],
+            [
+              -48.95946,
+              -15.84741
+            ],
+            [
+              -48.95946,
+              -15.84714
+            ],
+            [
+              -48.95964,
+              -15.84714
+            ],
+            [
+              -48.95964,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-04",
+        "proprietario_nome": "Proprietário Lote H-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.84741
+            ],
+            [
+              -48.95928,
+              -15.84741
+            ],
+            [
+              -48.95928,
+              -15.84714
+            ],
+            [
+              -48.95946,
+              -15.84714
+            ],
+            [
+              -48.95946,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-05",
+        "proprietario_nome": "Proprietário Lote H-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.84741
+            ],
+            [
+              -48.9591,
+              -15.84741
+            ],
+            [
+              -48.9591,
+              -15.84714
+            ],
+            [
+              -48.95928,
+              -15.84714
+            ],
+            [
+              -48.95928,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-06",
+        "proprietario_nome": "Proprietário Lote H-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.84741
+            ],
+            [
+              -48.95892,
+              -15.84741
+            ],
+            [
+              -48.95892,
+              -15.84714
+            ],
+            [
+              -48.9591,
+              -15.84714
+            ],
+            [
+              -48.9591,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-07",
+        "proprietario_nome": "Proprietário Lote H-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.84741
+            ],
+            [
+              -48.95874,
+              -15.84741
+            ],
+            [
+              -48.95874,
+              -15.84714
+            ],
+            [
+              -48.95892,
+              -15.84714
+            ],
+            [
+              -48.95892,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-08",
+        "proprietario_nome": "Proprietário Lote H-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.84741
+            ],
+            [
+              -48.95856,
+              -15.84741
+            ],
+            [
+              -48.95856,
+              -15.84714
+            ],
+            [
+              -48.95874,
+              -15.84714
+            ],
+            [
+              -48.95874,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-09",
+        "proprietario_nome": "Proprietário Lote H-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.84741
+            ],
+            [
+              -48.95838,
+              -15.84741
+            ],
+            [
+              -48.95838,
+              -15.84714
+            ],
+            [
+              -48.95856,
+              -15.84714
+            ],
+            [
+              -48.95856,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-10",
+        "proprietario_nome": "Proprietário Lote H-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.84741
+            ],
+            [
+              -48.9582,
+              -15.84741
+            ],
+            [
+              -48.9582,
+              -15.84714
+            ],
+            [
+              -48.95838,
+              -15.84714
+            ],
+            [
+              -48.95838,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-11",
+        "proprietario_nome": "Proprietário Lote H-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.84741
+            ],
+            [
+              -48.95802,
+              -15.84741
+            ],
+            [
+              -48.95802,
+              -15.84714
+            ],
+            [
+              -48.9582,
+              -15.84714
+            ],
+            [
+              -48.9582,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "H",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote H-12",
+        "proprietario_nome": "Proprietário Lote H-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-H-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.84741
+            ],
+            [
+              -48.95784,
+              -15.84741
+            ],
+            [
+              -48.95784,
+              -15.84714
+            ],
+            [
+              -48.95802,
+              -15.84714
+            ],
+            [
+              -48.95802,
+              -15.84741
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-01",
+        "proprietario_nome": "Proprietário Lote I-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.84704
+            ],
+            [
+              -48.95982,
+              -15.84704
+            ],
+            [
+              -48.95982,
+              -15.84677
+            ],
+            [
+              -48.96,
+              -15.84677
+            ],
+            [
+              -48.96,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-02",
+        "proprietario_nome": "Proprietário Lote I-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.84704
+            ],
+            [
+              -48.95964,
+              -15.84704
+            ],
+            [
+              -48.95964,
+              -15.84677
+            ],
+            [
+              -48.95982,
+              -15.84677
+            ],
+            [
+              -48.95982,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-03",
+        "proprietario_nome": "Proprietário Lote I-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.84704
+            ],
+            [
+              -48.95946,
+              -15.84704
+            ],
+            [
+              -48.95946,
+              -15.84677
+            ],
+            [
+              -48.95964,
+              -15.84677
+            ],
+            [
+              -48.95964,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-04",
+        "proprietario_nome": "Proprietário Lote I-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.84704
+            ],
+            [
+              -48.95928,
+              -15.84704
+            ],
+            [
+              -48.95928,
+              -15.84677
+            ],
+            [
+              -48.95946,
+              -15.84677
+            ],
+            [
+              -48.95946,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-05",
+        "proprietario_nome": "Proprietário Lote I-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.84704
+            ],
+            [
+              -48.9591,
+              -15.84704
+            ],
+            [
+              -48.9591,
+              -15.84677
+            ],
+            [
+              -48.95928,
+              -15.84677
+            ],
+            [
+              -48.95928,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-06",
+        "proprietario_nome": "Proprietário Lote I-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.84704
+            ],
+            [
+              -48.95892,
+              -15.84704
+            ],
+            [
+              -48.95892,
+              -15.84677
+            ],
+            [
+              -48.9591,
+              -15.84677
+            ],
+            [
+              -48.9591,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-07",
+        "proprietario_nome": "Proprietário Lote I-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.84704
+            ],
+            [
+              -48.95874,
+              -15.84704
+            ],
+            [
+              -48.95874,
+              -15.84677
+            ],
+            [
+              -48.95892,
+              -15.84677
+            ],
+            [
+              -48.95892,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-08",
+        "proprietario_nome": "Proprietário Lote I-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.84704
+            ],
+            [
+              -48.95856,
+              -15.84704
+            ],
+            [
+              -48.95856,
+              -15.84677
+            ],
+            [
+              -48.95874,
+              -15.84677
+            ],
+            [
+              -48.95874,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-09",
+        "proprietario_nome": "Proprietário Lote I-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.84704
+            ],
+            [
+              -48.95838,
+              -15.84704
+            ],
+            [
+              -48.95838,
+              -15.84677
+            ],
+            [
+              -48.95856,
+              -15.84677
+            ],
+            [
+              -48.95856,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-10",
+        "proprietario_nome": "Proprietário Lote I-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.84704
+            ],
+            [
+              -48.9582,
+              -15.84704
+            ],
+            [
+              -48.9582,
+              -15.84677
+            ],
+            [
+              -48.95838,
+              -15.84677
+            ],
+            [
+              -48.95838,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-11",
+        "proprietario_nome": "Proprietário Lote I-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.84704
+            ],
+            [
+              -48.95802,
+              -15.84704
+            ],
+            [
+              -48.95802,
+              -15.84677
+            ],
+            [
+              -48.9582,
+              -15.84677
+            ],
+            [
+              -48.9582,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "I",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote I-12",
+        "proprietario_nome": "Proprietário Lote I-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-I-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.84704
+            ],
+            [
+              -48.95784,
+              -15.84704
+            ],
+            [
+              -48.95784,
+              -15.84677
+            ],
+            [
+              -48.95802,
+              -15.84677
+            ],
+            [
+              -48.95802,
+              -15.84704
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "01",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-01",
+        "proprietario_nome": "Proprietário Lote J-01",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-001",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.96,
+              -15.84667
+            ],
+            [
+              -48.95982,
+              -15.84667
+            ],
+            [
+              -48.95982,
+              -15.8464
+            ],
+            [
+              -48.96,
+              -15.8464
+            ],
+            [
+              -48.96,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "02",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-02",
+        "proprietario_nome": "Proprietário Lote J-02",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-002",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95982,
+              -15.84667
+            ],
+            [
+              -48.95964,
+              -15.84667
+            ],
+            [
+              -48.95964,
+              -15.8464
+            ],
+            [
+              -48.95982,
+              -15.8464
+            ],
+            [
+              -48.95982,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "03",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-03",
+        "proprietario_nome": "Proprietário Lote J-03",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-003",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95964,
+              -15.84667
+            ],
+            [
+              -48.95946,
+              -15.84667
+            ],
+            [
+              -48.95946,
+              -15.8464
+            ],
+            [
+              -48.95964,
+              -15.8464
+            ],
+            [
+              -48.95964,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "04",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-04",
+        "proprietario_nome": "Proprietário Lote J-04",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-004",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95946,
+              -15.84667
+            ],
+            [
+              -48.95928,
+              -15.84667
+            ],
+            [
+              -48.95928,
+              -15.8464
+            ],
+            [
+              -48.95946,
+              -15.8464
+            ],
+            [
+              -48.95946,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "05",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-05",
+        "proprietario_nome": "Proprietário Lote J-05",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-005",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95928,
+              -15.84667
+            ],
+            [
+              -48.9591,
+              -15.84667
+            ],
+            [
+              -48.9591,
+              -15.8464
+            ],
+            [
+              -48.95928,
+              -15.8464
+            ],
+            [
+              -48.95928,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "06",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-06",
+        "proprietario_nome": "Proprietário Lote J-06",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-006",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9591,
+              -15.84667
+            ],
+            [
+              -48.95892,
+              -15.84667
+            ],
+            [
+              -48.95892,
+              -15.8464
+            ],
+            [
+              -48.9591,
+              -15.8464
+            ],
+            [
+              -48.9591,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "07",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-07",
+        "proprietario_nome": "Proprietário Lote J-07",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-007",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95892,
+              -15.84667
+            ],
+            [
+              -48.95874,
+              -15.84667
+            ],
+            [
+              -48.95874,
+              -15.8464
+            ],
+            [
+              -48.95892,
+              -15.8464
+            ],
+            [
+              -48.95892,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "08",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-08",
+        "proprietario_nome": "Proprietário Lote J-08",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-008",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95874,
+              -15.84667
+            ],
+            [
+              -48.95856,
+              -15.84667
+            ],
+            [
+              -48.95856,
+              -15.8464
+            ],
+            [
+              -48.95874,
+              -15.8464
+            ],
+            [
+              -48.95874,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "09",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-09",
+        "proprietario_nome": "Proprietário Lote J-09",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-009",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95856,
+              -15.84667
+            ],
+            [
+              -48.95838,
+              -15.84667
+            ],
+            [
+              -48.95838,
+              -15.8464
+            ],
+            [
+              -48.95856,
+              -15.8464
+            ],
+            [
+              -48.95856,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "10",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-10",
+        "proprietario_nome": "Proprietário Lote J-10",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-010",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95838,
+              -15.84667
+            ],
+            [
+              -48.9582,
+              -15.84667
+            ],
+            [
+              -48.9582,
+              -15.8464
+            ],
+            [
+              -48.95838,
+              -15.8464
+            ],
+            [
+              -48.95838,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "11",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-11",
+        "proprietario_nome": "Proprietário Lote J-11",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-011",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.9582,
+              -15.84667
+            ],
+            [
+              -48.95802,
+              -15.84667
+            ],
+            [
+              -48.95802,
+              -15.8464
+            ],
+            [
+              -48.9582,
+              -15.8464
+            ],
+            [
+              -48.9582,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "codigo_lote": "12",
+        "quadra": "J",
+        "setor": "Setor Residencial Sol",
+        "nome": "Lote J-12",
+        "proprietario_nome": "Proprietário Lote J-12",
+        "municipio": "Pirenópolis",
+        "estado": "GO",
+        "comarca": "Pirenópolis",
+        "matricula": "M-J-012",
+        "status_operacional": "cliente_vinculado",
+        "status_documental": "pendente",
+        "recebe_magic_link": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -48.95802,
+              -15.84667
+            ],
+            [
+              -48.95784,
+              -15.84667
+            ],
+            [
+              -48.95784,
+              -15.8464
+            ],
+            [
+              -48.95802,
+              -15.8464
+            ],
+            [
+              -48.95802,
+              -15.84667
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

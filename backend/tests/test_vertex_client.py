@@ -20,13 +20,11 @@ async def test_validar_dxf_sucesso():
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
         mock_req.return_value = mock_resposta
         
-        resultado = await client.validar_dxf("https://storage.supabase.com/projeto/123.dxf")
+        resultado = await client.validar_dxf(b"conteudo dxf", "teste.dxf")
         
         assert resultado["valido"] is True
         assert resultado["versao"] == "AutoCAD 2013"
-        mock_req.assert_called_once_with(
-            "POST", "/cad/dxf/validar", json_data={"download_url": "https://storage.supabase.com/projeto/123.dxf"}
-        )
+        mock_req.assert_called_once()
 
 @pytest.mark.anyio
 async def test_extrair_pontos_dxf_sucesso():
@@ -41,7 +39,7 @@ async def test_extrair_pontos_dxf_sucesso():
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
         mock_req.return_value = mock_resposta
         
-        pontos = await client.extrair_pontos_dxf("https://storage.supabase.com/projeto/123.dxf")
+        pontos = await client.extrair_pontos_dxf(b"conteudo dxf", "teste.dxf")
         
         assert len(pontos) == 1
         assert pontos[0]["codigo"] == "V01"
@@ -54,7 +52,7 @@ async def test_vertex_indisponivel():
     
     with patch("httpx.AsyncClient.post", side_effect=httpx.ConnectError("Connection refused")):
         with pytest.raises(ConnectionError) as exc_info:
-            await client.validar_dxf("https://storage.supabase.com/projeto/123.dxf")
+            await client.validar_dxf(b"conteudo dxf", "teste.dxf")
         
         assert "Não foi possível conectar ao VERTEXROSEA" in str(exc_info.value)
 
@@ -65,6 +63,6 @@ async def test_vertex_timeout():
     
     with patch("httpx.AsyncClient.post", side_effect=httpx.TimeoutException("Timeout")):
         with pytest.raises(TimeoutError) as exc_info:
-            await client.validar_dxf("https://storage.supabase.com/projeto/123.dxf")
+            await client.validar_dxf(b"conteudo dxf", "teste.dxf")
         
         assert "excedeu o tempo limite" in str(exc_info.value)

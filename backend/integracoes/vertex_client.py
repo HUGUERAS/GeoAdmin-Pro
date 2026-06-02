@@ -24,7 +24,13 @@ class VertexClient:
         logger.info("VertexClient inicializado apontando para %s", self.base_url)
 
     async def _request(
-        self, method: str, path: str, json_data: Optional[Dict[str, Any]] = None, timeout: float = 10.0
+        self,
+        method: str,
+        path: str,
+        json_data: Optional[Dict[str, Any]] = None,
+        files: Optional[Dict[str, Any]] = None,
+        data: Optional[Dict[str, Any]] = None,
+        timeout: float = 10.0
     ) -> Dict[str, Any]:
         """Executa requisições HTTP de forma resiliente."""
         url = f"{self.base_url}/{path.lstrip('/')}"
@@ -32,8 +38,8 @@ class VertexClient:
         async with httpx.AsyncClient(headers=self.headers, timeout=timeout) as client:
             try:
                 if method.upper() == "POST":
-                    logger.debug("POST request para %s com dados: %s", url, json_data)
-                    response = await client.post(url, json=json_data)
+                    logger.debug("POST request para %s com json: %s, data: %s, files: %s", url, json_data, data, files)
+                    response = await client.post(url, json=json_data, data=data, files=files)
                 else:
                     logger.debug("GET request para %s", url)
                     response = await client.get(url)
@@ -62,29 +68,30 @@ class VertexClient:
                 logger.error("Erro desconhecido ao chamar VERTEXROSEA: %s", e, exc_info=True)
                 raise RuntimeError(f"Falha na integração com VERTEXROSEA: {e}")
 
-    async def validar_dxf(self, download_url: str) -> Dict[str, Any]:
+    async def validar_dxf(self, conteudo: bytes, filename: str) -> Dict[str, Any]:
         """
-        Solicita validação técnica de um DXF no VERTEXROSEA.
+        Solicita validação técnica de um DXF no VERTEXROSEA enviando os bytes via multipart.
         
         Retorna dicionário informando se é válido, avisos e metadados.
         """
-        payload = {"download_url": download_url}
-        return await self._request("POST", "/cad/dxf/validar", json_data=payload)
+        files = {"file": (filename, conteudo, "application/octet-stream")}
+        return await self._request("POST", "/cad/dxf/validar", files=files)
 
-    async def extrair_pontos_dxf(self, download_url: str) -> List[Dict[str, Any]]:
+    async def extrair_pontos_dxf(self, conteudo: bytes, filename: str) -> List[Dict[str, Any]]:
         """
-        Solicita extração das coordenadas dos pontos de um DXF.
+        Solicita extração das coordenadas dos pontos de um DXF enviando os bytes via multipart.
         """
-        payload = {"download_url": download_url}
-        resultado = await self._request("POST", "/cad/dxf/pontos", json_data=payload)
+        files = {"file": (filename, conteudo, "application/octet-stream")}
+        resultado = await self._request("POST", "/cad/dxf/pontos", files=files)
         return resultado.get("pontos", [])
 
-    async def parse_txt_coletora(self, download_url: str, formato: str = "metrica_topo") -> Dict[str, Any]:
+    async def parse_txt_coletora(self, conteudo: bytes, filename: str, formato: str = "metrica_topo") -> Dict[str, Any]:
         """
-        Faz o parseamento e normalização técnica de arquivo de coletora (LandStar/Métrica).
+        Faz o parseamento e normalização técnica de arquivo de coletora (LandStar/Métrica) via multipart.
         """
-        payload = {"download_url": download_url, "formato": formato}
-        return await self._request("POST", "/cad/txt/parse", json_data=payload)
+        files = {"file": (filename, conteudo, "application/octet-stream")}
+        data = {"formato": formato}
+        return await self._request("POST", "/cad/txt/parse", files=files, data=data)
 
     async def disparar_job_freecad(self, project_id: str, codigo_projeto: str, vertices: List[Dict[str, Any]], download_url_dxf: Optional[str] = None) -> Dict[str, Any]:
         """
