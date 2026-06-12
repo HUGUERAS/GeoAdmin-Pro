@@ -2,11 +2,11 @@
   "expo": {
     "name": "GeoAdmin Pro",
     "slug": "geoadmin-pro",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "scheme": "geoadmin",
     "android": {
       "package": "com.hugeras.geoadminpro",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "BLUETOOTH",
         "BLUETOOTH_ADMIN",

@@ -46,6 +46,7 @@ class ResultadoImportacao(BaseModel):
 async def importar_landstar(
     projeto_id: str,
     arquivo: UploadFile = File(..., description="Arquivo TXT ou CSV exportado pelo LandStar 8.x"),
+    area_id: Optional[str] = Query(None, description="Área/lote de destino para os pontos importados"),
     aplicar_geoide: bool = Query(True, description="Corrigir altitude elipsoidal → ortométrica (IBGE HNOR 2020)"),
     apenas_preview: bool = Query(False, description="Só retorna os pontos sem inserir no banco"),
 ):
@@ -117,6 +118,7 @@ async def importar_landstar(
 
         pontos_para_inserir.append({
             "projeto_id":  projeto_id,
+            "area_id":     area_id,
             "nome":        p.nome,
             "lat":         p.lat,
             "lon":         p.lon,

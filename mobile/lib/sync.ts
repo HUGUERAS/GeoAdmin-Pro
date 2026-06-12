@@ -36,6 +36,7 @@ export async function sincronizar(projeto_id?: string): Promise<SyncResult> {
     const payload = {
       pontos: pendentes.map(p => ({
         projeto_id:  p.projeto_id,
+        area_id:     p.area_id ?? null,
         nome:        p.nome,
         lat:         p.lat,
         lon:         p.lon,

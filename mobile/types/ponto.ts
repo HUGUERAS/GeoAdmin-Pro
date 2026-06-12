@@ -9,6 +9,7 @@ export type SyncStatus = 'pending' | 'synced' | 'error'
 export interface PontoLocal {
   id: string            // UUID gerado no dispositivo
   projeto_id: string
+  area_id?: string | null
   nome: string
   lat: number
   lon: number

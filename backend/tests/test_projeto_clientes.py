@@ -243,3 +243,31 @@ def test_registrar_evento_magic_link_envia_token_hash_sem_token_bruto():
     assert eventos[0]['token_hash'] == sha256(b'token-secreto').hexdigest()
     assert 'token' not in eventos[0]
     assert eventos[0]['payload_json'] == {'vertices_recebidos': 3}
+
+
+def test_registrar_evento_magic_link_nao_faz_fallback_sem_token_hash():
+    tentativas = []
+
+    def resolver(query: FakeQuery):
+        if query.table == 'eventos_magic_link' and query.action == 'insert':
+            tentativas.append(query.payload)
+            raise Exception("Could not find the 'token_hash' column of 'eventos_magic_link' in the schema cache")
+        raise AssertionError(f'Tabela inesperada: {query.table} {query.action}')
+
+    resultado = projeto_clientes_mod.registrar_evento_magic_link(
+        FakeSupabase(resolver),
+        projeto_id='proj-1',
+        projeto_cliente_id='pc-1',
+        cliente_id='cli-1',
+        area_id='area-1',
+        token='token-secreto',
+        tipo_evento='gerado',
+        canal='whatsapp',
+        autor='teste',
+        payload={'projeto_nome': 'Projeto Teste'},
+    )
+
+    assert len(tentativas) == 1
+    assert tentativas[0]['token_hash'] == sha256(b'token-secreto').hexdigest()
+    assert 'token' not in tentativas[0]
+    assert resultado['token_hash'] == sha256(b'token-secreto').hexdigest()

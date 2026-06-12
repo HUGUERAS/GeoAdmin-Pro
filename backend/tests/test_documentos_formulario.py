@@ -99,6 +99,27 @@ def test_payload_cliente_formulario_normaliza_documentos():
     assert payload["conjuge_cpf"] == "98765432100"
 
 
+def test_croqui_do_mapa_preserva_pontos_sem_exigir_poligono():
+    pontos_json = '[{"ordem":1,"lat":-14.19108,"lon":-49.4061},{"ordem":2,"lat":-14.1915,"lon":-49.4056}]'
+
+    pontos = documentos_mod._parse_pontos_croqui_json(pontos_json)
+    anexo = documentos_mod._anexo_pontos_croqui(pontos, "pontos_marcados")
+
+    assert pontos == [
+        {"lat": -14.19108, "lon": -49.4061},
+        {"lat": -14.1915, "lon": -49.4056},
+    ]
+    assert anexo[0] == "croqui_pontos_cliente.geojson"
+    assert anexo[2] == "application/geo+json"
+    assert b"LineString" in anexo[1]
+
+
+def test_croqui_texto_aceita_um_ponto_de_referencia():
+    pontos = documentos_mod._parse_pontos_croqui_texto("-14.19108,-49.40610")
+
+    assert pontos == [{"lat": -14.19108, "lon": -49.4061}]
+
+
 def test_carregar_area_contexto_inclui_geometria_para_mapa_cliente():
     def resolver(query: FakeQuery):
         if query.table == "areas_projeto" and query.action == "select":

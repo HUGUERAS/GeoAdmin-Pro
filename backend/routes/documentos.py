@@ -82,6 +82,8 @@ class DadosFormulario(BaseModel):
     observacoes: Optional[str] = ""
     croqui_coords: Optional[str] = ""
     croqui_svg: Optional[str] = ""
+    croqui_pontos_json: Optional[str] = ""
+    croqui_mapa_status: Optional[str] = ""
 
 
 def _get_supabase():
@@ -667,6 +669,92 @@ def _parse_int(value: Any) -> int | None:
         return None
 
 
+def _normalizar_ponto_croqui(item: Any) -> dict[str, float] | None:
+    if isinstance(item, dict):
+        lat_raw = item.get("lat") or item.get("latitude") or item.get("y")
+        lon_raw = item.get("lon") or item.get("lng") or item.get("longitude") or item.get("x")
+    elif isinstance(item, (list, tuple)) and len(item) >= 2:
+        lat_raw, lon_raw = item[0], item[1]
+    else:
+        return None
+
+    try:
+        lat = float(str(lat_raw).replace(",", "."))
+        lon = float(str(lon_raw).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return None
+    return {"lat": round(lat, 8), "lon": round(lon, 8)}
+
+
+def _parse_pontos_croqui_json(valor: Any) -> list[dict[str, float]]:
+    if not valor:
+        return []
+    try:
+        payload = json.loads(valor) if isinstance(valor, str) else valor
+    except Exception:
+        return []
+    if isinstance(payload, dict):
+        payload = payload.get("pontos") or payload.get("points") or []
+    if not isinstance(payload, list):
+        return []
+    pontos = [_normalizar_ponto_croqui(item) for item in payload]
+    return [ponto for ponto in pontos if ponto]
+
+
+def _parse_pontos_croqui_texto(valor: str | None) -> list[dict[str, float]]:
+    pontos: list[dict[str, float]] = []
+    for linha in str(valor or "").splitlines():
+        texto = linha.strip()
+        if not texto:
+            continue
+        partes = [parte for parte in texto.replace(";", ",").replace("\t", ",").replace(" ", ",").split(",") if parte]
+        if len(partes) < 2:
+            continue
+        try:
+            a = float(partes[0].replace(",", "."))
+            b = float(partes[1].replace(",", "."))
+        except ValueError:
+            continue
+        if abs(a) <= 90 and abs(b) <= 180:
+            pontos.append({"lat": round(a, 8), "lon": round(b, 8)})
+        elif abs(a) <= 180 and abs(b) <= 90:
+            pontos.append({"lat": round(b, 8), "lon": round(a, 8)})
+    return pontos
+
+
+def _anexo_pontos_croqui(pontos: list[dict[str, float]], status: str | None) -> tuple[str, bytes, str]:
+    features: list[dict[str, Any]] = []
+    for index, ponto in enumerate(pontos, start=1):
+        features.append({
+            "type": "Feature",
+            "properties": {"ordem": index, "origem": "formulario_cliente"},
+            "geometry": {"type": "Point", "coordinates": [ponto["lon"], ponto["lat"]]},
+        })
+    if len(pontos) >= 2:
+        features.append({
+            "type": "Feature",
+            "properties": {"origem": "formulario_cliente", "tipo": "linha_aproximada"},
+            "geometry": {"type": "LineString", "coordinates": [[p["lon"], p["lat"]] for p in pontos]},
+        })
+    payload = {
+        "type": "FeatureCollection",
+        "properties": {
+            "origem": "formulario_cliente",
+            "status_mapa": status or "pontos_marcados",
+            "pontos_total": len(pontos),
+        },
+        "features": features,
+    }
+    return (
+        "croqui_pontos_cliente.geojson",
+        json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        "application/geo+json",
+    )
+
+
 def _normalizar_payload(payload: dict[str, Any]) -> DadosFormulario:
     bruto = {**payload}
     bruto["confrontantes"] = payload.get("confrontantes") or []
@@ -924,6 +1012,10 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
         _atualizar_projeto_formulario(sb, projeto_id, dados)
         _sincronizar_confrontantes_formulario(sb, projeto_id, cliente_id, dados.confrontantes)
 
+    pontos_croqui = _parse_pontos_croqui_json(dados.croqui_pontos_json)
+    if not pontos_croqui and dados.croqui_coords:
+        pontos_croqui = _parse_pontos_croqui_texto(dados.croqui_coords)
+
     vertices: list[dict[str, Any]] = []
     if dados.croqui_coords:
         try:
@@ -941,6 +1033,9 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
             else:
                 uploads.append(geo_upload)
 
+    if vertices and not pontos_croqui:
+        pontos_croqui = [{"lat": float(item["lat"]), "lon": float(item["lon"])} for item in vertices]
+
     area_nome = dados.area_nome or dados.nome_imovel or "Área principal"
     area_contexto = _carregar_area_contexto(sb, (vinculo or {}).get("area_id")) if vinculo else None
     area = salvar_area_projeto(
@@ -955,7 +1050,7 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
         ccir=dados.ccir,
         car=dados.car,
         observacoes=dados.observacoes,
-        status_operacional="croqui_recebido" if vertices else "cliente_vinculado",
+        status_operacional="croqui_recebido" if (vertices or pontos_croqui) else "cliente_vinculado",
         status_documental="formulario_ok",
         origem_tipo="formulario_cliente",
         geometria_esboco=vertices,
@@ -964,6 +1059,8 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
 
     if dados.croqui_svg:
         uploads.append(("croqui_cliente.svg", dados.croqui_svg.encode("utf-8"), "image/svg+xml"))
+    if pontos_croqui:
+        uploads.append(_anexo_pontos_croqui(pontos_croqui, dados.croqui_mapa_status))
 
     anexos = anexar_arquivos_area(area_id=area["id"], cliente_id=cliente_id, arquivos=uploads)
 
@@ -997,6 +1094,8 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
                 expira_em=(vinculo or {}).get("magic_link_expira") or cliente.get("magic_link_expira"),
                 payload={
                     "vertices_recebidos": len(vertices),
+                    "pontos_croqui_recebidos": len(pontos_croqui),
+                    "mapa_status": dados.croqui_mapa_status or None,
                     "anexos_total": len(anexos),
                     "confrontantes_total": len(dados.confrontantes),
                 },
@@ -1005,12 +1104,13 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
             logger.warning("Falha ao registrar consumo do magic link: %s", exc)
 
     logger.info(
-        "Formulario recebido do cliente %s — projeto=%s confrontantes=%s anexos=%s vertices=%s",
+        "Formulario recebido do cliente %s — projeto=%s confrontantes=%s anexos=%s vertices=%s pontos_croqui=%s",
         cliente_id,
         projeto_id,
         len(dados.confrontantes),
         len(anexos),
         len(vertices),
+        len(pontos_croqui),
     )
 
     return {
@@ -1023,6 +1123,7 @@ async def receber_formulario(request: Request, token: str = Query(...), supabase
             "anexos_total": len(anexos),
         },
         "vertices_recebidos": len(vertices),
+        "pontos_croqui_recebidos": len(pontos_croqui),
     }
 
 

@@ -598,14 +598,10 @@ def registrar_evento_magic_link(
     except Exception as exc:
         texto = str(exc).lower()
         if 'token_hash' in texto and ('schema cache' in texto or 'column' in texto):
-            registro_compat = {chave: valor for chave, valor in registro.items() if chave != 'token_hash'}
-            try:
-                resposta = sb.table('eventos_magic_link').insert(registro_compat).execute()
-                dados = _dados(resposta)
-                return dados[0] if dados else registro_compat
-            except Exception as exc_compat:
-                logger.warning("Falha ao registrar evento de magic link: %s", exc_compat)
-                return registro_compat
+            logger.warning(
+                "Schema de eventos_magic_link sem token_hash; evento de magic link nao persistido."
+            )
+            return registro
         logger.warning("Falha ao registrar evento de magic link: %s", exc)
         if 'eventos_magic_link' in str(exc).lower():
             return registro

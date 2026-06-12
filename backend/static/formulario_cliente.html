@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GeoAdmin Pro — Formulário do Cliente</title>
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
 <style>
   :root {
     --bg: #0d110f;
@@ -245,12 +246,98 @@
     margin-bottom: 16px;
   }
   .sketch-shell {
-    border: 1px dashed rgba(133, 89, 21, .45);
+    border: 1px solid rgba(47,165,106,.28);
     border-radius: 18px;
-    background: linear-gradient(180deg, #111613 0%, #161d19 100%);
+    background: linear-gradient(180deg, #111613 0%, #141b17 100%);
     padding: 14px;
     display: grid;
     gap: 12px;
+  }
+  .choice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .choice-card {
+    text-align: left;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--bg-soft);
+    color: var(--text);
+    padding: 14px;
+    min-height: 112px;
+    cursor: pointer;
+    display: grid;
+    gap: 7px;
+  }
+  .choice-card.active {
+    border-color: rgba(47,165,106,.72);
+    background: linear-gradient(180deg, #102118 0%, #17231d 100%);
+    box-shadow: 0 8px 20px rgba(47,165,106,.14);
+  }
+  .choice-card strong {
+    font-size: 15px;
+  }
+  .choice-card span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .simple-guide {
+    border: 1px solid rgba(47,165,106,.24);
+    border-radius: 16px;
+    background: rgba(47,165,106,.08);
+    padding: 14px;
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .simple-guide strong {
+    color: #7fe0a8;
+  }
+  .simple-guide ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--muted);
+    line-height: 1.55;
+    font-size: 13px;
+  }
+  .sketch-mode-panel[hidden] { display: none; }
+  .external-data {
+    margin-top: 16px;
+    border: 1px solid rgba(168,184,173,.24);
+    border-radius: 16px;
+    background: #111613;
+    overflow: hidden;
+  }
+  .external-data summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .external-data summary::-webkit-details-marker { display: none; }
+  .external-data summary::after {
+    content: "+";
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    border: 1px solid rgba(168,184,173,.35);
+    display: grid;
+    place-items: center;
+    color: #9be7ba;
+    flex: 0 0 auto;
+  }
+  .external-data[open] summary::after { content: "-"; }
+  .external-data-body {
+    border-top: 1px solid rgba(168,184,173,.18);
+    padding: 14px;
   }
   .client-map {
     border: 1px solid rgba(47,165,106,.36);
@@ -290,13 +377,136 @@
     font-weight: 700;
     white-space: nowrap;
   }
+  .client-map-actions,
+  .client-map-board {
+    width: 100%;
+  }
+  .client-map-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+  }
+  .client-map-actions[hidden] { display: none; }
+  .map-confirmation {
+    border: 1px solid rgba(70,192,126,.32);
+    border-radius: 14px;
+    background: rgba(70,192,126,.10);
+    color: #9be7ba;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .map-confirmation[hidden] { display: none; }
   .client-map-board {
     width: 100%;
     border-radius: 14px;
     border: 1px solid rgba(47,165,106,.22);
     background: #0a0f0d;
-    aspect-ratio: 16 / 10;
+    min-height: 340px;
+    height: min(58vh, 460px);
     overflow: hidden;
+    position: relative;
+  }
+  .map-crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 30px;
+    height: 30px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 460;
+  }
+  .map-crosshair::before,
+  .map-crosshair::after {
+    content: "";
+    position: absolute;
+    background: rgba(255,248,239,.92);
+    box-shadow: 0 1px 4px rgba(0,0,0,.45);
+  }
+  .map-crosshair::before {
+    left: 14px;
+    top: 0;
+    width: 2px;
+    height: 30px;
+  }
+  .map-crosshair::after {
+    left: 0;
+    top: 14px;
+    width: 30px;
+    height: 2px;
+  }
+  .satellite-map {
+    width: 100%;
+    height: 100%;
+    min-height: 340px;
+    background: #0a0f0d;
+  }
+  .leaflet-container {
+    font-family: inherit;
+    background: #0a0f0d;
+  }
+  .leaflet-control-attribution {
+    background: rgba(10,15,13,.78) !important;
+    color: #cbd9d0 !important;
+    font-size: 10px;
+  }
+  .leaflet-control-attribution a {
+    color: #9be7ba !important;
+  }
+  .leaflet-touch .leaflet-bar,
+  .leaflet-touch .leaflet-control-layers {
+    border-color: rgba(47,165,106,.34);
+  }
+  .sketch-point-marker {
+    border: 2px solid #fff8ef;
+    border-radius: 999px;
+    background: #f0b53a;
+    color: #1c160d;
+    box-shadow: 0 4px 12px rgba(0,0,0,.35);
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .sketch-point-list {
+    display: grid;
+    gap: 8px;
+  }
+  .sketch-point-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid rgba(240,181,58,.28);
+    border-radius: 12px;
+    background: rgba(240,181,58,.10);
+    padding: 8px;
+    color: #fff8ef;
+    font-size: 12px;
+  }
+  .sketch-point-row strong {
+    color: #f7c45e;
+    font-size: 13px;
+  }
+  .sketch-point-row span {
+    overflow-wrap: anywhere;
+  }
+  .sketch-point-row button {
+    border: 1px solid rgba(255,248,239,.22);
+    border-radius: 10px;
+    background: rgba(255,255,255,.10);
+    color: #fff8ef;
+    padding: 7px 9px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .location-marker {
+    border: 2px solid #e6f1ea;
+    border-radius: 999px;
+    background: #2fa56a;
+    box-shadow: 0 0 0 8px rgba(47,165,106,.22);
   }
   .sketch-toolbar {
     display: flex;
@@ -335,6 +545,7 @@
     overflow: hidden;
     position: relative;
   }
+  .sketch-shell[hidden] { display: none; }
   svg { width: 100%; height: 100%; display: block; touch-action: none; }
   .upload-grid {
     display: grid;
@@ -417,6 +628,8 @@
     .nav-row .secondary-btn,
     .nav-row .primary-btn,
     .ghost-btn { width: 100%; }
+    .client-map-board,
+    .satellite-map { min-height: 300px; }
   }
 </style>
 </head>
@@ -618,8 +831,8 @@
 
       <div class="step-card" data-step="2" hidden>
         <div class="step-header">
-          <h2 class="step-title">3. Esboço aproximado da área</h2>
-          <p class="step-subtitle">Faça um croqui rápido só para nos orientar. Se você tiver coordenadas, KML, GeoJSON, CSV, TXT ou um croqui em foto/PDF, envie também.</p>
+          <h2 class="step-title">3. Localização no mapa</h2>
+          <p class="step-subtitle">Use o mapa satélite para marcar pontos aproximados da área, entrada, cerca ou canto conhecido. Se tiver KML, GeoJSON, CSV, TXT ou foto/PDF, envie também.</p>
         </div>
 
         <div class="client-map" id="client-map" hidden>
@@ -631,44 +844,59 @@
             <span class="client-map-chip" id="client-map-chip">Recorte</span>
           </div>
           <div class="client-map-board">
-            <svg id="client-map-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"></svg>
+            <div id="client-satellite-map" class="satellite-map" aria-label="Mapa satélite para marcação de pontos"></div>
+            <div class="map-crosshair" aria-hidden="true"></div>
           </div>
           <div class="hint" id="client-map-status">Este mapa mostra apenas a área vinculada ao seu link.</div>
+          <div class="client-map-actions" id="client-map-actions" hidden>
+            <button type="button" class="primary-btn" id="btn-confirm-map">Este mapa está certo</button>
+            <button type="button" class="ghost-btn" id="btn-adjust-sketch">Marcar ajuste</button>
+          </div>
+          <div class="map-confirmation" id="map-confirmation" hidden>Mapa confirmado para este envio.</div>
         </div>
 
-        <div class="sketch-shell">
+        <div class="sketch-shell" id="sketch-shell">
           <div class="sketch-toolbar">
-            <button type="button" class="ghost-btn" id="btn-clear-sketch">Limpar desenho</button>
-            <span class="hint">Toque no quadro abaixo para marcar os vértices do croqui. Isso é só um esboço, não precisa ficar perfeito.</span>
+            <button type="button" class="ghost-btn" id="btn-locate-map">Usar minha localização</button>
+            <button type="button" class="ghost-btn" id="btn-add-map-center">Marcar centro do mapa</button>
+            <button type="button" class="ghost-btn" id="btn-undo-sketch">Desfazer ponto</button>
+            <button type="button" class="ghost-btn" id="btn-clear-sketch">Limpar pontos</button>
+            <button type="button" class="ghost-btn" id="btn-skip-sketch">Não sei marcar</button>
+            <span class="hint">Toque no mapa ou posicione a mira e marque o centro. Com 2 pontos o app cria uma linha. Arraste os pontos amarelos para ajustar.</span>
           </div>
-          <div class="sketch-board">
-            <svg id="sketch-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
-          </div>
-          <div class="hint" id="sketch-status">Nenhum vértice desenhado ainda.</div>
+          <div class="hint" id="sketch-status">Nenhum ponto marcado ainda.</div>
+          <div class="sketch-point-list" id="sketch-point-list" hidden></div>
         </div>
 
-        <div class="grid" style="margin-top:16px;">
-          <div class="field">
-            <label for="croqui_coords">Coordenadas aproximadas (opcional)</label>
-            <textarea id="croqui_coords" name="croqui_coords" autocomplete="off" placeholder="Cole aqui linhas como lat,lon ou lon,lat. Exemplo:\n-14.19108,-49.40610\n-14.19150,-49.40560\n-14.19210,-49.40590"></textarea>
-            <div class="hint">Se você não tiver coordenadas, pode pular esse campo e só desenhar o croqui ou enviar um arquivo.</div>
-          </div>
-        </div>
+        <details class="external-data">
+          <summary>Tenho coordenadas, KML, arquivo ou foto para enviar</summary>
+          <div class="external-data-body">
+            <div class="grid">
+              <div class="field">
+                <label for="croqui_coords">Coordenadas externas (opcional)</label>
+                <textarea id="croqui_coords" name="croqui_coords" autocomplete="off" placeholder="Campo opcional para quem já tem coordenadas. Exemplo:\n-14.19108,-49.40610\n-14.19150,-49.40560\n-14.19210,-49.40590"></textarea>
+                <div class="hint">Não precisa preencher este campo para enviar o formulário. Ele serve para técnico, agrimensor ou quem já recebeu coordenadas prontas.</div>
+              </div>
+            </div>
 
-        <div class="upload-grid" style="margin-top:16px;">
-          <div class="upload-box">
-            <label for="arquivo_geometria">Arquivo geoespacial opcional</label>
-            <input id="arquivo_geometria" name="arquivo_geometria" type="file" autocomplete="off" accept=".geojson,.json,.kml,.csv,.txt,.zip" />
-            <div class="hint">Aceita GeoJSON, KML, CSV, TXT ou ZIP com shapefile.</div>
+            <div class="upload-grid" style="margin-top:16px;">
+              <div class="upload-box">
+                <label for="arquivo_geometria">Arquivo geoespacial opcional</label>
+                <input id="arquivo_geometria" name="arquivo_geometria" type="file" autocomplete="off" accept=".geojson,.json,.kml,.csv,.txt,.zip" />
+                <div class="hint">Aceita GeoJSON, KML, CSV, TXT ou ZIP com shapefile.</div>
+              </div>
+              <div class="upload-box">
+                <label for="anexos">Croqui, foto ou PDF</label>
+                <input id="anexos" name="anexos" type="file" autocomplete="off" accept="image/*,.pdf" multiple />
+                <div class="hint">Envie fotos do croqui, mapa escaneado ou qualquer documento que ajude na localização.</div>
+              </div>
+            </div>
           </div>
-          <div class="upload-box">
-            <label for="anexos">Croqui, foto ou PDF</label>
-            <input id="anexos" name="anexos" type="file" autocomplete="off" accept="image/*,.pdf" multiple />
-            <div class="hint">Envie fotos do croqui, mapa escaneado ou qualquer documento que ajude na localização.</div>
-          </div>
-        </div>
+        </details>
 
         <input type="hidden" id="croqui_svg" name="croqui_svg" autocomplete="off" />
+        <input type="hidden" id="croqui_pontos_json" name="croqui_pontos_json" autocomplete="off" />
+        <input type="hidden" id="croqui_mapa_status" name="croqui_mapa_status" autocomplete="off" />
 
         <div class="nav-row">
           <button type="button" class="secondary-btn" data-prev>Voltar</button>
@@ -704,6 +932,7 @@
     <p class="footer-note">Este formulário foi preparado para ser simples no celular. O desenho é apenas um apoio visual e não substitui o levantamento técnico final.</p>
   </main>
 
+<script src="/static/vendor/leaflet/leaflet.js"></script>
 <script>
 const passos = [
   { titulo: 'Dados pessoais', descricao: 'Identificação do proprietário' },
@@ -714,6 +943,8 @@ const passos = [
 const estado = {
   passoAtual: 0,
   sketchPoints: [],
+  mapaConfirmado: false,
+  sketchIgnorado: false,
   confrontantes: [
     { lado: 'Norte', nome: '', cpf: '', nome_imovel: '', matricula: '', tipo: 'particular' },
     { lado: 'Sul', nome: '', cpf: '', nome_imovel: '', matricula: '', tipo: 'particular' },
@@ -726,14 +957,27 @@ const errorBanner = document.getElementById('error-banner')
 const successCard = document.getElementById('success-card')
 const progress = document.getElementById('progress')
 const steps = [...document.querySelectorAll('.step-card')]
-const sketchSvg = document.getElementById('sketch-svg')
 const sketchStatus = document.getElementById('sketch-status')
+const croquiCoordsInput = document.getElementById('croqui_coords')
 const croquiSvgInput = document.getElementById('croqui_svg')
+const croquiPontosInput = document.getElementById('croqui_pontos_json')
+const croquiMapaStatusInput = document.getElementById('croqui_mapa_status')
 const clientMap = document.getElementById('client-map')
-const clientMapSvg = document.getElementById('client-map-svg')
+const clientSatelliteMap = document.getElementById('client-satellite-map')
 const clientMapMeta = document.getElementById('client-map-meta')
 const clientMapChip = document.getElementById('client-map-chip')
 const clientMapStatus = document.getElementById('client-map-status')
+const clientMapActions = document.getElementById('client-map-actions')
+const mapConfirmation = document.getElementById('map-confirmation')
+const btnConfirmMap = document.getElementById('btn-confirm-map')
+const btnAdjustSketch = document.getElementById('btn-adjust-sketch')
+const sketchPointList = document.getElementById('sketch-point-list')
+let mapaCliente = null
+let camadaRecorte = null
+let camadaSketch = null
+let marcadorLocalizacao = null
+let ignorarProximoCliqueMapa = false
+const MAPA_PADRAO_BRASILIA = { lat: -15.7801, lon: -47.9292, zoom: 12 }
 const listaMunicipios = document.getElementById('lista-municipios')
 const municipioImovelInput = document.getElementById('municipio_imovel')
 const municipioEnderecoInput = document.getElementById('municipio')
@@ -881,6 +1125,9 @@ function mostrarPasso(index) {
     step.hidden = stepIndex !== estado.passoAtual
   })
   renderProgress()
+  if (estado.passoAtual === 2) {
+    invalidarMapaCliente()
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -1011,42 +1258,277 @@ function removeConfrontante(index) {
   renderConfrontantes()
 }
 
-function desenharSketch() {
-  const gridLines = []
-  for (let i = 10; i < 100; i += 10) {
-    gridLines.push(`<line x1="${i}" y1="0" x2="${i}" y2="100" stroke="#f0e3ca" stroke-width="0.4" />`)
-    gridLines.push(`<line x1="0" y1="${i}" x2="100" y2="${i}" stroke="#f0e3ca" stroke-width="0.4" />`)
-  }
-  const points = estado.sketchPoints
-  const polyline = points.length
-    ? `<polyline fill="${points.length >= 3 ? 'rgba(197,139,43,.20)' : 'none'}" stroke="#b27014" stroke-width="1.5" points="${points.map(p => `${p.x},${p.y}`).join(' ')}${points.length >= 3 ? ' ' + points[0].x + ',' + points[0].y : ''}" />`
-    : ''
-  const circles = points.map((point, index) => `
-    <g>
-      <circle cx="${point.x}" cy="${point.y}" r="2.1" fill="#7d4f0b" />
-      <text x="${point.x + 2.8}" y="${point.y - 2.8}" font-size="4" fill="#5b4630">${index + 1}</text>
-    </g>
-  `).join('')
-  sketchSvg.innerHTML = `
-    <rect x="0" y="0" width="100" height="100" fill="#fffdf8" />
-    ${gridLines.join('')}
-    ${polyline}
-    ${circles}
-  `
-  sketchStatus.textContent = points.length
-    ? `${points.length} vértice(s) marcados. Este desenho é apenas um croqui de referência.`
-    : 'Nenhum vértice desenhado ainda.'
-  croquiSvgInput.value = points.length ? sketchSvg.outerHTML : ''
+function atualizarStatusMapa(status) {
+  croquiMapaStatusInput.value = status || ''
 }
 
-function registrarPonto(event) {
-  const box = sketchSvg.getBoundingClientRect()
-  const clientX = event.touches ? event.touches[0].clientX : event.clientX
-  const clientY = event.touches ? event.touches[0].clientY : event.clientY
-  const x = ((clientX - box.left) / box.width) * 100
-  const y = ((clientY - box.top) / box.height) * 100
-  estado.sketchPoints.push({ x: Math.max(2, Math.min(98, Number(x.toFixed(2)))), y: Math.max(2, Math.min(98, Number(y.toFixed(2)))) })
-  desenharSketch()
+function atualizarCamposCroqui() {
+  const pontos = estado.sketchPoints
+  croquiCoordsInput.value = pontos.map((ponto) => `${ponto.lat},${ponto.lon}`).join('\n')
+  croquiPontosInput.value = pontos.length
+    ? JSON.stringify(pontos.map((ponto, index) => ({ ordem: index + 1, lat: ponto.lat, lon: ponto.lon })))
+    : ''
+  croquiSvgInput.value = ''
+}
+
+function textoPontosMarcados(total) {
+  if (!total) {
+    return estado.sketchIgnorado
+      ? 'Cliente informou que não sabe marcar no mapa.'
+      : 'Nenhum ponto marcado ainda.'
+  }
+  if (total === 1) {
+    return '1 ponto marcado. Isso já ajuda a localizar uma entrada, cerca ou canto conhecido.'
+  }
+  if (total === 2) {
+    return '2 pontos marcados. Linha aproximada salva para orientar a equipe de campo.'
+  }
+  return `${total} pontos marcados. Área aproximada salva para conferência técnica.`
+}
+
+function normalizarLatLng(latlng) {
+  if (!latlng) return null
+  const lat = Number(latlng.lat)
+  const lon = Number(latlng.lng ?? latlng.lon)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+  return {
+    lat: Number(lat.toFixed(8)),
+    lon: Number(lon.toFixed(8)),
+  }
+}
+
+function marcarSketchAlterado(status = 'pontos_marcados') {
+  estado.mapaConfirmado = false
+  estado.sketchIgnorado = false
+  mapConfirmation.hidden = true
+  atualizarStatusMapa(estado.sketchPoints.length ? status : '')
+}
+
+function criarIconePonto(index) {
+  if (!window.L) return null
+  return L.divIcon({
+    className: 'sketch-point-marker',
+    html: `<span>${index + 1}</span>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  })
+}
+
+function inicializarMapaCliente() {
+  clientMap.hidden = false
+  if (mapaCliente) return true
+  if (!window.L || !clientSatelliteMap) {
+    clientMapChip.textContent = 'Mapa offline'
+    clientMapStatus.textContent = 'O mapa satélite não carregou neste navegador. Você ainda pode colar coordenadas ou enviar um arquivo abaixo.'
+    return false
+  }
+
+  mapaCliente = L.map(clientSatelliteMap, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: true,
+  }).setView([MAPA_PADRAO_BRASILIA.lat, MAPA_PADRAO_BRASILIA.lon], MAPA_PADRAO_BRASILIA.zoom)
+
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 20,
+    attribution: 'Tiles &copy; Esri',
+  }).addTo(mapaCliente)
+
+  mapaCliente.on('click', (event) => {
+    if (ignorarProximoCliqueMapa) return
+    registrarPontoMapa(event.latlng)
+  })
+  invalidarMapaCliente()
+  return true
+}
+
+function invalidarMapaCliente() {
+  if (!mapaCliente) return
+  setTimeout(() => mapaCliente.invalidateSize(), 90)
+}
+
+function renderListaPontos() {
+  if (!sketchPointList) return
+  if (!estado.sketchPoints.length) {
+    sketchPointList.hidden = true
+    sketchPointList.innerHTML = ''
+    return
+  }
+  sketchPointList.hidden = false
+  sketchPointList.innerHTML = estado.sketchPoints.map((ponto, index) => `
+    <div class="sketch-point-row">
+      <strong>P${index + 1}</strong>
+      <span>${ponto.lat}, ${ponto.lon}</span>
+      <button type="button" data-center-sketch="${index}">Ver</button>
+      <button type="button" data-remove-sketch="${index}">Remover</button>
+    </div>
+  `).join('')
+}
+
+function renderSketchMapa(opcoes = {}) {
+  atualizarCamposCroqui()
+  sketchStatus.textContent = textoPontosMarcados(estado.sketchPoints.length)
+  renderListaPontos()
+
+  if (!mapaCliente || !window.L) return
+  if (camadaSketch) {
+    mapaCliente.removeLayer(camadaSketch)
+    camadaSketch = null
+  }
+  if (!estado.sketchPoints.length) return
+
+  const grupo = L.layerGroup()
+  const latLngs = estado.sketchPoints.map((ponto) => [ponto.lat, ponto.lon])
+  if (latLngs.length >= 2) {
+    L.polyline(latLngs, { color: '#1c160d', weight: 9, opacity: .85 }).addTo(grupo)
+    L.polyline(latLngs, { color: '#f7c45e', weight: 5, opacity: 1 }).addTo(grupo)
+  }
+  if (latLngs.length >= 3) {
+    L.polygon(latLngs, {
+      color: '#f0b53a',
+      weight: 2,
+      fillColor: '#f0b53a',
+      fillOpacity: .18,
+    }).addTo(grupo)
+  }
+  estado.sketchPoints.forEach((ponto, index) => {
+    const marcador = L.marker([ponto.lat, ponto.lon], {
+      icon: criarIconePonto(index),
+      draggable: true,
+      autoPan: true,
+      zIndexOffset: 900,
+    })
+      .bindTooltip(`Ponto ${index + 1}: arraste para ajustar`, { direction: 'top' })
+      .on('dragstart', () => {
+        ignorarProximoCliqueMapa = true
+      })
+      .on('dragend', (event) => {
+        atualizarPontoSketch(index, event.target.getLatLng())
+        setTimeout(() => {
+          ignorarProximoCliqueMapa = false
+        }, 180)
+      })
+      .on('contextmenu', () => removerPontoSketch(index))
+    marcador.addTo(grupo)
+  })
+  grupo.addTo(mapaCliente)
+  camadaSketch = grupo
+
+  if (opcoes.ajustarVisao && latLngs.length === 1) {
+    mapaCliente.setView(latLngs[0], Math.max(mapaCliente.getZoom(), 16))
+  } else if (opcoes.ajustarVisao && latLngs.length > 1) {
+    mapaCliente.fitBounds(L.latLngBounds(latLngs).pad(.32), { maxZoom: 18 })
+  }
+}
+
+function registrarPontoMapa(latlng, opcoes = {}) {
+  const ponto = normalizarLatLng(latlng)
+  if (!ponto) return
+  estado.sketchPoints.push(ponto)
+  marcarSketchAlterado()
+  renderSketchMapa(opcoes)
+}
+
+function atualizarPontoSketch(index, latlng) {
+  const ponto = normalizarLatLng(latlng)
+  if (!ponto || index < 0 || index >= estado.sketchPoints.length) return
+  estado.sketchPoints[index] = ponto
+  marcarSketchAlterado()
+  renderSketchMapa()
+}
+
+function removerPontoSketch(index) {
+  if (index < 0 || index >= estado.sketchPoints.length) return
+  estado.sketchPoints.splice(index, 1)
+  marcarSketchAlterado()
+  renderSketchMapa()
+}
+
+function centralizarPontoSketch(index) {
+  const ponto = estado.sketchPoints[index]
+  if (!ponto || !inicializarMapaCliente()) return
+  mapaCliente.setView([ponto.lat, ponto.lon], Math.max(mapaCliente.getZoom(), 17))
+}
+
+function adicionarPontoCentroMapa() {
+  if (!inicializarMapaCliente() || !mapaCliente) return
+  registrarPontoMapa(mapaCliente.getCenter())
+}
+
+function limparSketch(status = '') {
+  estado.sketchPoints = []
+  estado.mapaConfirmado = false
+  estado.sketchIgnorado = status === 'sem_marcacao'
+  mapConfirmation.hidden = true
+  atualizarStatusMapa(status)
+  renderSketchMapa()
+}
+
+function desfazerPontoSketch() {
+  estado.sketchPoints.pop()
+  estado.mapaConfirmado = false
+  estado.sketchIgnorado = false
+  mapConfirmation.hidden = true
+  atualizarStatusMapa(estado.sketchPoints.length ? 'pontos_marcados' : '')
+  renderSketchMapa()
+}
+
+function parsearPontosTexto(texto) {
+  return String(texto || '')
+    .split(/\r?\n/)
+    .map((linha) => linha.trim())
+    .filter(Boolean)
+    .map((linha) => {
+      const partes = linha.split(/[;,\t ]+/).filter(Boolean)
+      if (partes.length < 2) return null
+      const a = Number(partes[0].replace(',', '.'))
+      const b = Number(partes[1].replace(',', '.'))
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return null
+      if (Math.abs(a) <= 90 && Math.abs(b) <= 180) {
+        return { lat: Number(a.toFixed(8)), lon: Number(b.toFixed(8)) }
+      }
+      if (Math.abs(a) <= 180 && Math.abs(b) <= 90) {
+        return { lat: Number(b.toFixed(8)), lon: Number(a.toFixed(8)) }
+      }
+      return null
+    })
+    .filter(Boolean)
+}
+
+function sincronizarMapaPeloTextarea() {
+  const pontos = parsearPontosTexto(croquiCoordsInput.value)
+  estado.sketchPoints = pontos
+  estado.sketchIgnorado = false
+  estado.mapaConfirmado = false
+  atualizarStatusMapa(pontos.length ? 'pontos_marcados' : '')
+  renderSketchMapa({ ajustarVisao: true })
+}
+
+function usarLocalizacaoAtual() {
+  if (!navigator.geolocation) {
+    sketchStatus.textContent = 'Este navegador não liberou localização. Toque no mapa ou cole coordenadas.'
+    return
+  }
+  if (!inicializarMapaCliente()) return
+  sketchStatus.textContent = 'Buscando localização do aparelho...'
+  navigator.geolocation.getCurrentPosition((posicao) => {
+    const latlng = [posicao.coords.latitude, posicao.coords.longitude]
+    if (marcadorLocalizacao) {
+      mapaCliente.removeLayer(marcadorLocalizacao)
+    }
+    marcadorLocalizacao = L.circleMarker(latlng, {
+      radius: 9,
+      color: '#e6f1ea',
+      weight: 2,
+      fillColor: '#2fa56a',
+      fillOpacity: .85,
+      className: 'location-marker',
+    }).bindTooltip('Sua localização aproximada', { direction: 'top' }).addTo(mapaCliente)
+    mapaCliente.setView(latlng, Math.max(mapaCliente.getZoom(), 17))
+    sketchStatus.textContent = 'Localização encontrada. Toque no mapa para marcar o ponto correto.'
+  }, () => {
+    sketchStatus.textContent = 'Não foi possível usar a localização. Toque no mapa ou cole coordenadas.'
+  }, { enableHighAccuracy: true, timeout: 9000, maximumAge: 30000 })
 }
 
 function verticesValidos(vertices) {
@@ -1067,68 +1549,59 @@ function geometriaDoRecorte(area) {
   return null
 }
 
-function pontosMapa(vertices) {
-  const lons = vertices.map((item) => item.lon)
-  const lats = vertices.map((item) => item.lat)
-  const minLon = Math.min(...lons)
-  const maxLon = Math.max(...lons)
-  const minLat = Math.min(...lats)
-  const maxLat = Math.max(...lats)
-  const rangeLon = maxLon - minLon || 0.0001
-  const rangeLat = maxLat - minLat || 0.0001
-  const escala = Math.min(84 / rangeLon, 76 / rangeLat)
-  const drawW = rangeLon * escala
-  const drawH = rangeLat * escala
-  const offX = (100 - drawW) / 2
-  const offY = (100 - drawH) / 2
-  return vertices.map((item) => {
-    const x = offX + (item.lon - minLon) * escala
-    const y = 100 - offY - (item.lat - minLat) * escala
-    return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) }
-  })
-}
-
 function renderMapaCliente(area) {
   clientMap.hidden = false
+  const mapaDisponivel = inicializarMapaCliente()
   const geometria = geometriaDoRecorte(area)
   const identificacao = area?.identificacao_lote || area?.nome || 'Área vinculada ao link'
   clientMapMeta.textContent = identificacao
+  clientMapActions.hidden = true
+  mapConfirmation.hidden = true
+
+  if (camadaRecorte && mapaCliente) {
+    mapaCliente.removeLayer(camadaRecorte)
+    camadaRecorte = null
+  }
 
   if (!geometria) {
-    clientMapChip.textContent = 'Sem mapa'
-    clientMapStatus.textContent = 'Ainda não há perímetro ou esboço salvo para este recorte.'
-    clientMapSvg.innerHTML = `
-      <rect x="0" y="0" width="100" height="100" fill="#0a0f0d" />
-      <text x="50" y="48" text-anchor="middle" font-size="5" fill="#a8b8ad">Mapa indisponível</text>
-      <text x="50" y="57" text-anchor="middle" font-size="3.5" fill="#6f8175">use o croqui abaixo</text>
-    `
+    clientMapChip.textContent = mapaDisponivel ? 'Satélite' : 'Sem mapa'
+    clientMapStatus.textContent = mapaDisponivel
+      ? 'Mapa iniciado em Brasília/DF. Use o satélite para marcar pontos aproximados; não precisa desenhar perfeito.'
+      : 'O mapa satélite não carregou. Cole coordenadas ou envie um arquivo geoespacial abaixo.'
+    invalidarMapaCliente()
     return
   }
 
   clientMapChip.textContent = geometria.tipo
-  clientMapStatus.textContent = `${geometria.vertices.length} vértices. ${geometria.descricao}`
-  const pontos = pontosMapa(geometria.vertices)
-  const coords = pontos.map((p) => `${p.x},${p.y}`).join(' ')
-  const labels = pontos.map((p, index) => `
-    <g>
-      <circle cx="${p.x}" cy="${p.y}" r="1.8" fill="#46c07e" stroke="#e6f1ea" stroke-width="0.35" />
-      <text x="${p.x + 2.4}" y="${p.y - 2.4}" font-size="3.2" fill="#d8efe2">${index + 1}</text>
-    </g>
-  `).join('')
-  clientMapSvg.innerHTML = `
-    <rect x="0" y="0" width="100" height="100" fill="#07100c" />
-    <g opacity="0.22">
-      <line x1="20" y1="0" x2="20" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="40" y1="0" x2="40" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="60" y1="0" x2="60" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="80" y1="0" x2="80" y2="100" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="0" y1="25" x2="100" y2="25" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="0" y1="50" x2="100" y2="50" stroke="#7fe0a8" stroke-width="0.25" />
-      <line x1="0" y1="75" x2="100" y2="75" stroke="#7fe0a8" stroke-width="0.25" />
-    </g>
-    <polygon points="${coords}" fill="rgba(70,192,126,.22)" stroke="#46c07e" stroke-width="1.1" />
-    ${labels}
-  `
+  clientMapStatus.textContent = `${geometria.vertices.length} vértices. ${geometria.descricao} Confira o recorte e marque ajustes no mapa se algo estiver fora.`
+  clientMapActions.hidden = !mapaDisponivel
+
+  if (!mapaDisponivel) {
+    return
+  }
+
+  const grupo = L.layerGroup()
+  const latLngs = geometria.vertices.map((item) => [item.lat, item.lon])
+  L.polygon(latLngs, {
+    color: '#46c07e',
+    weight: 3,
+    fillColor: '#46c07e',
+    fillOpacity: .20,
+  }).addTo(grupo)
+  geometria.vertices.forEach((item, index) => {
+    L.circleMarker([item.lat, item.lon], {
+      radius: 5,
+      color: '#e6f1ea',
+      weight: 1,
+      fillColor: '#46c07e',
+      fillOpacity: .9,
+    }).bindTooltip(`Vértice ${index + 1}`, { direction: 'top' }).addTo(grupo)
+  })
+  grupo.addTo(mapaCliente)
+  camadaRecorte = grupo
+  mapaCliente.fitBounds(L.latLngBounds(latLngs).pad(.24), { maxZoom: 18 })
+  renderSketchMapa()
+  invalidarMapaCliente()
 }
 
 async function carregarContexto() {
@@ -1207,7 +1680,8 @@ form.addEventListener('submit', async (event) => {
     }
     form.style.display = 'none'
     successCard.style.display = 'block'
-    mostrarStatus(`Recebemos ${data.vertices_recebidos || 0} vértice(s) e ${data.area?.anexos_total || 0} anexo(s).`)
+    const pontosRecebidos = data.pontos_croqui_recebidos ?? data.vertices_recebidos ?? 0
+    mostrarStatus(`Recebemos ${pontosRecebidos} ponto(s) de referência e ${data.area?.anexos_total || 0} anexo(s).`)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (error) {
     mostrarErro(error.message || 'Falha ao enviar. Confira sua conexão e tente novamente.')
@@ -1220,16 +1694,30 @@ form.addEventListener('submit', async (event) => {
 document.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', nextStep))
 document.querySelectorAll('[data-prev]').forEach(button => button.addEventListener('click', prevStep))
 document.getElementById('btn-add-conf').addEventListener('click', addConfrontante)
-document.getElementById('btn-clear-sketch').addEventListener('click', () => {
-  estado.sketchPoints = []
-  desenharSketch()
+document.getElementById('btn-clear-sketch').addEventListener('click', () => limparSketch(''))
+document.getElementById('btn-undo-sketch').addEventListener('click', desfazerPontoSketch)
+document.getElementById('btn-skip-sketch').addEventListener('click', () => limparSketch('sem_marcacao'))
+document.getElementById('btn-locate-map').addEventListener('click', usarLocalizacaoAtual)
+document.getElementById('btn-add-map-center').addEventListener('click', adicionarPontoCentroMapa)
+btnConfirmMap?.addEventListener('click', () => {
+  estado.mapaConfirmado = true
+  estado.sketchIgnorado = false
+  atualizarStatusMapa(estado.sketchPoints.length ? 'pontos_marcados' : 'mapa_confirmado')
+  mapConfirmation.hidden = false
+  renderSketchMapa()
+  sketchStatus.textContent = estado.sketchPoints.length
+    ? `${textoPontosMarcados(estado.sketchPoints.length)} Pontos mantidos neste envio.`
+    : 'Mapa confirmado. Nenhum ajuste adicional marcado.'
 })
-
-sketchSvg.addEventListener('click', registrarPonto)
-sketchSvg.addEventListener('touchstart', (event) => {
-  event.preventDefault()
-  registrarPonto(event)
-}, { passive: false })
+btnAdjustSketch?.addEventListener('click', () => {
+  estado.mapaConfirmado = false
+  estado.sketchIgnorado = false
+  mapConfirmation.hidden = true
+  atualizarStatusMapa('ajuste_solicitado')
+  sketchStatus.textContent = 'Toque no mapa para marcar onde precisa ajustar.'
+  invalidarMapaCliente()
+})
+croquiCoordsInput?.addEventListener('change', sincronizarMapaPeloTextarea)
 
 document.addEventListener('input', (event) => {
   const target = event.target
@@ -1257,6 +1745,16 @@ document.addEventListener('input', (event) => {
 })
 
 document.addEventListener('click', (event) => {
+  const removerPonto = event.target.closest('[data-remove-sketch]')
+  if (removerPonto) {
+    removerPontoSketch(Number(removerPonto.dataset.removeSketch))
+    return
+  }
+  const centralizarPonto = event.target.closest('[data-center-sketch]')
+  if (centralizarPonto) {
+    centralizarPontoSketch(Number(centralizarPonto.dataset.centerSketch))
+    return
+  }
   const button = event.target.closest('[data-remove-conf]')
   if (!button) return
   removeConfrontante(Number(button.dataset.removeConf))
@@ -1273,7 +1771,7 @@ cepImovelInput?.addEventListener('blur', buscarCepImovel)
 
 renderProgress()
 renderConfrontantes()
-desenharSketch()
+renderSketchMapa()
 montarListaMunicipios()
 carregarContexto()
 </script>

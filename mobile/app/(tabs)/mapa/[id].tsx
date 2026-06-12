@@ -129,7 +129,7 @@ function normalizarPontos(pontos?: any[]): Ponto[] {
 function extrairGeometriaProjeto(data: ProjetoMapa) {
   const pontosProjeto = normalizarPontos(data.pontos)
   const perimetroAtivo = normalizarVertices(data.perimetro_ativo?.vertices)
-  const polygon = perimetroAtivo.length > 0 ? perimetroAtivo : pontosParaVertices(pontosProjeto)
+  const polygon = perimetroAtivo
   return { pontosProjeto, polygon }
 }
 

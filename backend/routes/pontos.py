@@ -23,6 +23,7 @@ router = APIRouter(prefix="/pontos", tags=["Pontos"], dependencies=[Depends(veri
 
 class PontoCreate(BaseModel):
     projeto_id: str
+    area_id: Optional[str] = None
     nome: str
     lat: float
     lon: float

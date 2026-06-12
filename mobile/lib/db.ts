@@ -22,6 +22,7 @@ export async function initDB(): Promise<void> {
     CREATE TABLE IF NOT EXISTS pontos_locais (
       id              TEXT PRIMARY KEY,
       projeto_id      TEXT NOT NULL,
+      area_id         TEXT,
       nome            TEXT NOT NULL,
       lat             REAL NOT NULL,
       lon             REAL NOT NULL,
@@ -42,6 +43,10 @@ export async function initDB(): Promise<void> {
       sync_em         TEXT
     );
   `)
+  const colunasPontos = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(pontos_locais)`)
+  if (!colunasPontos.some((coluna) => coluna.name === 'area_id')) {
+    await db.execAsync(`ALTER TABLE pontos_locais ADD COLUMN area_id TEXT;`)
+  }
   await initProjetosCache()
   await initAppConfig()
 }
@@ -50,11 +55,11 @@ export async function salvarPonto(p: Omit<PontoLocal, 'sync_status' | 'sync_tent
   const db = getDb()
   await db.runAsync(
     `INSERT INTO pontos_locais
-      (id, projeto_id, nome, lat, lon, norte, este, cota, codigo, status_gnss,
+      (id, projeto_id, area_id, nome, lat, lon, norte, este, cota, codigo, status_gnss,
        satelites, pdop, sigma_e, sigma_n, sigma_u, origem, coletado_em, sync_status, sync_tentativas)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',0)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pending',0)`,
     [
-      p.id, p.projeto_id, p.nome,
+      p.id, p.projeto_id, p.area_id ?? null, p.nome,
       p.lat, p.lon, p.norte, p.este, p.cota,
       p.codigo, p.status_gnss, p.satelites, p.pdop,
       p.sigma_e, p.sigma_n, p.sigma_u,
