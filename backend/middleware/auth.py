@@ -71,6 +71,7 @@ async def verificar_token(
             "sub": resposta.user.id,
             "email": resposta.user.email,
             "role": resposta.user.role,
+            "token": token,
         }
     except HTTPException:
         raise

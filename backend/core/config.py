@@ -27,6 +27,8 @@ class Settings:
             "http://127.0.0.1:19006",
             "http://localhost:8000",
             "http://127.0.0.1:8000",
+            "http://localhost:3333",
+            "http://127.0.0.1:3333",
         ])).split(",")
     ]
     PUBLIC_APP_URL: str = os.getenv("PUBLIC_APP_URL", "http://localhost:8000")
@@ -60,7 +62,9 @@ class Settings:
             r"192\.168(?:\.\d{1,3}){2}|"
             r"172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}|"
             # Vercel (preview + production)
-            r"[a-z0-9\-]+\.vercel\.app"
+            r"[a-z0-9\-]+\.vercel\.app|"
+            # Localtunnel
+            r"[a-z0-9\-]+\.loca\.lt"
             r")(:\d+)?$"
         )
 

@@ -127,7 +127,9 @@ function tratarErroFetch(erro: unknown): Error {
 
 export async function apiGet<T>(path: string): Promise<T> {
   try {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Bypass-Tunnel-Reminder': 'true'
+    };
     if (_authToken) {
       headers['Authorization'] = `Bearer ${_authToken}`;
     }
@@ -162,7 +164,9 @@ export async function apiPost<T>(path: string, body: JsonValue): Promise<T> {
 
 export async function apiPostFormData<T>(path: string, body: FormData): Promise<T> {
   try {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Bypass-Tunnel-Reminder': 'true'
+    };
     if (_authToken) {
       headers['Authorization'] = `Bearer ${_authToken}`;
     }
@@ -200,7 +204,9 @@ export async function apiPatch<T>(path: string, body: JsonValue): Promise<T> {
 
 export async function apiDelete<T>(path: string): Promise<T> {
   try {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Bypass-Tunnel-Reminder': 'true'
+    };
     if (_authToken) {
       headers['Authorization'] = `Bearer ${_authToken}`;
     }
@@ -215,3 +221,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
   }
 }
 
+
+export async function enviarMensagemChat(projetoId: string, mensagem: string): Promise<{ resposta: string }> {
+  return apiPost<{ resposta: string }>('/chat/', { projeto_id: projetoId, mensagem });
+}

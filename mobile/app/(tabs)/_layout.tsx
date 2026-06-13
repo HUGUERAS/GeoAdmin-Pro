@@ -13,6 +13,7 @@ export default function TabLayout() {
         height: 60,
         paddingBottom: 8,
       },
+
       tabBarActiveTintColor: C.primary,
       tabBarInactiveTintColor: C.muted,
       tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
@@ -20,6 +21,11 @@ export default function TabLayout() {
       headerTintColor: C.text,
       headerTitleStyle: { fontWeight: '700', fontSize: 18 },
     }}>
+      <Tabs.Screen name="admin/index" options={{
+        title: 'Master',
+        tabBarIcon: ({ color }) => <Feather name="bar-chart-2" size={22} color={color} />,
+        headerShown: false,
+      }} />
       <Tabs.Screen name="projeto/index" options={{
         title: 'Projetos',
         tabBarIcon: ({ color }) => <Feather name="folder" size={22} color={color} />,

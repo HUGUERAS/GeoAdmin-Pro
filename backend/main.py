@@ -59,6 +59,12 @@ from routes.perimetros import router as perimetros_router
 from routes.geo import router as geo_router
 from routes.importar import router as importar_router
 from routes.catalogo import router as catalogo_router
+from routes.chat import router as chat_router
+from routes.mensagens_externas import router as mensagens_externas_router
+from routes.mensagens_externas import public_router as webhooks_router
+from routes.gestao_documentos import router as gestao_documentos_router
+from routes.realtime import router as realtime_router
+from routes.admin_master import router as admin_master_router
 
 app = FastAPI(title="GeoAdmin Pro - Backend MVP")
 app.state.limiter = limiter
@@ -89,6 +95,12 @@ app.include_router(perimetros_router)
 app.include_router(geo_router)
 app.include_router(importar_router)
 app.include_router(catalogo_router)
+app.include_router(chat_router)
+app.include_router(mensagens_externas_router)
+app.include_router(webhooks_router)
+app.include_router(gestao_documentos_router)
+app.include_router(realtime_router)
+app.include_router(admin_master_router)
 
 
 import logging as _logging

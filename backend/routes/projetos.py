@@ -1368,3 +1368,19 @@ def baixar_cartas_confrontacao(projeto_id: str, area_ids: list[str] | None = Non
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{nome}"'},
     )
+
+@router.get('/{projeto_id}/pendencias/resumo', summary='Resumo das pendencias operacionais do projeto')
+def resumo_pendencias(projeto_id: str):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    from services.agents.pendencias import resumir_pendencias_projeto
+    return resumir_pendencias_projeto(sb, projeto_id)
+
+
+@router.get('/{projeto_id}/chat/sessoes', summary='Listar sessoes de chat do projeto')
+def listar_sessoes_chat(projeto_id: str):
+    sb = _get_supabase()
+    _projeto_ou_404(sb, projeto_id)
+    res = sb.table('chat_sessoes').select('*').eq('projeto_id', projeto_id).is_('deleted_at', 'null').order('atualizado_em', desc=True).execute()
+    return res.data or []
+
