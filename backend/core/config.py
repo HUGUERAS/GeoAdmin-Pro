@@ -71,6 +71,10 @@ class Settings:
     # PROJ
     PROJ_DATA_DIR: str = os.getenv("PROJ_DATA", "")
 
+    # VERTEXROSEA
+    VERTEXROSEA_API_URL: str = os.getenv("VERTEXROSEA_API_URL", "http://localhost:8001")
+    VERTEXROSEA_API_KEY: str = os.getenv("VERTEXROSEA_API_KEY", "")
+
     def validate(self) -> None:
         """Valida configurações críticas."""
         if not self.SUPABASE_URL or not (self.SUPABASE_ANON_KEY or self.SUPABASE_SERVICE_ROLE_KEY):

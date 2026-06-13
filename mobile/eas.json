@@ -17,7 +17,6 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://geoadmin-api-800479022570.us-central1.run.app"
       },
       "android": {
-        "credentialsSource": "local",
         "buildType": "apk"
       }
     },

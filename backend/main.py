@@ -58,6 +58,7 @@ from routes.pontos import router as pontos_router
 from routes.perimetros import router as perimetros_router
 from routes.geo import router as geo_router
 from routes.importar import router as importar_router
+from routes.importar_generico import router as importar_generico_router
 from routes.catalogo import router as catalogo_router
 from routes.chat import router as chat_router
 from routes.mensagens_externas import router as mensagens_externas_router
@@ -94,6 +95,7 @@ app.include_router(pontos_router)
 app.include_router(perimetros_router)
 app.include_router(geo_router)
 app.include_router(importar_router)
+app.include_router(importar_generico_router)
 app.include_router(catalogo_router)
 app.include_router(chat_router)
 app.include_router(mensagens_externas_router)

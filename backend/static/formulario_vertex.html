@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>VERTEX — Cadastro</title>
+  <style>
+    :root { --verde:#1f7a4d; --verde2:#16613c; --cinza:#f3f4f6; --texto:#1f2937; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin:0; font-family: -apple-system, system-ui, Roboto, Arial, sans-serif;
+           background:var(--cinza); color:var(--texto); padding:16px; }
+    .topo { text-align:center; margin-bottom:8px; }
+    .topo h1 { color:var(--verde); font-size:28px; margin:4px 0; letter-spacing:1px; }
+    .topo p { margin:0; font-size:16px; color:#555; }
+    .card { background:#fff; border-radius:16px; padding:16px; margin:12px 0;
+            box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .foto-btn { display:flex; align-items:center; gap:14px; width:100%;
+                border:2px dashed #cbd5e1; background:#fff; border-radius:14px;
+                padding:18px; font-size:19px; color:var(--texto); cursor:pointer; text-align:left; }
+    .foto-btn.ok { border-color:var(--verde); background:#eafaf1; }
+    .foto-btn .ic { font-size:30px; }
+    .foto-btn small { display:block; color:#777; font-size:14px; }
+    input[type=file] { display:none; }
+    .campo { width:100%; padding:16px; font-size:18px; border:1px solid #cbd5e1;
+             border-radius:12px; margin-top:10px; }
+    .enviar { width:100%; padding:20px; font-size:22px; font-weight:bold; color:#fff;
+              background:var(--verde); border:none; border-radius:14px; margin-top:14px; }
+    .enviar:disabled { background:#9bbfaa; }
+    .local { width:100%; padding:16px; font-size:18px; border:1px solid var(--verde);
+             background:#fff; color:var(--verde); border-radius:12px; margin-top:10px; }
+    .local.ok { background:var(--verde); color:#fff; }
+    .ajuda { font-size:15px; color:#666; text-align:center; margin-top:6px; }
+    .ok-msg { text-align:center; padding:40px 16px; }
+    .ok-msg .big { font-size:60px; }
+    .ok-msg h2 { color:var(--verde); }
+    .thumb { width:54px; height:54px; object-fit:cover; border-radius:10px; }
+  </style>
+</head>
+<body>
+  <div id="form">
+    <div class="topo">
+      <h1>VERTEX</h1>
+      <p>Regularização da sua área</p>
+    </div>
+
+    <div class="card">
+      <p style="font-size:18px;margin-top:0">Tire foto dos seus documentos. É rápido.</p>
+
+      <label class="foto-btn" id="lbl-rg">
+        <span class="ic">📄</span>
+        <span>Foto do RG ou CPF<small>frente do documento</small></span>
+        <input type="file" accept="image/*" capture="environment" id="rg" />
+      </label>
+
+      <label class="foto-btn" id="lbl-rgv" style="margin-top:10px">
+        <span class="ic">🔄</span>
+        <span>Verso do documento<small>opcional</small></span>
+        <input type="file" accept="image/*" capture="environment" id="rgv" />
+      </label>
+
+      <label class="foto-btn" id="lbl-doc" style="margin-top:10px">
+        <span class="ic">🧾</span>
+        <span>CCIR, CAR ou ITR<small>se tiver</small></span>
+        <input type="file" accept="image/*" capture="environment" id="doc" />
+      </label>
+    </div>
+
+    <div class="card">
+      <input class="campo" id="nome" placeholder="Seu nome (opcional)" />
+      <button type="button" class="local" id="btn-local">📍 Marcar onde fica a área</button>
+      <div class="ajuda" id="local-txt"></div>
+    </div>
+
+    <button class="enviar" id="enviar" disabled>Enviar</button>
+    <div class="ajuda">Seus dados são usados só para a regularização na ETR.</div>
+  </div>
+
+  <div id="sucesso" class="ok-msg" style="display:none">
+    <div class="big">✅</div>
+    <h2>Recebemos suas fotos!</h2>
+    <p style="font-size:18px">A VERTEX vai analisar e te retorna pelo WhatsApp.</p>
+  </div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || '';
+  const files = {};
+  let coords = null;
+
+  function bind(id, lblId) {
+    const inp = document.getElementById(id);
+    inp.addEventListener('change', () => {
+      if (inp.files && inp.files[0]) {
+        files[id] = inp.files[0];
+        document.getElementById(lblId).classList.add('ok');
+      }
+      atualizarBotao();
+    });
+  }
+  bind('rg', 'lbl-rg');
+  bind('rgv', 'lbl-rgv');
+  bind('doc', 'lbl-doc');
+
+  function atualizarBotao() {
+    document.getElementById('enviar').disabled = Object.keys(files).length === 0;
+  }
+
+  document.getElementById('btn-local').addEventListener('click', () => {
+    const b = document.getElementById('btn-local');
+    const t = document.getElementById('local-txt');
+    if (!navigator.geolocation) { t.textContent = 'Localização não disponível neste aparelho.'; return; }
+    t.textContent = 'Obtendo localização...';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        coords = pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6);
+        b.classList.add('ok'); b.textContent = '📍 Localização marcada';
+        t.textContent = '';
+      },
+      () => { t.textContent = 'Não consegui pegar a localização. Tudo bem, pode enviar mesmo assim.'; }
+    );
+  });
+
+  document.getElementById('enviar').addEventListener('click', async () => {
+    const btn = document.getElementById('enviar');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    const fd = new FormData();
+    if (files['rg']) fd.append('rg', files['rg']);
+    if (files['rgv']) fd.append('rg_verso', files['rgv']);
+    if (files['doc']) fd.append('documento', files['doc']);
+    const nome = document.getElementById('nome').value.trim();
+    if (nome) fd.append('nome', nome);
+    if (coords) fd.append('coords', coords);
+    try {
+      const res = await fetch('/formulario/foto?token=' + encodeURIComponent(token), { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('falha');
+      document.getElementById('form').style.display = 'none';
+      document.getElementById('sucesso').style.display = 'block';
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Enviar';
+      alert('Não consegui enviar. Tente de novo, por favor.');
+    }
+  });
+</script>
+</body>
+</html>

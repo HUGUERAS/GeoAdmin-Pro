@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   View,
@@ -10,6 +11,7 @@ import {
   Alert,
   TextInput,
   Platform,
+  RefreshControl,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Feather } from '@expo/vector-icons'
@@ -400,6 +402,7 @@ export default function ClienteDetalheScreen() {
   const [projetoReferenciaId, setProjetoReferenciaId] = useState('')
   const [salvandoReferencia, setSalvandoReferencia] = useState(false)
   const [removendoReferencia, setRemovendoReferencia] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   const carregar = async () => {
     try {
@@ -417,8 +420,16 @@ export default function ClienteDetalheScreen() {
     }
   }
 
-  useEffect(() => {
-    carregar()
+  useFocusEffect(
+    useCallback(() => {
+      carregar()
+    }, [id])
+  )
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await carregar()
+    setRefreshing(false)
   }, [id])
 
   const abrirMapaProjeto = async (projetoId: string) => {
@@ -681,7 +692,11 @@ export default function ClienteDetalheScreen() {
   const status = obterMetaStatus(detalhe.resumo?.status_documentacao)
 
   return (
-    <ScrollView style={[s.container, { backgroundColor: C.background }]} contentContainerStyle={s.content}>
+    <ScrollView 
+      style={[s.container, { backgroundColor: C.background }]} 
+      contentContainerStyle={s.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
+    >
       <View style={[s.header, { backgroundColor: C.card, borderBottomColor: C.cardBorder, paddingTop: Math.max(topInset + 12, 20) }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.voltar} accessibilityRole="button" accessibilityLabel="Voltar para a lista de clientes">
           <Feather name="arrow-left" size={20} color={C.text} />

@@ -14,3 +14,9 @@ node_modules/
 
 credentials.json
 credentials/
+
+vertex-release.keystore
+
+*.keystore
+
+*.jks

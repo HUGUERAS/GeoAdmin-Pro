@@ -348,21 +348,24 @@
     gap: 12px;
     margin-bottom: 16px;
   }
-  .client-map[hidden] { display: none; }
-  .client-map-head {
+  .satellite-toolbar {
     display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
   }
-  .client-map-title {
-    display: block;
-    font-size: 15px;
-    font-weight: 700;
+  .satellite-board {
+    width: 100%;
+    height: 320px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.12);
+    background: #0a0f0d;
   }
-  .client-map-meta {
-    display: block;
-    margin-top: 3px;
+  .satellite-board .leaflet-container {
+    width: 100%;
+    height: 100%;
+  }
+  .satellite-status {
     font-size: 12px;
     color: var(--muted);
     line-height: 1.4;
@@ -724,6 +727,46 @@
           </div>
         </div>
 
+        <div class="note" style="margin-top:16px;">Fotos dos documentos</div>
+        <div class="upload-grid" style="margin-top:14px;">
+          <div class="upload-box">
+            <label for="doc_identidade_frente">RG ou CPF (frente)</label>
+            <input
+              id="doc_identidade_frente"
+              name="doc_identidade_frente"
+              type="file"
+              autocomplete="off"
+              accept="image/*,.pdf"
+              capture="environment"
+            />
+            <div class="hint">Tire a foto nítida da frente do documento.</div>
+          </div>
+          <div class="upload-box">
+            <label for="doc_identidade_verso">RG ou CPF (verso)</label>
+            <input
+              id="doc_identidade_verso"
+              name="doc_identidade_verso"
+              type="file"
+              autocomplete="off"
+              accept="image/*,.pdf"
+              capture="environment"
+            />
+            <div class="hint">Opcional, mas ajuda na conferência.</div>
+          </div>
+          <div class="upload-box">
+            <label for="doc_rural">CCIR, CAR ou ITR</label>
+            <input
+              id="doc_rural"
+              name="doc_rural"
+              type="file"
+              autocomplete="off"
+              accept="image/*,.pdf"
+              capture="environment"
+            />
+            <div class="hint">Se tiver, envie uma foto ou PDF.</div>
+          </div>
+        </div>
+
         <div class="nav-row">
           <div class="spacer"></div>
           <button type="button" class="primary-btn" data-next>Continuar</button>
@@ -835,13 +878,12 @@
           <p class="step-subtitle">Use o mapa satélite para marcar pontos aproximados da área, entrada, cerca ou canto conhecido. Se tiver KML, GeoJSON, CSV, TXT ou foto/PDF, envie também.</p>
         </div>
 
-        <div class="client-map" id="client-map" hidden>
-          <div class="client-map-head">
-            <div>
-              <span class="client-map-title">Mapa do seu recorte</span>
-              <span class="client-map-meta" id="client-map-meta">Carregando área vinculada ao seu link.</span>
-            </div>
-            <span class="client-map-chip" id="client-map-chip">Recorte</span>
+        <div class="satellite-shell">
+          <div class="satellite-toolbar">
+            <button type="button" class="ghost-btn" id="btn-map-style">Ativar satélite</button>
+            <button type="button" class="ghost-btn" id="btn-map-locate">Usar minha localização</button>
+            <button type="button" class="ghost-btn" id="btn-map-undo">Desfazer vértice</button>
+            <button type="button" class="ghost-btn" id="btn-map-clear">Limpar marcação</button>
           </div>
           <div class="client-map-board">
             <div id="client-satellite-map" class="satellite-map" aria-label="Mapa satélite para marcação de pontos"></div>
@@ -999,6 +1041,167 @@ const municipiosSugeridos = [
   'Rio Verde','Sanclerlândia','Santa Helena de Goiás','Santa Rita do Araguaia','São João d\'Aliança','São Luís de Montes Belos','São Miguel do Araguaia','Senador Canedo','Silvânia','Simolândia',
   'Sítio d\'Abadia','Trindade','Uruaçu','Uruana','Valparaíso de Goiás','Vicentinópolis','Vila Boa','Vila Propício','Brasília'
 ]
+let satelliteMap = null
+let streetLayer = null
+let satelliteLayer = null
+let usandoSatelite = false
+let satelliteAreaLayer = null
+let satelliteDrawLayer = null
+let satelliteVertexLayer = null
+let satelliteVertices = []
+let contextoAreaMapa = null
+
+function atualizarDesenhoMapa() {
+  if (!satelliteMap || !window.L) return
+
+  if (satelliteDrawLayer) {
+    satelliteMap.removeLayer(satelliteDrawLayer)
+    satelliteDrawLayer = null
+  }
+  if (satelliteVertexLayer) {
+    satelliteMap.removeLayer(satelliteVertexLayer)
+    satelliteVertexLayer = null
+  }
+
+  if (!satelliteVertices.length) {
+    satelliteMapStatus.textContent = 'Toque no mapa para adicionar os vértices do polígono da área.'
+    if (mapaLatLngInput) mapaLatLngInput.value = ''
+    if (croquiCoordsInput) croquiCoordsInput.value = ''
+    return
+  }
+
+  const latlngs = satelliteVertices.map((p) => [p.lat, p.lng])
+  satelliteVertexLayer = L.layerGroup(
+    satelliteVertices.map((p, index) => L.marker([p.lat, p.lng], {
+      icon: L.divIcon({
+        className: 'map-vertex-label',
+        html: `<div style="background:#111;color:#fff;border:1px solid #fff;border-radius:10px;padding:2px 6px;font-size:11px;">${index + 1}</div>`,
+      }),
+    }))
+  ).addTo(satelliteMap)
+
+  if (satelliteVertices.length >= 3) {
+    satelliteDrawLayer = L.polygon(latlngs, {
+      color: '#f5c267',
+      weight: 2,
+      fillColor: '#f5c267',
+      fillOpacity: 0.22,
+    }).addTo(satelliteMap)
+    satelliteMapStatus.textContent = `${satelliteVertices.length} vértices no polígono.`
+  } else {
+    satelliteDrawLayer = L.polyline(latlngs, {
+      color: '#f5c267',
+      weight: 2,
+    }).addTo(satelliteMap)
+    satelliteMapStatus.textContent = `${satelliteVertices.length} vértice(s). Continue tocando para fechar a área.`
+  }
+
+  if (mapaLatLngInput) {
+    const centro = satelliteVertices[0]
+    mapaLatLngInput.value = `${centro.lat.toFixed(6)},${centro.lng.toFixed(6)}`
+  }
+  if (croquiCoordsInput) {
+    croquiCoordsInput.value = satelliteVertices
+      .map((p) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`)
+      .join('\n')
+  }
+}
+
+function adicionarVerticeMapa(lat, lng) {
+  satelliteVertices.push({ lat, lng })
+  atualizarDesenhoMapa()
+}
+
+function desfazerVerticeMapa() {
+  if (!satelliteVertices.length) return
+  satelliteVertices.pop()
+  atualizarDesenhoMapa()
+}
+
+function limparMarcacaoMapa() {
+  satelliteVertices = []
+  atualizarDesenhoMapa()
+}
+
+function verticesRecorte(area) {
+  const bruto = area?.geometria_final || area?.geometria_esboco || []
+  return (bruto || [])
+    .map((item) => ({ lat: Number(item.lat), lon: Number(item.lon) }))
+    .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon))
+}
+
+function desenharRecorteNoMapa(area) {
+  if (!satelliteMap || !window.L) return
+  if (satelliteAreaLayer) {
+    satelliteMap.removeLayer(satelliteAreaLayer)
+    satelliteAreaLayer = null
+  }
+  const vertices = verticesRecorte(area)
+  if (vertices.length < 3) return
+  const latlngs = vertices.map((v) => [v.lat, v.lon])
+  satelliteAreaLayer = L.polygon(latlngs, {
+    color: '#46c07e',
+    weight: 2,
+    dashArray: '4 4',
+    fillColor: '#46c07e',
+    fillOpacity: 0.14,
+  }).addTo(satelliteMap)
+  satelliteMap.fitBounds(satelliteAreaLayer.getBounds(), { padding: [18, 18] })
+}
+
+function alternarCamadaMapa(forceSatellite = null) {
+  if (!satelliteMap || !streetLayer || !satelliteLayer) return
+  const ativarSatelite = forceSatellite === null ? !usandoSatelite : !!forceSatellite
+  usandoSatelite = ativarSatelite
+  if (ativarSatelite) {
+    if (satelliteMap.hasLayer(streetLayer)) satelliteMap.removeLayer(streetLayer)
+    if (!satelliteMap.hasLayer(satelliteLayer)) satelliteLayer.addTo(satelliteMap)
+    if (btnMapStyle) btnMapStyle.textContent = 'Usar mapa leve'
+  } else {
+    if (satelliteMap.hasLayer(satelliteLayer)) satelliteMap.removeLayer(satelliteLayer)
+    if (!satelliteMap.hasLayer(streetLayer)) streetLayer.addTo(satelliteMap)
+    if (btnMapStyle) btnMapStyle.textContent = 'Ativar satélite'
+  }
+}
+
+function inicializarMapaSatelite() {
+  if (satelliteMap || !window.L) {
+    if (!window.L) {
+      satelliteMapStatus.textContent = 'Não foi possível carregar o mapa satélite. Você pode seguir com o croqui e os demais dados.'
+    }
+    return
+  }
+  satelliteMap = L.map('satellite-map', { zoomControl: true })
+  streetLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap',
+    }
+  ).addTo(satelliteMap)
+  satelliteLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+      maxZoom: 19,
+      attribution: 'Tiles © Esri',
+    }
+  )
+  satelliteMap.setView([-15.793889, -47.882778], 12)
+  satelliteMap.on('click', (event) => {
+    adicionarVerticeMapa(event.latlng.lat, event.latlng.lng)
+  })
+  alternarCamadaMapa(false)
+}
+
+function garantirMapaPronto() {
+  inicializarMapaSatelite()
+  if (satelliteMap) {
+    satelliteMap.invalidateSize()
+    if (contextoAreaMapa) {
+      desenharRecorteNoMapa(contextoAreaMapa)
+    }
+  }
+}
 
 function normalizarMunicipio(valor) {
   return (valor || '').trim()
@@ -1124,6 +1327,9 @@ function mostrarPasso(index) {
   steps.forEach((step, stepIndex) => {
     step.hidden = stepIndex !== estado.passoAtual
   })
+  if (estado.passoAtual === 2) {
+    garantirMapaPronto()
+  }
   renderProgress()
   if (estado.passoAtual === 2) {
     invalidarMapaCliente()
@@ -1610,7 +1816,7 @@ async function carregarContexto() {
     if (!res.ok) throw new Error('Falha ao carregar contexto')
     const data = await res.json()
     document.getElementById('meta-projeto').textContent = data.projeto?.projeto_nome || 'Projeto em preparação'
-    document.getElementById('meta-cliente').textContent = data.cliente?.nome || 'Participante'
+    document.getElementById('meta-cliente').textContent = 'Participante'
     document.getElementById('meta-papel').textContent = data.participante?.papel || 'Participante do processo'
     document.getElementById('meta-lote').textContent = data.lote?.identificacao || data.area?.nome || 'Recorte sem lote específico'
     document.getElementById('meta-validade').textContent = data.cliente?.magic_link_expira
@@ -1622,8 +1828,7 @@ async function carregarContexto() {
     if (data.mensagem) {
       document.getElementById('hero-subtitle').textContent = `${data.mensagem} Você não tem acesso aos demais lotes ou imóveis do projeto.`
     }
-    renderMapaCliente(data.area)
-
+    contextoAreaMapa = data.area || null
     const municipioImovelContexto = normalizarMunicipio(
       data.projeto?.municipio ||
       data.projeto?.imovel_municipio
@@ -1650,7 +1855,7 @@ async function carregarContexto() {
     document.getElementById('meta-papel').textContent = 'Papel indisponível'
     document.getElementById('meta-lote').textContent = 'Lote indisponível'
     document.getElementById('meta-validade').textContent = 'Verifique o link'
-    renderMapaCliente(null)
+    contextoAreaMapa = null
     montarListaMunicipios()
   }
 }
